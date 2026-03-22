@@ -1,0 +1,561 @@
+[
+  {
+    "id": "p1-01",
+    "tier": 1,
+    "prompt": "Write a function `double(n)` that returns n multiplied by 2.",
+    "functionName": "double",
+    "starterCode": "def double(n):\n    pass\n",
+    "testCases": [
+      { "input": "5", "expected": "10" },
+      { "input": "0", "expected": "0" },
+      { "input": "-3", "expected": "-6" }
+    ],
+    "hints": ["Multiply the input by 2.", "return n * 2"]
+  },
+  {
+    "id": "p1-02",
+    "tier": 1,
+    "prompt": "Write a function `is_even(n)` that returns True if n is even, False otherwise.",
+    "functionName": "is_even",
+    "starterCode": "def is_even(n):\n    pass\n",
+    "testCases": [
+      { "input": "4", "expected": "True" },
+      { "input": "7", "expected": "False" },
+      { "input": "0", "expected": "True" }
+    ],
+    "hints": ["Use the modulo operator %.", "return n % 2 == 0"]
+  },
+  {
+    "id": "p1-03",
+    "tier": 1,
+    "prompt": "Write a function `absolute(n)` that returns the absolute value of n without using the built-in `abs()`.",
+    "functionName": "absolute",
+    "starterCode": "def absolute(n):\n    pass\n",
+    "testCases": [
+      { "input": "-5", "expected": "5" },
+      { "input": "3", "expected": "3" },
+      { "input": "0", "expected": "0" }
+    ],
+    "hints": ["Check if n is negative.", "return -n if n < 0 else n"]
+  },
+  {
+    "id": "p1-04",
+    "tier": 1,
+    "prompt": "Write a function `max_of_three(a, b, c)` that returns the largest of three numbers.",
+    "functionName": "max_of_three",
+    "starterCode": "def max_of_three(a, b, c):\n    pass\n",
+    "testCases": [
+      { "input": "1, 2, 3", "expected": "3" },
+      { "input": "5, 5, 5", "expected": "5" },
+      { "input": "-1, -2, -3", "expected": "-1" },
+      { "input": "10, 3, 7", "expected": "10" }
+    ],
+    "hints": ["Compare the values using if/elif.", "Use max() or chain comparisons."]
+  },
+  {
+    "id": "p1-05",
+    "tier": 1,
+    "prompt": "Write a function `celsius_to_fahrenheit(c)` that converts Celsius to Fahrenheit. Formula: F = C * 9/5 + 32.",
+    "functionName": "celsius_to_fahrenheit",
+    "starterCode": "def celsius_to_fahrenheit(c):\n    pass\n",
+    "testCases": [
+      { "input": "0", "expected": "32.0" },
+      { "input": "100", "expected": "212.0" },
+      { "input": "-40", "expected": "-40.0" }
+    ],
+    "hints": ["Apply the formula directly.", "return c * 9/5 + 32"]
+  },
+  {
+    "id": "p1-06",
+    "tier": 1,
+    "prompt": "Write a function `string_length(s)` that returns the length of a string without using `len()`.",
+    "functionName": "string_length",
+    "starterCode": "def string_length(s):\n    pass\n",
+    "testCases": [
+      { "input": "\"hello\"", "expected": "5" },
+      { "input": "\"\"", "expected": "0" },
+      { "input": "\"a b c\"", "expected": "5" }
+    ],
+    "hints": ["Use a counter variable and iterate through the string.", "count = 0; for _ in s: count += 1"]
+  },
+  {
+    "id": "p1-07",
+    "tier": 1,
+    "prompt": "Write a function `count_vowels(s)` that returns the number of vowels (a, e, i, o, u) in a string. Case-insensitive.",
+    "functionName": "count_vowels",
+    "starterCode": "def count_vowels(s):\n    pass\n",
+    "testCases": [
+      { "input": "\"hello\"", "expected": "2" },
+      { "input": "\"AEIOU\"", "expected": "5" },
+      { "input": "\"rhythm\"", "expected": "0" },
+      { "input": "\"Python\"", "expected": "1" }
+    ],
+    "hints": ["Convert to lowercase, check each character against 'aeiou'.", "sum(1 for c in s.lower() if c in 'aeiou')"]
+  },
+  {
+    "id": "p1-08",
+    "tier": 1,
+    "prompt": "Write a function `reverse_string(s)` that returns the reversed string without using slicing or reversed().",
+    "functionName": "reverse_string",
+    "starterCode": "def reverse_string(s):\n    pass\n",
+    "testCases": [
+      { "input": "\"hello\"", "expected": "olleh" },
+      { "input": "\"abc\"", "expected": "cba" },
+      { "input": "\"a\"", "expected": "a" },
+      { "input": "\"\"", "expected": "" }
+    ],
+    "hints": ["Build the result by iterating from the end.", "Concatenate characters in reverse order."]
+  },
+  {
+    "id": "p1-09",
+    "tier": 1,
+    "prompt": "Write a function `sum_list(nums)` that returns the sum of all numbers in a list without using `sum()`.",
+    "functionName": "sum_list",
+    "starterCode": "def sum_list(nums):\n    pass\n",
+    "testCases": [
+      { "input": "[1, 2, 3]", "expected": "6" },
+      { "input": "[]", "expected": "0" },
+      { "input": "[-1, 1]", "expected": "0" },
+      { "input": "[10]", "expected": "10" }
+    ],
+    "hints": ["Use a loop and an accumulator variable.", "total = 0; for n in nums: total += n"]
+  },
+  {
+    "id": "p1-10",
+    "tier": 1,
+    "prompt": "Write a function `factorial(n)` that returns n! (n factorial). Assume n >= 0.",
+    "functionName": "factorial",
+    "starterCode": "def factorial(n):\n    pass\n",
+    "testCases": [
+      { "input": "0", "expected": "1" },
+      { "input": "1", "expected": "1" },
+      { "input": "5", "expected": "120" },
+      { "input": "10", "expected": "3628800" }
+    ],
+    "hints": ["Base case: 0! = 1. Multiply from 1 to n.", "Use a loop or recursion."]
+  },
+  {
+    "id": "p2-01",
+    "tier": 2,
+    "prompt": "Write a function `fizzbuzz(n)` that returns a list of strings from 1 to n. For multiples of 3 use 'Fizz', for multiples of 5 use 'Buzz', for multiples of both use 'FizzBuzz', otherwise the number as a string.",
+    "functionName": "fizzbuzz",
+    "starterCode": "def fizzbuzz(n):\n    pass\n",
+    "testCases": [
+      { "input": "5", "expected": "['1', '2', 'Fizz', '4', 'Buzz']" },
+      { "input": "15", "expected": "['1', '2', 'Fizz', '4', 'Buzz', 'Fizz', '7', '8', 'Fizz', 'Buzz', '11', 'Fizz', '13', '14', 'FizzBuzz']" },
+      { "input": "1", "expected": "['1']" }
+    ],
+    "hints": ["Check divisibility by 15 first, then 3, then 5.", "Build a result list with a for loop."]
+  },
+  {
+    "id": "p2-02",
+    "tier": 2,
+    "prompt": "Write a function `is_palindrome(s)` that returns True if s is a palindrome (ignoring case and spaces).",
+    "functionName": "is_palindrome",
+    "starterCode": "def is_palindrome(s):\n    pass\n",
+    "testCases": [
+      { "input": "\"racecar\"", "expected": "True" },
+      { "input": "\"hello\"", "expected": "False" },
+      { "input": "\"A man a plan a canal Panama\"", "expected": "True" },
+      { "input": "\"\"", "expected": "True" }
+    ],
+    "hints": ["Normalize: lowercase and remove spaces.", "Compare the cleaned string with its reverse."]
+  },
+  {
+    "id": "p2-03",
+    "tier": 2,
+    "prompt": "Write a function `two_sum(nums, target)` that returns a list of two indices whose values sum to target. Assume exactly one solution exists.",
+    "functionName": "two_sum",
+    "starterCode": "def two_sum(nums, target):\n    pass\n",
+    "testCases": [
+      { "input": "[2, 7, 11, 15], 9", "expected": "[0, 1]" },
+      { "input": "[3, 2, 4], 6", "expected": "[1, 2]" },
+      { "input": "[1, 5, 3, 7], 8", "expected": "[1, 2]" }
+    ],
+    "hints": ["Use a dictionary to store seen values and their indices.", "For each number, check if target - number is in the dictionary."]
+  },
+  {
+    "id": "p2-04",
+    "tier": 2,
+    "prompt": "Write a function `flatten(lst)` that flattens a nested list into a single list. Example: `[1, [2, [3]], 4]` → `[1, 2, 3, 4]`.",
+    "functionName": "flatten",
+    "starterCode": "def flatten(lst):\n    pass\n",
+    "testCases": [
+      { "input": "[1, [2, [3]], 4]", "expected": "[1, 2, 3, 4]" },
+      { "input": "[[1, 2], [3, 4]]", "expected": "[1, 2, 3, 4]" },
+      { "input": "[1, 2, 3]", "expected": "[1, 2, 3]" },
+      { "input": "[]", "expected": "[]" }
+    ],
+    "hints": ["Use recursion: if an element is a list, flatten it.", "Check isinstance(item, list) for each element."]
+  },
+  {
+    "id": "p2-05",
+    "tier": 2,
+    "prompt": "Write a function `unique_chars(s)` that returns True if all characters in the string are unique (no repeats).",
+    "functionName": "unique_chars",
+    "starterCode": "def unique_chars(s):\n    pass\n",
+    "testCases": [
+      { "input": "\"abcdef\"", "expected": "True" },
+      { "input": "\"hello\"", "expected": "False" },
+      { "input": "\"\"", "expected": "True" },
+      { "input": "\"abcda\"", "expected": "False" }
+    ],
+    "hints": ["Use a set to track seen characters.", "len(set(s)) == len(s)"]
+  },
+  {
+    "id": "p2-06",
+    "tier": 2,
+    "prompt": "Write a function `word_count(s)` that returns a dictionary mapping each word (lowercased) to its count in the string.",
+    "functionName": "word_count",
+    "starterCode": "def word_count(s):\n    pass\n",
+    "testCases": [
+      { "input": "\"the cat sat on the mat\"", "expected": "{'the': 2, 'cat': 1, 'sat': 1, 'on': 1, 'mat': 1}" },
+      { "input": "\"hello\"", "expected": "{'hello': 1}" },
+      { "input": "\"a a a b\"", "expected": "{'a': 3, 'b': 1}" }
+    ],
+    "hints": ["Split the string into words, iterate and count.", "Use a dictionary. For each word, increment its count."]
+  },
+  {
+    "id": "p2-07",
+    "tier": 2,
+    "prompt": "Write a function `fibonacci(n)` that returns the first n Fibonacci numbers as a list. fib(1)=[0], fib(2)=[0,1], etc.",
+    "functionName": "fibonacci",
+    "starterCode": "def fibonacci(n):\n    pass\n",
+    "testCases": [
+      { "input": "1", "expected": "[0]" },
+      { "input": "2", "expected": "[0, 1]" },
+      { "input": "7", "expected": "[0, 1, 1, 2, 3, 5, 8]" }
+    ],
+    "hints": ["Start with [0, 1] and extend by summing the last two.", "Handle edge cases n=1 and n=2 separately."]
+  },
+  {
+    "id": "p2-08",
+    "tier": 2,
+    "prompt": "Write a function `remove_duplicates(lst)` that returns a new list with duplicates removed, preserving original order.",
+    "functionName": "remove_duplicates",
+    "starterCode": "def remove_duplicates(lst):\n    pass\n",
+    "testCases": [
+      { "input": "[1, 2, 2, 3, 1, 4]", "expected": "[1, 2, 3, 4]" },
+      { "input": "[]", "expected": "[]" },
+      { "input": "[1, 1, 1]", "expected": "[1]" }
+    ],
+    "hints": ["Use a set to track seen items, append to result if not seen.", "Iterate and check membership in the seen set."]
+  },
+  {
+    "id": "p2-09",
+    "tier": 2,
+    "prompt": "Write a function `rotate_list(lst, k)` that rotates a list to the right by k positions. Example: `rotate_list([1,2,3,4,5], 2)` → `[4,5,1,2,3]`.",
+    "functionName": "rotate_list",
+    "starterCode": "def rotate_list(lst, k):\n    pass\n",
+    "testCases": [
+      { "input": "[1,2,3,4,5], 2", "expected": "[4, 5, 1, 2, 3]" },
+      { "input": "[1,2,3], 0", "expected": "[1, 2, 3]" },
+      { "input": "[1,2,3], 3", "expected": "[1, 2, 3]" },
+      { "input": "[], 5", "expected": "[]" }
+    ],
+    "hints": ["Use k % len(lst) to handle k larger than the list.", "Slice: lst[-k:] + lst[:-k]"]
+  },
+  {
+    "id": "p2-10",
+    "tier": 2,
+    "prompt": "Write a function `title_case(s)` that capitalizes the first letter of each word. Do not use the built-in `.title()` method.",
+    "functionName": "title_case",
+    "starterCode": "def title_case(s):\n    pass\n",
+    "testCases": [
+      { "input": "\"hello world\"", "expected": "Hello World" },
+      { "input": "\"python is fun\"", "expected": "Python Is Fun" },
+      { "input": "\"a\"", "expected": "A" },
+      { "input": "\"\"", "expected": "" }
+    ],
+    "hints": ["Split into words, capitalize first char, join back.", "word[0].upper() + word[1:] for each word"]
+  },
+  {
+    "id": "p3-01",
+    "tier": 3,
+    "prompt": "Write a function `group_anagrams(words)` that groups a list of words into lists of anagrams. Return a list of groups (order doesn't matter within groups).",
+    "functionName": "group_anagrams",
+    "starterCode": "def group_anagrams(words):\n    pass\n",
+    "testCases": [
+      { "input": "[\"eat\", \"tea\", \"tan\", \"ate\", \"nat\", \"bat\"]", "expected": "[['eat', 'tea', 'ate'], ['tan', 'nat'], ['bat']]" },
+      { "input": "[\"\"]", "expected": "[['']]" },
+      { "input": "[\"a\"]", "expected": "[['a']]" }
+    ],
+    "hints": ["Use sorted characters as dictionary keys.", "defaultdict(list) with ''.join(sorted(word)) as key."]
+  },
+  {
+    "id": "p3-02",
+    "tier": 3,
+    "prompt": "Write a function `matrix_transpose(matrix)` that returns the transpose of a 2D matrix (list of lists).",
+    "functionName": "matrix_transpose",
+    "starterCode": "def matrix_transpose(matrix):\n    pass\n",
+    "testCases": [
+      { "input": "[[1,2,3],[4,5,6]]", "expected": "[[1, 4], [2, 5], [3, 6]]" },
+      { "input": "[[1]]", "expected": "[[1]]" },
+      { "input": "[[1,2],[3,4],[5,6]]", "expected": "[[1, 3, 5], [2, 4, 6]]" }
+    ],
+    "hints": ["The element at [i][j] becomes [j][i].", "Use list(map(list, zip(*matrix))) or nested loops."]
+  },
+  {
+    "id": "p3-03",
+    "tier": 3,
+    "prompt": "Write a function `longest_common_prefix(strs)` that returns the longest common prefix among a list of strings.",
+    "functionName": "longest_common_prefix",
+    "starterCode": "def longest_common_prefix(strs):\n    pass\n",
+    "testCases": [
+      { "input": "[\"flower\",\"flow\",\"flight\"]", "expected": "fl" },
+      { "input": "[\"dog\",\"racecar\",\"car\"]", "expected": "" },
+      { "input": "[\"abc\"]", "expected": "abc" },
+      { "input": "[]", "expected": "" }
+    ],
+    "hints": ["Compare characters at each position across all strings.", "Stop when characters don't match or a string ends."]
+  },
+  {
+    "id": "p3-04",
+    "tier": 3,
+    "prompt": "Write a function `merge_sorted(a, b)` that merges two sorted lists into a single sorted list without using `sorted()` or `.sort()`.",
+    "functionName": "merge_sorted",
+    "starterCode": "def merge_sorted(a, b):\n    pass\n",
+    "testCases": [
+      { "input": "[1,3,5], [2,4,6]", "expected": "[1, 2, 3, 4, 5, 6]" },
+      { "input": "[], [1,2]", "expected": "[1, 2]" },
+      { "input": "[1,1], [1,1]", "expected": "[1, 1, 1, 1]" }
+    ],
+    "hints": ["Use two pointers, one for each list.", "Compare elements at each pointer, append smaller, advance that pointer."]
+  },
+  {
+    "id": "p3-05",
+    "tier": 3,
+    "prompt": "Write a function `valid_parentheses(s)` that returns True if the string of brackets `()[]{}` is valid (properly opened and closed in order).",
+    "functionName": "valid_parentheses",
+    "starterCode": "def valid_parentheses(s):\n    pass\n",
+    "testCases": [
+      { "input": "\"()[]{}\"", "expected": "True" },
+      { "input": "\"(]\"", "expected": "False" },
+      { "input": "\"([{}])\"", "expected": "True" },
+      { "input": "\"\"", "expected": "True" },
+      { "input": "\"{[}]\"", "expected": "False" }
+    ],
+    "hints": ["Use a stack. Push opening brackets, pop on closing.", "Map closing to opening: ')':'(', etc."]
+  },
+  {
+    "id": "p3-06",
+    "tier": 3,
+    "prompt": "Write a function `run_length_encode(s)` that returns a run-length encoded string. Example: `\"aaabbc\"` → `\"3a2b1c\"`.",
+    "functionName": "run_length_encode",
+    "starterCode": "def run_length_encode(s):\n    pass\n",
+    "testCases": [
+      { "input": "\"aaabbc\"", "expected": "3a2b1c" },
+      { "input": "\"abc\"", "expected": "1a1b1c" },
+      { "input": "\"aaa\"", "expected": "3a" },
+      { "input": "\"\"", "expected": "" }
+    ],
+    "hints": ["Track current character and count, emit when character changes.", "Don't forget to emit the last group."]
+  },
+  {
+    "id": "p3-07",
+    "tier": 3,
+    "prompt": "Write a function `spiral_order(matrix)` that returns elements of a 2D matrix in spiral order (clockwise from top-left).",
+    "functionName": "spiral_order",
+    "starterCode": "def spiral_order(matrix):\n    pass\n",
+    "testCases": [
+      { "input": "[[1,2,3],[4,5,6],[7,8,9]]", "expected": "[1, 2, 3, 6, 9, 8, 7, 4, 5]" },
+      { "input": "[[1,2],[3,4]]", "expected": "[1, 2, 4, 3]" },
+      { "input": "[[1]]", "expected": "[1]" }
+    ],
+    "hints": ["Use four boundaries: top, bottom, left, right. Shrink after each pass.", "Traverse right, down, left, up in each cycle."]
+  },
+  {
+    "id": "p3-08",
+    "tier": 3,
+    "prompt": "Write a function `binary_search(lst, target)` that returns the index of target in a sorted list, or -1 if not found. Do not use built-ins.",
+    "functionName": "binary_search",
+    "starterCode": "def binary_search(lst, target):\n    pass\n",
+    "testCases": [
+      { "input": "[1,3,5,7,9], 5", "expected": "2" },
+      { "input": "[1,3,5,7,9], 4", "expected": "-1" },
+      { "input": "[1], 1", "expected": "0" },
+      { "input": "[], 1", "expected": "-1" }
+    ],
+    "hints": ["Maintain low and high pointers.", "mid = (low + high) // 2, compare lst[mid] with target."]
+  },
+  {
+    "id": "p3-09",
+    "tier": 3,
+    "prompt": "Write a function `normalize(data)` that normalizes a list of numbers to the range [0, 1]. Return a list of floats rounded to 4 decimal places. If all values are equal, return a list of 0.0.",
+    "functionName": "normalize",
+    "starterCode": "def normalize(data):\n    pass\n",
+    "testCases": [
+      { "input": "[1, 2, 3, 4, 5]", "expected": "[0.0, 0.25, 0.5, 0.75, 1.0]" },
+      { "input": "[10, 10, 10]", "expected": "[0.0, 0.0, 0.0]" },
+      { "input": "[0, 100]", "expected": "[0.0, 1.0]" }
+    ],
+    "hints": ["min-max normalization: (x - min) / (max - min).", "Handle the edge case where max == min."]
+  },
+  {
+    "id": "p3-10",
+    "tier": 3,
+    "prompt": "Write a function `compress(s)` that performs basic string compression. `\"aabcccccaaa\"` → `\"a2b1c5a3\"`. If compressed isn't shorter, return original.",
+    "functionName": "compress",
+    "starterCode": "def compress(s):\n    pass\n",
+    "testCases": [
+      { "input": "\"aabcccccaaa\"", "expected": "a2b1c5a3" },
+      { "input": "\"abc\"", "expected": "abc" },
+      { "input": "\"aaa\"", "expected": "a3" },
+      { "input": "\"\"", "expected": "" }
+    ],
+    "hints": ["Track current char and count, emit char+count on change.", "Compare lengths at the end."]
+  },
+  {
+    "id": "p4-01",
+    "tier": 4,
+    "prompt": "Write a function `lru_cache(capacity)` that returns two functions: `get(key)` and `put(key, value)`. `get` returns the value or -1. `put` inserts or updates. Evict least recently used when over capacity. Return as a dict: `{'get': get_fn, 'put': put_fn}`.",
+    "functionName": "lru_cache",
+    "starterCode": "def lru_cache(capacity):\n    pass\n",
+    "testCases": [
+      { "input": "2", "expected": "test_lru" }
+    ],
+    "hints": ["Use an OrderedDict or a dict + list.", "Move accessed keys to the end on get/put."]
+  },
+  {
+    "id": "p4-02",
+    "tier": 4,
+    "prompt": "Write a function `max_subarray_sum(nums)` that returns the maximum sum of any contiguous subarray (Kadane's algorithm).",
+    "functionName": "max_subarray_sum",
+    "starterCode": "def max_subarray_sum(nums):\n    pass\n",
+    "testCases": [
+      { "input": "[-2,1,-3,4,-1,2,1,-5,4]", "expected": "6" },
+      { "input": "[1]", "expected": "1" },
+      { "input": "[-1,-2,-3]", "expected": "-1" },
+      { "input": "[5,4,-1,7,8]", "expected": "23" }
+    ],
+    "hints": ["Track current_sum and max_sum.", "current_sum = max(num, current_sum + num) at each step."]
+  },
+  {
+    "id": "p4-03",
+    "tier": 4,
+    "prompt": "Write a function `deep_flatten(obj)` that recursively flattens nested dicts into a single dict with dot-separated keys. Example: `{'a': {'b': 1}}` → `{'a.b': 1}`.",
+    "functionName": "deep_flatten",
+    "starterCode": "def deep_flatten(obj, prefix=''):\n    pass\n",
+    "testCases": [
+      { "input": "{'a': {'b': 1, 'c': 2}}", "expected": "{'a.b': 1, 'a.c': 2}" },
+      { "input": "{'x': 1}", "expected": "{'x': 1}" },
+      { "input": "{'a': {'b': {'c': 3}}}", "expected": "{'a.b.c': 3}" }
+    ],
+    "hints": ["Recursion: if value is a dict, recurse with updated prefix.", "Build the key as prefix + '.' + key (strip leading dot)."]
+  },
+  {
+    "id": "p4-04",
+    "tier": 4,
+    "prompt": "Write a function `permutations(lst)` that returns all permutations of a list as a list of lists.",
+    "functionName": "permutations",
+    "starterCode": "def permutations(lst):\n    pass\n",
+    "testCases": [
+      { "input": "[1, 2, 3]", "expected": "[[1, 2, 3], [1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]]" },
+      { "input": "[1]", "expected": "[[1]]" },
+      { "input": "[]", "expected": "[[]]" }
+    ],
+    "hints": ["Use recursion: pick each element as first, permute the rest.", "Base case: empty list returns [[]]."]
+  },
+  {
+    "id": "p4-05",
+    "tier": 4,
+    "prompt": "Write a function `eval_rpn(tokens)` that evaluates a Reverse Polish Notation expression. Tokens are strings: numbers or operators (+, -, *, /). Division truncates toward zero.",
+    "functionName": "eval_rpn",
+    "starterCode": "def eval_rpn(tokens):\n    pass\n",
+    "testCases": [
+      { "input": "[\"2\",\"1\",\"+\",\"3\",\"*\"]", "expected": "9" },
+      { "input": "[\"4\",\"13\",\"5\",\"/\",\"+\"]", "expected": "6" },
+      { "input": "[\"10\",\"6\",\"9\",\"3\",\"+\",\"-11\",\"*\",\"/\",\"*\",\"17\",\"+\",\"5\",\"+\"]", "expected": "22" }
+    ],
+    "hints": ["Use a stack. Push numbers, pop two on operators.", "For division, use int(a / b) to truncate toward zero."]
+  },
+  {
+    "id": "p4-06",
+    "tier": 4,
+    "prompt": "Write a function `longest_unique_substring(s)` that returns the length of the longest substring without repeating characters.",
+    "functionName": "longest_unique_substring",
+    "starterCode": "def longest_unique_substring(s):\n    pass\n",
+    "testCases": [
+      { "input": "\"abcabcbb\"", "expected": "3" },
+      { "input": "\"bbbbb\"", "expected": "1" },
+      { "input": "\"pwwkew\"", "expected": "3" },
+      { "input": "\"\"", "expected": "0" }
+    ],
+    "hints": ["Sliding window with a set of characters.", "Move left pointer when a duplicate is found."]
+  },
+  {
+    "id": "p4-07",
+    "tier": 4,
+    "prompt": "Write a function `topological_sort(graph)` that takes an adjacency list (dict of node → list of dependencies) and returns a valid topological order. Assume the graph is a DAG.",
+    "functionName": "topological_sort",
+    "starterCode": "def topological_sort(graph):\n    pass\n",
+    "testCases": [
+      { "input": "{'a': ['b', 'c'], 'b': ['d'], 'c': ['d'], 'd': []}", "expected": "['d', 'b', 'c', 'a']" },
+      { "input": "{'a': []}", "expected": "['a']" }
+    ],
+    "hints": ["Use Kahn's algorithm: start with nodes that have no incoming edges.", "Or use DFS with a visited set and post-order collection."]
+  },
+  {
+    "id": "p5-01",
+    "tier": 5,
+    "prompt": "Write a function `solve_sudoku(board)` that solves a 9x9 Sudoku puzzle in-place. Empty cells are 0. Return the solved board.",
+    "functionName": "solve_sudoku",
+    "starterCode": "def solve_sudoku(board):\n    pass\n",
+    "testCases": [
+      { "input": "[[5,3,0,0,7,0,0,0,0],[6,0,0,1,9,5,0,0,0],[0,9,8,0,0,0,0,6,0],[8,0,0,0,6,0,0,0,3],[4,0,0,8,0,3,0,0,1],[7,0,0,0,2,0,0,0,6],[0,6,0,0,0,0,2,8,0],[0,0,0,4,1,9,0,0,5],[0,0,0,0,8,0,0,7,9]]", "expected": "[[5,3,4,6,7,8,9,1,2],[6,7,2,1,9,5,3,4,8],[1,9,8,3,4,2,5,6,7],[8,5,9,7,6,1,4,2,3],[4,2,6,8,5,3,7,9,1],[7,1,3,9,2,4,8,5,6],[9,6,1,5,3,7,2,8,4],[2,8,7,4,1,9,6,3,5],[3,4,5,2,8,6,1,7,9]]" }
+    ],
+    "hints": ["Use backtracking: find an empty cell, try 1-9, check constraints.", "Check row, column, and 3x3 box for each candidate."]
+  },
+  {
+    "id": "p5-02",
+    "tier": 5,
+    "prompt": "Write a function `knapsack(weights, values, capacity)` that returns the maximum value achievable with the given capacity (0/1 knapsack).",
+    "functionName": "knapsack",
+    "starterCode": "def knapsack(weights, values, capacity):\n    pass\n",
+    "testCases": [
+      { "input": "[1, 3, 4, 5], [1, 4, 5, 7], 7", "expected": "9" },
+      { "input": "[2, 3, 4], [3, 4, 5], 5", "expected": "7" },
+      { "input": "[1], [10], 0", "expected": "0" }
+    ],
+    "hints": ["Dynamic programming: dp[i][w] = max value using first i items with capacity w.", "Optimize space: use a 1D array, iterate capacity in reverse."]
+  },
+  {
+    "id": "p5-03",
+    "tier": 5,
+    "prompt": "Write a function `min_edit_distance(s1, s2)` that returns the minimum number of single-character edits (insert, delete, replace) to transform s1 into s2.",
+    "functionName": "min_edit_distance",
+    "starterCode": "def min_edit_distance(s1, s2):\n    pass\n",
+    "testCases": [
+      { "input": "\"kitten\", \"sitting\"", "expected": "3" },
+      { "input": "\"\", \"abc\"", "expected": "3" },
+      { "input": "\"abc\", \"abc\"", "expected": "0" },
+      { "input": "\"horse\", \"ros\"", "expected": "3" }
+    ],
+    "hints": ["Classic DP: dp[i][j] = edit distance for s1[:i] and s2[:j].", "Three operations: insert (dp[i][j-1]+1), delete (dp[i-1][j]+1), replace (dp[i-1][j-1] + (0 or 1))."]
+  },
+  {
+    "id": "p5-04",
+    "tier": 5,
+    "prompt": "Write a function `trie_search(words, queries)` that builds a trie from `words` and returns a list of booleans indicating whether each query has a prefix match in the trie.",
+    "functionName": "trie_search",
+    "starterCode": "def trie_search(words, queries):\n    pass\n",
+    "testCases": [
+      { "input": "[\"apple\", \"app\", \"banana\"], [\"app\", \"ap\", \"ban\", \"cat\"]", "expected": "[True, True, True, False]" },
+      { "input": "[\"hello\"], [\"hell\", \"hello\", \"hellos\"]", "expected": "[True, True, False]" }
+    ],
+    "hints": ["Build a trie (nested dicts). Insert each word character by character.", "For queries, traverse the trie. A prefix match means every character is found."]
+  },
+  {
+    "id": "p5-05",
+    "tier": 5,
+    "prompt": "Write a function `longest_increasing_subsequence(nums)` that returns the length of the longest strictly increasing subsequence.",
+    "functionName": "longest_increasing_subsequence",
+    "starterCode": "def longest_increasing_subsequence(nums):\n    pass\n",
+    "testCases": [
+      { "input": "[10,9,2,5,3,7,101,18]", "expected": "4" },
+      { "input": "[0,1,0,3,2,3]", "expected": "4" },
+      { "input": "[7,7,7,7]", "expected": "1" }
+    ],
+    "hints": ["O(n²) DP: dp[i] = length of LIS ending at index i.", "O(n log n): maintain a tails array and use binary search."]
+  }
+]

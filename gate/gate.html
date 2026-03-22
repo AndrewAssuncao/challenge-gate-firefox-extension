@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Challenge Gate</title>
+  <link rel="stylesheet" href="gate.css">
+  <link rel="stylesheet" href="typing.css">
+  <link rel="stylesheet" href="python.css">
+</head>
+<body>
+  <div id="gate-container">
+    <!-- Header -->
+    <header id="gate-header">
+      <div class="gate-header-row">
+        <div class="gate-domain" id="gate-domain"></div>
+        <div id="challenge-toggle" class="hidden">
+          <button class="toggle-btn active" data-challenge="typing">typing</button>
+          <button class="toggle-btn" data-challenge="python">python</button>
+        </div>
+      </div>
+      <div class="gate-subtitle" id="gate-subtitle">Complete the challenge to continue.</div>
+    </header>
+
+    <!-- Cap exceeded state -->
+    <div id="cap-exceeded" class="hidden">
+      <div class="cap-message">Daily time limit reached.</div>
+      <div class="cap-detail" id="cap-detail"></div>
+    </div>
+
+    <!-- Typing challenge -->
+    <div id="typing-challenge" class="challenge-panel hidden">
+      <div id="typing-config">
+        <button class="word-count-btn active" data-count="25">25</button>
+        <button class="word-count-btn" data-count="50">50</button>
+      </div>
+      <div id="typing-stats">
+        <span id="typing-wpm"></span>
+        <span id="typing-accuracy"></span>
+        <span id="typing-progress"></span>
+      </div>
+      <div id="words-wrapper" tabindex="0">
+        <div id="caret"></div>
+        <div id="words"></div>
+        <div id="focus-warning" class="hidden">Click or press any key to focus</div>
+      </div>
+      <div id="typing-result" class="hidden">
+        <div id="typing-result-text"></div>
+        <button id="typing-retry" class="gate-btn">retry</button>
+      </div>
+    </div>
+
+    <!-- Python challenge -->
+    <div id="python-challenge" class="challenge-panel hidden">
+      <div id="python-meta">
+        <span id="python-tier">Tier 1</span>
+        <span id="python-progress"></span>
+      </div>
+      <div id="python-prompt"></div>
+      <div id="python-editor-container">
+        <div id="python-line-numbers"></div>
+        <textarea id="python-editor" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+        <pre id="python-highlight" aria-hidden="true"></pre>
+      </div>
+      <div id="python-actions">
+        <button id="python-run" class="gate-btn">Run</button>
+        <button id="python-hint" class="gate-btn gate-btn-ghost">Hint</button>
+        <button id="python-help" class="gate-btn gate-btn-ghost">Help</button>
+        <button id="python-skip" class="gate-btn gate-btn-ghost">Skip</button>
+      </div>
+      <div id="python-output" class="hidden">
+        <div id="python-test-results"></div>
+      </div>
+      <div id="python-loading" class="hidden">
+        <div class="loading-text">Loading Python runtime<span class="loading-dots"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="typing.js"></script>
+  <script src="challenge-provider.js"></script>
+  <script src="python.js"></script>
+  <script src="gate.js"></script>
+</body>
+</html>

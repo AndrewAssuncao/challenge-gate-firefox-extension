@@ -1,0 +1,201 @@
+/* Typing Challenge — Monkeytype-style */
+
+/* Config bar (word count selector) */
+#typing-config {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 12px;
+  justify-content: center;
+}
+
+.word-count-btn {
+  padding: 4px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.12s;
+}
+
+.word-count-btn:hover {
+  color: var(--text);
+}
+
+.word-count-btn.active {
+  color: var(--text-bright);
+}
+
+/* Stats bar */
+#typing-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+  font-family: var(--mono);
+  align-items: baseline;
+  min-height: 36px;
+}
+
+#typing-wpm {
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--text-dim);
+  letter-spacing: -0.03em;
+  transition: color 0.2s;
+  min-width: 80px;
+}
+
+#typing-wpm.live {
+  color: var(--text);
+}
+
+#typing-accuracy {
+  font-size: 16px;
+  color: var(--text-dim);
+  transition: color 0.2s;
+}
+
+#typing-accuracy.failing {
+  color: var(--error);
+}
+
+#typing-progress {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+/* Words wrapper — the main typing area */
+#words-wrapper {
+  position: relative;
+  padding: 4px 0;
+  margin-bottom: 24px;
+  min-height: 120px;
+  max-height: 160px;
+  overflow: hidden;
+  outline: none;
+  cursor: text;
+  user-select: none;
+  -moz-user-select: none;
+}
+
+/* Focus warning overlay */
+#focus-warning {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 10, 0.75);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 13px;
+  z-index: 5;
+  backdrop-filter: blur(3px);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Words container */
+#words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 24px;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  position: relative;
+  transition: transform 0.15s ease;
+}
+
+/* Individual word */
+.word {
+  display: inline-flex;
+}
+
+/* Individual letter */
+.letter {
+  color: var(--text-dim);
+  transition: color 0.05s;
+  position: relative;
+}
+
+.letter.correct {
+  color: var(--text-bright);
+}
+
+.letter.incorrect {
+  color: var(--error);
+}
+
+.letter.incorrect-extra {
+  color: var(--error-extra);
+  font-size: 0;
+  width: 0;
+  overflow: hidden;
+}
+
+/* Active word indicator — subtle underline */
+.word.active {
+  /* intentionally minimal — the caret is the indicator */
+}
+
+.word.error {
+  border-bottom: 2px solid var(--error);
+  margin-bottom: -2px;
+}
+
+/* Caret */
+#caret {
+  position: absolute;
+  width: 2.5px;
+  height: 32px;
+  background: var(--accent);
+  border-radius: 2px;
+  z-index: 2;
+  transition: left 0.08s ease, top 0.08s ease;
+  animation: caretBlink 1s ease infinite;
+  pointer-events: none;
+}
+
+#caret.typing {
+  animation: none;
+  opacity: 1;
+}
+
+@keyframes caretBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Result */
+#typing-result {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+  animation: fadeIn 0.2s ease;
+}
+
+#typing-result-text {
+  font-family: var(--mono);
+  font-size: 14px;
+  flex: 1;
+}
+
+#typing-result-text.pass {
+  color: var(--success);
+}
+
+#typing-result-text.fail {
+  color: var(--error);
+}
+
+/* Smooth line scroll */
+#words-wrapper.smooth-scroll #words {
+  transition: transform 0.2s ease;
+}

@@ -1,0 +1,9 @@
+.DS_Store
+.claude/
+.env
+.env.*
+*.log
+web-ext-artifacts/
+dist/
+build/
+node_modules/
