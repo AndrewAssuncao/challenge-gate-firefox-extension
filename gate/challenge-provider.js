@@ -112,6 +112,12 @@ ${profile.totalSessions === 0 ? 'This is the user\'s FIRST challenge ever. Start
 ${profile.weakAreas.length > 0 ? `Consider revisiting: ${weakList}` : ''}
 
 If the user has been passing consistently on this topic (3+ passes), introduce a slightly harder variant or begin transitioning to the next concept.
+Every test case input must be a valid Python argument list fragment that can be inserted directly into \`function_name(<input>)\`.
+If a test case uses a string, the string MUST be quoted inside the JSON string.
+Examples:
+- Good single string input: "\\"Hello World\\""
+- Good mixed input: "[1, 2, 3], 5"
+- Bad input: "Hello World"
 
 Respond with ONLY valid JSON (no markdown fences, no commentary):
 {
@@ -128,6 +134,207 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
   "hints": ["Subtle hint", "More direct hint"],
   "afterSolve": "1-2 sentence note about what they just learned or a related tip. Shown after passing."
 }`;
+  }
+
+  function extractFunctionParamInfo(starterCode, functionName) {
+    const fallback = { minArgs: 1, maxArgs: 1 };
+    if (!starterCode || !functionName) return fallback;
+
+    const escapedName = functionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = String(starterCode).match(new RegExp(`def\\s+${escapedName}\\s*\\(([^)]*)\\)`));
+    if (!match) return fallback;
+
+    const params = splitTopLevelArgs(match[1] || '')
+      .map(p => p.trim())
+      .filter(Boolean);
+
+    let minArgs = 0;
+    let maxArgs = 0;
+    let hasVarArgs = false;
+
+    for (const param of params) {
+      if (param.startsWith('*')) {
+        hasVarArgs = true;
+        continue;
+      }
+
+      const normalized = param.split(':')[0].trim();
+      if (!normalized) continue;
+      maxArgs++;
+      if (!normalized.includes('=')) minArgs++;
+    }
+
+    return {
+      minArgs,
+      maxArgs: hasVarArgs ? Number.POSITIVE_INFINITY : maxArgs
+    };
+  }
+
+  function splitTopLevelArgs(input) {
+    const src = String(input || '');
+    if (!src.trim()) return [];
+
+    const parts = [];
+    let current = '';
+    let depth = 0;
+    let quote = null;
+    let escapeNext = false;
+
+    for (let i = 0; i < src.length; i++) {
+      const ch = src[i];
+
+      if (quote) {
+        current += ch;
+        if (escapeNext) {
+          escapeNext = false;
+        } else if (ch === '\\') {
+          escapeNext = true;
+        } else if (ch === quote) {
+          quote = null;
+        }
+        continue;
+      }
+
+      if (ch === '"' || ch === '\'') {
+        quote = ch;
+        current += ch;
+        continue;
+      }
+
+      if (ch === '(' || ch === '[' || ch === '{') {
+        depth++;
+        current += ch;
+        continue;
+      }
+
+      if (ch === ')' || ch === ']' || ch === '}') {
+        depth = Math.max(0, depth - 1);
+        current += ch;
+        continue;
+      }
+
+      if (ch === ',' && depth === 0) {
+        parts.push(current.trim());
+        current = '';
+        continue;
+      }
+
+      current += ch;
+    }
+
+    if (current.trim() || src.endsWith(',')) {
+      parts.push(current.trim());
+    }
+
+    return parts.filter(part => part.length > 0);
+  }
+
+  function isSimpleLiteralToken(token) {
+    const value = String(token || '').trim();
+    if (!value) return false;
+
+    if (/^[-+]?\d+(?:\.\d+)?$/.test(value)) return true;
+    if (/^[-+]?\d+(?:\.\d+)?[eE][-+]?\d+$/.test(value)) return true;
+    if (/^(True|False|None)$/.test(value)) return true;
+    if (/^(['"]).*\1$/s.test(value)) return true;
+    if (/^[\[{(].*[\]})]$/s.test(value)) return true;
+
+    return false;
+  }
+
+  function looksLikeBareStringToken(token) {
+    const value = String(token || '').trim();
+    if (!value) return false;
+    if (isSimpleLiteralToken(value)) return false;
+    if (/[=<>+\-*/%]/.test(value)) return false;
+    if (/[:]/.test(value)) return false;
+    if (/[\[\]{}()]/.test(value)) return false;
+    return /[A-Za-z]/.test(value);
+  }
+
+  function quoteToken(token) {
+    return JSON.stringify(String(token || '').trim());
+  }
+
+  function repairLikelyMalformedInput(input, paramInfo) {
+    const raw = String(input || '').trim();
+    if (!raw) return { input: raw, repaired: false };
+    if (raw.includes('"') || raw.includes('\'')) return { input: raw, repaired: false };
+
+    const tokens = splitTopLevelArgs(raw);
+    if (tokens.length === 0) return { input: raw, repaired: false };
+
+    const minArgs = Number.isFinite(paramInfo?.minArgs) ? paramInfo.minArgs : 1;
+    const maxArgs = paramInfo?.maxArgs ?? 1;
+    const withinRange = tokens.length >= minArgs &&
+      (maxArgs === Number.POSITIVE_INFINITY || tokens.length <= maxArgs);
+    if (!withinRange) return { input: raw, repaired: false };
+
+    let repaired = false;
+    const repairedTokens = tokens.map(token => {
+      if (looksLikeBareStringToken(token)) {
+        repaired = true;
+        return quoteToken(token);
+      }
+      return token;
+    });
+
+    if (!repaired) return { input: raw, repaired: false };
+
+    return {
+      input: repairedTokens.join(', '),
+      repaired: true,
+      reason: 'Quoted bare string arguments in malformed test input.'
+    };
+  }
+
+  function sanitizeChallenge(challenge) {
+    if (!challenge || typeof challenge !== 'object') return null;
+
+    const sanitized = {
+      ...challenge,
+      id: String(challenge.id || `m-${Math.random().toString(36).slice(2, 10)}`),
+      prompt: String(challenge.prompt || ''),
+      functionName: String(challenge.functionName || ''),
+      starterCode: String(challenge.starterCode || ''),
+      teachingNote: challenge.teachingNote ? String(challenge.teachingNote) : null,
+      conceptIntroduced: challenge.conceptIntroduced ? String(challenge.conceptIntroduced) : null,
+      afterSolve: challenge.afterSolve ? String(challenge.afterSolve) : ''
+    };
+
+    if (!sanitized.functionName || !sanitized.starterCode) return null;
+
+    const paramInfo = extractFunctionParamInfo(sanitized.starterCode, sanitized.functionName);
+    const repairNotes = [];
+
+    const testCases = Array.isArray(challenge.testCases) ? challenge.testCases : [];
+    sanitized.testCases = testCases
+      .map(tc => {
+        if (!tc || typeof tc.input === 'undefined' || typeof tc.expected === 'undefined') return null;
+
+        const repaired = repairLikelyMalformedInput(tc.input, paramInfo);
+        if (repaired.repaired) {
+          repairNotes.push(`Adjusted test input ${JSON.stringify(String(tc.input))} -> ${JSON.stringify(repaired.input)}`);
+        }
+
+        return {
+          input: repaired.input,
+          expected: String(tc.expected)
+        };
+      })
+      .filter(Boolean);
+
+    if (sanitized.testCases.length === 0) return null;
+
+    sanitized.hints = Array.isArray(challenge.hints)
+      ? challenge.hints.map(h => String(h)).filter(Boolean)
+      : [];
+
+    if (repairNotes.length) {
+      sanitized.__repairNotes = repairNotes;
+    }
+
+    return sanitized;
   }
 
   // ── Generate via Claude API (called through background script) ──────────
@@ -151,10 +358,10 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
       if (!content) return null;
 
       const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const challenge = JSON.parse(cleaned);
+      const challenge = sanitizeChallenge(JSON.parse(cleaned));
 
       // Validate
-      if (!challenge.functionName || !challenge.testCases || !challenge.starterCode) {
+      if (!challenge || !challenge.functionName || !challenge.testCases || !challenge.starterCode) {
         console.error('[Mentor] Invalid challenge structure');
         return null;
       }
@@ -184,13 +391,24 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
     if (!localProblems || localProblems.length === 0) return null;
     const completed = profile.recentChallenges.map(c => c.id);
     const tier = (CURRICULUM[profile.currentTopicIndex] || CURRICULUM[0]).tier;
-    const eligible = localProblems.filter(p =>
+    const sanitizePool = (problems) => problems.map(sanitizeChallenge).filter(Boolean);
+    const eligible = sanitizePool(localProblems.filter(p =>
       p.tier === tier && !completed.includes(p.id)
-    );
+    ));
     if (eligible.length > 0) return eligible[Math.floor(Math.random() * eligible.length)];
-    const all = localProblems.filter(p => p.tier === tier);
+    const all = sanitizePool(localProblems.filter(p => p.tier === tier));
     if (all.length > 0) return all[Math.floor(Math.random() * all.length)];
-    return localProblems[Math.floor(Math.random() * localProblems.length)];
+    const fallback = sanitizePool(localProblems);
+    return fallback[Math.floor(Math.random() * fallback.length)] || null;
+  }
+
+  function recomputeWeakAreas(profile) {
+    profile.weakAreas = Object.entries(profile.topicHistory)
+      .filter(([_, data]) => data.attempts >= 3 && (data.passes / data.attempts) < 0.5)
+      .map(([id]) => {
+        const topic = CURRICULUM.find(c => c.id === id);
+        return topic ? topic.name : id;
+      });
   }
 
   // ── Profile management ──────────────────────────────────────────────────
@@ -235,12 +453,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
     }
 
     // Identify weak areas: topics with pass rate < 50% and 3+ attempts
-    profile.weakAreas = Object.entries(profile.topicHistory)
-      .filter(([_, data]) => data.attempts >= 3 && (data.passes / data.attempts) < 0.5)
-      .map(([id]) => {
-        const topic = CURRICULUM.find(c => c.id === id);
-        return topic ? topic.name : id;
-      });
+    recomputeWeakAreas(profile);
 
     // Session tracking
     const today = new Date().toISOString().slice(0, 10);
@@ -257,6 +470,33 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
     }
     profile.totalSessions++;
 
+    return profile;
+  }
+
+  function removeChallengeAttempts(profile, challenge) {
+    if (!profile || !challenge?.id) return profile;
+
+    const attemptsToRemove = profile.recentChallenges.filter(entry => entry.id === challenge.id);
+    if (attemptsToRemove.length === 0) return profile;
+
+    profile.recentChallenges = profile.recentChallenges.filter(entry => entry.id !== challenge.id);
+
+    const topicId = challenge.topic || attemptsToRemove[0]?.topic || 'unknown';
+    const topicStats = profile.topicHistory[topicId];
+    if (topicStats) {
+      const removedPasses = attemptsToRemove.filter(entry => entry.passed).length;
+      const removedFails = attemptsToRemove.length - removedPasses;
+
+      topicStats.attempts = Math.max(0, topicStats.attempts - attemptsToRemove.length);
+      topicStats.passes = Math.max(0, topicStats.passes - removedPasses);
+      topicStats.fails = Math.max(0, topicStats.fails - removedFails);
+
+      if (topicStats.attempts === 0 && topicStats.passes === 0 && topicStats.fails === 0) {
+        delete profile.topicHistory[topicId];
+      }
+    }
+
+    recomputeWeakAreas(profile);
     return profile;
   }
 
@@ -283,6 +523,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
   return {
     getChallenge,
     updateProfileAfterChallenge,
+    removeChallengeAttempts,
     defaultProfile,
     CURRICULUM
   };

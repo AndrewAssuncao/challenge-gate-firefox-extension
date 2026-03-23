@@ -42,44 +42,52 @@ const DEFAULT_SITES = [
 // ── Storage helpers ─────────────────────────────────────────────────────────
 
 async function loadState() {
-  const data = await browser.storage.local.get([
-    'blockedSites', 'unlocks', 'timeTracking', 'settings', 'progression', 'learningProfile', 'typingHistory'
-  ]);
+  try {
+    const data = await browser.storage.local.get([
+      'blockedSites', 'unlocks', 'timeTracking', 'settings', 'progression', 'learningProfile', 'typingHistory'
+    ]);
 
-  if (!data.blockedSites) {
-    // First run — seed defaults
-    blockedSites = DEFAULT_SITES;
-    await browser.storage.local.set({ blockedSites });
-  } else {
-    blockedSites = data.blockedSites;
+    if (!data.blockedSites) {
+      // First run — seed defaults
+      blockedSites = DEFAULT_SITES;
+      await browser.storage.local.set({ blockedSites }).catch(logStorageError);
+    } else {
+      blockedSites = data.blockedSites;
+    }
+
+    unlocks = data.unlocks || {};
+    timeTracking = data.timeTracking || {};
+    settings = { ...settings, ...(data.settings || {}) };
+    progression = { ...progression, ...(data.progression || {}) };
+    learningProfile = data.learningProfile || null;
+    typingHistory = data.typingHistory || [];
+  } catch (err) {
+    console.error('[Challenge Gate] Failed to load state:', err);
   }
+}
 
-  unlocks = data.unlocks || {};
-  timeTracking = data.timeTracking || {};
-  settings = { ...settings, ...(data.settings || {}) };
-  progression = { ...progression, ...(data.progression || {}) };
-  learningProfile = data.learningProfile || null;
-  typingHistory = data.typingHistory || [];
+function logStorageError(err) {
+  console.error('[Challenge Gate] Storage write failed:', err);
 }
 
 async function saveUnlocks() {
-  await browser.storage.local.set({ unlocks });
+  await browser.storage.local.set({ unlocks }).catch(logStorageError);
 }
 
 async function saveTimeTracking() {
-  await browser.storage.local.set({ timeTracking });
+  await browser.storage.local.set({ timeTracking }).catch(logStorageError);
 }
 
 async function saveProgression() {
-  await browser.storage.local.set({ progression });
+  await browser.storage.local.set({ progression }).catch(logStorageError);
 }
 
 async function saveSettings() {
-  await browser.storage.local.set({ settings });
+  await browser.storage.local.set({ settings }).catch(logStorageError);
 }
 
 async function saveBlockedSites() {
-  await browser.storage.local.set({ blockedSites });
+  await browser.storage.local.set({ blockedSites }).catch(logStorageError);
 }
 
 // Keep in-memory state in sync when other pages write to storage
@@ -236,8 +244,8 @@ browser.idle.onStateChanged.addListener((state) => {
   updateActiveTab();
 });
 
-// Safety-net flush every 30s
-setInterval(() => flushActiveTrack(), 30000);
+// Safety-net flush every 30s (store ID so it could be cleared if needed)
+let flushIntervalId = setInterval(() => flushActiveTrack(), 30000);
 
 // ── Message handling (from gate, popup, dashboard) ──────────────────────────
 
@@ -344,6 +352,8 @@ const messageHandlers = {
     }
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -358,8 +368,10 @@ const messageHandlers = {
           messages: [
             { role: 'user', content: msg.prompt }
           ]
-        })
+        }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errText = await response.text();
@@ -383,7 +395,7 @@ const messageHandlers = {
 
   async saveLearningProfile(msg) {
     learningProfile = msg.profile;
-    await browser.storage.local.set({ learningProfile });
+    await browser.storage.local.set({ learningProfile }).catch(logStorageError);
     return { success: true };
   },
 
@@ -397,7 +409,7 @@ const messageHandlers = {
     if (typingHistory.length > 500) {
       typingHistory = typingHistory.slice(-500);
     }
-    await browser.storage.local.set({ typingHistory });
+    await browser.storage.local.set({ typingHistory }).catch(logStorageError);
     return { success: true };
   },
 
@@ -405,6 +417,29 @@ const messageHandlers = {
     return typingHistory;
   }
 };
+
+// ── Suspend / shutdown handler ───────────────────────────────────────────────
+// Flush in-memory state to storage before the background script is unloaded
+// (e.g. system sleep, browser shutdown, extension update).
+
+function flushAllState() {
+  // Use synchronous-ish best-effort saves. In MV2 background scripts,
+  // the browser may kill us shortly after this fires, so we fire-and-forget.
+  flushActiveTrack().catch(logStorageError);
+  saveUnlocks().catch(logStorageError);
+  saveTimeTracking().catch(logStorageError);
+  saveProgression().catch(logStorageError);
+  saveSettings().catch(logStorageError);
+  saveBlockedSites().catch(logStorageError);
+}
+
+// idle state "locked" fires when the OS is about to sleep (screen locks)
+// We already handle idle → updateActiveTab, but also flush everything.
+browser.idle.onStateChanged.addListener((state) => {
+  if (state === 'locked' || state === 'idle') {
+    flushAllState();
+  }
+});
 
 // ── Init ────────────────────────────────────────────────────────────────────
 

@@ -527,5 +527,13 @@ const TypingChallenge = (() => {
     }
   }
 
+  // Clean up timeout when the gate page is unloaded
+  window.addEventListener('beforeunload', () => {
+    if (caretBlinkTimeout) {
+      clearTimeout(caretBlinkTimeout);
+      caretBlinkTimeout = null;
+    }
+  });
+
   return { init };
 })();

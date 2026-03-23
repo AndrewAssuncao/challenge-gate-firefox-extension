@@ -77,7 +77,7 @@ const Gate = (() => {
 
   async function onChallengeComplete() {
     if (isSettingsGate) {
-      window.opener?.postMessage({ type: 'settingsUnlocked' }, '*');
+      window.opener?.postMessage({ type: 'settingsUnlocked' }, window.opener.origin || '*');
       window.close();
       return;
     }

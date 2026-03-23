@@ -12,6 +12,8 @@ const PythonChallenge = (() => {
   let worker = null;
   let pyodideReady = false;
   let profile = null;
+  let challengeResolved = false;
+  let lastRunDiagnostics = null;
 
   const promptEl = document.getElementById('python-prompt');
   const editorEl = document.getElementById('python-editor');
@@ -27,11 +29,27 @@ const PythonChallenge = (() => {
   const skipBtn = document.getElementById('python-skip');
   const helpBtn = document.getElementById('python-help');
   let lastErrorOutput = '';
+  let fallbackTimeout = null;
+
+  function destroyWorker() {
+    if (worker) {
+      worker.terminate();
+      worker = null;
+      pyodideReady = false;
+    }
+  }
 
   async function init(cfg) {
+    // Clear any pending fallback timeout from a previous init
+    if (fallbackTimeout) {
+      clearTimeout(fallbackTimeout);
+      fallbackTimeout = null;
+    }
     config = cfg;
     hintsUsed = 0;
     lastErrorOutput = '';
+    lastRunDiagnostics = null;
+    challengeResolved = false;
     outputEl.classList.add('hidden');
     hintBtn.disabled = false;
     helpBtn.disabled = false;
@@ -63,7 +81,8 @@ const PythonChallenge = (() => {
     if (!challenge) {
       // Total failure — fall back to typing
       promptEl.innerHTML = '<span style="color: var(--text-dim)">Could not load a challenge. Switching to typing.</span>';
-      setTimeout(() => {
+      fallbackTimeout = setTimeout(() => {
+        fallbackTimeout = null;
         // Switch to typing via the toggle
         const typingBtn = document.querySelector('.toggle-btn[data-challenge="typing"]');
         if (typingBtn) typingBtn.click();
@@ -271,15 +290,18 @@ const PythonChallenge = (() => {
     worker.onerror = (err) => {
       console.error('[Challenge Gate] Pyodide worker error:', err);
       loadingEl.classList.add('hidden');
+      // Clean up the broken worker so a retry can create a fresh one
+      destroyWorker();
     };
   }
 
   async function runCode() {
-    if (!pyodideReady || !challenge) return;
+    if (!pyodideReady || !challenge || challengeResolved) return;
 
     runBtn.disabled = true;
     runBtn.textContent = 'Running…';
     outputEl.classList.add('hidden');
+    lastRunDiagnostics = null;
 
     worker.postMessage({
       type: 'run',
@@ -290,9 +312,12 @@ const PythonChallenge = (() => {
   }
 
   function handleResult(data) {
+    if (challengeResolved) return;
+
     runBtn.disabled = false;
     runBtn.textContent = 'Run';
     outputEl.classList.remove('hidden');
+    lastRunDiagnostics = data.diagnostics || null;
 
     if (data.error) {
       lastErrorOutput = data.error;
@@ -303,8 +328,16 @@ const PythonChallenge = (() => {
       return;
     }
 
+    if (lastRunDiagnostics?.unrecoverableChallengeIssue) {
+      const issueText = buildChallengeIssueText(lastRunDiagnostics);
+      void bypassChallengeForIssue(issueText);
+      return;
+    }
+
     const results = data.results || [];
     const allPassed = results.length > 0 && results.every(r => r.passed);
+    const repairNoticeHtml = buildRepairNoticeHtml(lastRunDiagnostics);
+    const repairNoticeText = buildRepairNoticeText(lastRunDiagnostics);
 
     let html = results.map((r, i) => {
       const cls = r.passed ? 'pass' : 'fail';
@@ -319,6 +352,7 @@ const PythonChallenge = (() => {
     if (allPassed) {
       lastErrorOutput = '';
       html += `<div class="test-summary all-pass">All tests passed.</div>`;
+      html += repairNoticeHtml;
       // Show after-solve feedback from mentor
       if (challenge.afterSolve) {
         html += `<div class="after-solve">${escapeHtml(challenge.afterSolve)}</div>`;
@@ -333,8 +367,12 @@ const PythonChallenge = (() => {
           if (r.error) msg += ` (${r.error})`;
           return msg;
         }).join('\n');
+      if (repairNoticeText) {
+        lastErrorOutput = `${lastErrorOutput}\n${repairNoticeText}`.trim();
+      }
       const passCount = results.filter(r => r.passed).length;
       html += `<div class="test-summary some-fail">${passCount}/${results.length} tests passed.</div>`;
+      html += repairNoticeHtml;
       onFailed();
     }
 
@@ -342,6 +380,9 @@ const PythonChallenge = (() => {
   }
 
   async function onPassed() {
+    if (challengeResolved) return;
+    challengeResolved = true;
+
     // Update learning profile
     profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, true, challengeSource);
     await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
@@ -362,6 +403,8 @@ const PythonChallenge = (() => {
   }
 
   async function onFailed() {
+    if (challengeResolved) return;
+
     // Record failure in learning profile (no gate unlock)
     profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource);
     await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
@@ -387,25 +430,42 @@ const PythonChallenge = (() => {
   }
 
   async function askForHelp() {
-    if (!challenge) return;
+    if (!challenge || challengeResolved) return;
 
     helpBtn.disabled = true;
     helpBtn.textContent = 'Thinking…';
 
     const userCode = editorEl.value;
-    const prompt = `You are a concise Python tutor. The student is working on this problem:
+    const prompt = `You are reviewing a Python challenge in a browser extension.
+Decide whether the problem is in the student's code or in the challenge itself.
+Return ONLY valid JSON:
+{
+  "kind": "student_issue" | "challenge_issue",
+  "message": "2-4 sentence response",
+  "suggestedAction": "none" | "bypass"
+}
+
+Use "challenge_issue" only if the prompt/tests are flawed or the test harness is calling the function incorrectly.
+If it is a challenge issue, say that plainly and do not blame the student's logic.
+Do not provide the full solution.
+
+The student is working on this problem:
 
 Problem: ${challenge.prompt}
 Function signature: ${challenge.starterCode}
+Test cases:
+${formatTestCasesForHelp()}
 
 Their current code:
 \`\`\`python
 ${userCode}
 \`\`\`
 
-${lastErrorOutput ? `Their code produced these errors/failures:\n${lastErrorOutput}` : 'They have not run the code yet, or it produced no output.'}
+${lastErrorOutput ? `Their latest run produced these errors/failures:\n${lastErrorOutput}` : 'They have not run the code yet, or it produced no output.'}
 
-Give a SHORT, targeted hint (2-4 sentences max). Don't give the solution. Point them toward the right approach or identify the specific mistake in their logic. Be direct and dry — no encouragement, no fluff.`;
+Runtime diagnostics:
+${formatDiagnosticsForHelp(lastRunDiagnostics)}
+`;
 
     try {
       const response = await browser.runtime.sendMessage({
@@ -413,7 +473,8 @@ Give a SHORT, targeted hint (2-4 sentences max). Don't give the solution. Point 
         prompt
       });
 
-      const helpText = response.content || response.error || 'Could not get help right now.';
+      const parsed = parseHelpResponse(response.content || '');
+      const helpText = parsed?.message || response.content || response.error || 'Could not get help right now.';
 
       // Show help in output area
       const existing = outputEl.querySelector('.python-help');
@@ -424,15 +485,23 @@ Give a SHORT, targeted hint (2-4 sentences max). Don't give the solution. Point 
       div.textContent = helpText;
       outputEl.classList.remove('hidden');
       outputEl.appendChild(div);
+
+      if (parsed?.kind === 'challenge_issue') {
+        await bypassChallengeForIssue(parsed.message);
+      }
     } catch (err) {
       console.error('[Challenge Gate] Help request failed:', err);
     }
 
-    helpBtn.disabled = false;
-    helpBtn.textContent = 'Help';
+    if (!challengeResolved) {
+      helpBtn.disabled = false;
+      helpBtn.textContent = 'Help';
+    }
   }
 
   async function skipChallenge() {
+    if (challengeResolved) return;
+
     // Record a skip (counts as a fail for progression)
     if (challenge) {
       profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource);
@@ -442,11 +511,112 @@ Give a SHORT, targeted hint (2-4 sentences max). Don't give the solution. Point 
     init(config);
   }
 
+  function buildRepairNoticeText(diagnostics) {
+    const repairedTests = diagnostics?.repairedTests || [];
+    if (!repairedTests.length) return '';
+
+    const lines = repairedTests.map(test => {
+      const normalized = test.normalizedInput ? ` -> ${test.normalizedInput}` : '';
+      return `Adjusted malformed test input ${test.input}${normalized}`;
+    });
+
+    return `Repaired test harness:\n${lines.join('\n')}`;
+  }
+
+  function buildRepairNoticeHtml(diagnostics) {
+    const text = buildRepairNoticeText(diagnostics);
+    if (!text) return '';
+    return `<div class="python-help">${escapeHtml(text)}</div>`;
+  }
+
+  function buildChallengeIssueText(diagnostics) {
+    const issueLines = (diagnostics?.unrecoverableTests || []).map(test => {
+      return `Broken test input ${test.input}: ${test.error}`;
+    });
+
+    const detail = issueLines.length
+      ? issueLines.join('\n')
+      : 'The challenge test harness could not run safely.';
+
+    return `${detail}\nChallenge issue detected. Access granted. This one will not count against your progress.`;
+  }
+
+  function formatTestCasesForHelp() {
+    if (!challenge?.testCases?.length) return '(No test cases available)';
+    return challenge.testCases
+      .map((tc, i) => `Test ${i + 1}: input=${tc.input} expected=${tc.expected}`)
+      .join('\n');
+  }
+
+  function formatDiagnosticsForHelp(diagnostics) {
+    if (!diagnostics) return 'None.';
+
+    const parts = [];
+    if (diagnostics.repairedTests?.length) {
+      parts.push(buildRepairNoticeText(diagnostics));
+    }
+    if (diagnostics.unrecoverableTests?.length) {
+      parts.push(buildChallengeIssueText(diagnostics));
+    }
+    return parts.length ? parts.join('\n') : 'None.';
+  }
+
+  function parseHelpResponse(raw) {
+    const text = String(raw || '').trim();
+    if (!text) return null;
+
+    const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+
+    try {
+      const parsed = JSON.parse(match[0]);
+      if (!parsed || typeof parsed !== 'object') return null;
+      return {
+        kind: parsed.kind,
+        message: String(parsed.message || ''),
+        suggestedAction: parsed.suggestedAction || 'none'
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async function bypassChallengeForIssue(reason) {
+    if (challengeResolved) return;
+    challengeResolved = true;
+
+    runBtn.disabled = true;
+    hintBtn.disabled = true;
+    helpBtn.disabled = true;
+    skipBtn.disabled = true;
+    outputEl.classList.remove('hidden');
+    lastErrorOutput = reason;
+
+    resultsEl.innerHTML = `
+      <div class="test-case fail">
+        <div class="test-label">Challenge issue</div>
+        <div class="test-error">${escapeHtml(reason)}</div>
+      </div>
+      <div class="test-summary all-pass">Broken challenge detected. Access granted. This attempt was removed from challenge progress history.</div>
+    `;
+
+    if (challenge && profile) {
+      profile = ChallengeProvider.removeChallengeAttempts(profile, challenge);
+      await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
+    }
+
+    setTimeout(() => Gate.onChallengeComplete(), 1500);
+  }
+
   function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
   }
 
-  return { init };
+  // Clean up worker when the gate page is unloaded
+  window.addEventListener('beforeunload', destroyWorker);
+
+  return { init, destroyWorker };
 })();

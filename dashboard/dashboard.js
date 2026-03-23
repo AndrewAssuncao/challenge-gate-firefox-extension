@@ -62,10 +62,19 @@ const Dashboard = (() => {
     render();
     bindEvents();
     // Refresh every 15 seconds
+    if (refreshTimer) clearInterval(refreshTimer);
     refreshTimer = setInterval(async () => {
       await loadState();
       render();
     }, 15000);
+
+    // Clean up timer when page unloads to prevent leaks
+    window.addEventListener('beforeunload', () => {
+      if (refreshTimer) {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+      }
+    });
   }
 
   async function loadState() {
@@ -472,12 +481,17 @@ const Dashboard = (() => {
     });
 
     // Listen for settings unlock from gate window
+    let settingsLockTimeout = null;
     window.addEventListener('message', (e) => {
+      // Only accept messages from our own extension origin
+      if (e.origin !== window.location.origin) return;
       if (e.data?.type === 'settingsUnlocked') {
         settingsUnlocked = true;
         render();
-        // Auto-lock after 5 minutes
-        setTimeout(() => {
+        // Auto-lock after 5 minutes (clear previous timer to prevent accumulation)
+        if (settingsLockTimeout) clearTimeout(settingsLockTimeout);
+        settingsLockTimeout = setTimeout(() => {
+          settingsLockTimeout = null;
           settingsUnlocked = false;
           render();
         }, 5 * 60 * 1000);
