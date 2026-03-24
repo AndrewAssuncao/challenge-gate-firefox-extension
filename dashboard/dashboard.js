@@ -737,17 +737,16 @@ const Dashboard = (() => {
     const edges = KNOWLEDGE_GRAPH.edges;
     const disciplines = KNOWLEDGE_GRAPH.disciplines;
 
-    // Layout: 3 columns (python, terminal, git), nodes stacked by tier
+    // Layout parameters
     const colWidth = 260;
-    const rowHeight = 28;
+    const rowHeight = 26;
+    const tierGap = 14; // extra gap between tiers
     const padLeft = 40;
-    const padTop = 30;
-    const nodeRadius = 8;
+    const padTop = 38;
+    const nodeRadius = 7;
 
-    // Assign positions
-    const colCounts = { python: 0, terminal: 0, git: 0 };
-    const maxTier = Math.max(...nodes.map(n => n.tier));
     const positions = {};
+    const tierBounds = {}; // track y-range per tier for dividers
 
     // Group by discipline and tier
     const groups = {};
@@ -757,18 +756,33 @@ const Dashboard = (() => {
       groups[key].push(n);
     }
 
-    // Position nodes: column by discipline, y by tier + index within tier
+    // Position nodes with tier gaps
     let maxY = 0;
+    const allTiers = [...new Set(nodes.map(n => n.tier))].sort((a, b) => a - b);
+
     for (const n of nodes) {
       const colIdx = n.discipline === 'python' ? 0 : n.discipline === 'terminal' ? 1 : 2;
       const tierNodes = groups[`${n.discipline}:${n.tier}`];
       const idxInTier = tierNodes.indexOf(n);
-      const tierOffset = nodes.filter(nn => nn.discipline === n.discipline && nn.tier < n.tier).length;
+
+      // Count nodes in previous tiers for this discipline
+      let yOffset = 0;
+      for (const t of allTiers) {
+        if (t >= n.tier) break;
+        const count = (groups[`${n.discipline}:${t}`] || []).length;
+        yOffset += count * rowHeight + tierGap;
+      }
+      yOffset += idxInTier * rowHeight;
 
       const x = padLeft + colIdx * colWidth + colWidth / 2;
-      const y = padTop + (tierOffset + idxInTier) * rowHeight;
+      const y = padTop + yOffset;
       positions[n.id] = { x, y, node: n };
       if (y > maxY) maxY = y;
+
+      // Track tier bounds for dividers
+      if (!tierBounds[n.tier]) tierBounds[n.tier] = { minY: y, maxY: y };
+      tierBounds[n.tier].minY = Math.min(tierBounds[n.tier].minY, y);
+      tierBounds[n.tier].maxY = Math.max(tierBounds[n.tier].maxY, y);
     }
 
     const width = padLeft + 3 * colWidth;
@@ -784,43 +798,35 @@ const Dashboard = (() => {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
-    // Column headers
-    ctx.font = '11px system-ui, sans-serif';
+    // Tier dividers and labels
+    ctx.font = '9px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    for (const [tier, bounds] of Object.entries(tierBounds)) {
+      const y = bounds.minY - 10;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(padLeft - 28, y, width - padLeft + 10, 1);
+      ctx.fillStyle = '#444';
+      ctx.fillText(`T${tier}`, 8, y + 4);
+    }
+
+    // Column headers with subtle underline
+    ctx.font = 'bold 11px system-ui, sans-serif';
     for (const [key, disc] of Object.entries(disciplines)) {
       const colIdx = key === 'python' ? 0 : key === 'terminal' ? 1 : 2;
       const x = padLeft + colIdx * colWidth + colWidth / 2;
       ctx.fillStyle = disc.color;
       ctx.textAlign = 'center';
       ctx.fillText(disc.label, x, 16);
+      // Underline
+      ctx.fillStyle = disc.color;
+      ctx.globalAlpha = 0.2;
+      ctx.fillRect(x - 30, 20, 60, 1);
+      ctx.globalAlpha = 1;
     }
 
-    // Draw cross-discipline edges
-    ctx.globalAlpha = 0.2;
-    for (const edge of edges) {
-      const from = positions[edge.from];
-      const to = positions[edge.to];
-      if (!from || !to) continue;
-
-      ctx.beginPath();
-      ctx.strokeStyle = '#4a7eff';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      ctx.moveTo(from.x, from.y);
-      // Bezier curve for cross-discipline edges
-      const midX = (from.x + to.x) / 2;
-      ctx.quadraticCurveTo(midX, (from.y + to.y) / 2 - 20, to.x, to.y);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-    ctx.globalAlpha = 1;
-
-    // Draw same-discipline edges (sequential curriculum connections)
-    ctx.globalAlpha = 0.15;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([]);
+    // Draw same-discipline edges (sequential)
     for (const n of nodes) {
       const idx = nodes.indexOf(n);
-      // Find next node in same discipline
       const next = nodes.find((nn, ni) => ni > idx && nn.discipline === n.discipline);
       if (next) {
         const from = positions[n.id];
@@ -828,47 +834,100 @@ const Dashboard = (() => {
         if (from && to) {
           ctx.beginPath();
           ctx.strokeStyle = disciplines[n.discipline]?.color || '#666';
+          ctx.globalAlpha = 0.12;
+          ctx.lineWidth = 1;
           ctx.moveTo(from.x, from.y + nodeRadius);
           ctx.lineTo(to.x, to.y - nodeRadius);
           ctx.stroke();
+          ctx.globalAlpha = 1;
         }
       }
     }
-    ctx.globalAlpha = 1;
+
+    // Draw cross-discipline edges with gradient-like coloring
+    for (const edge of edges) {
+      const from = positions[edge.from];
+      const to = positions[edge.to];
+      if (!from || !to) continue;
+
+      // Both nodes connected? Use brighter line if both are mastered/learning
+      const fromMastery = from.node.mastery;
+      const toMastery = to.node.mastery;
+      const bothActive = fromMastery !== 'not_started' && toMastery !== 'not_started';
+
+      ctx.beginPath();
+      ctx.strokeStyle = bothActive ? '#4a7eff' : '#2a3a5a';
+      ctx.globalAlpha = bothActive ? 0.35 : 0.12;
+      ctx.lineWidth = bothActive ? 1.5 : 0.8;
+      ctx.setLineDash(bothActive ? [] : [3, 4]);
+
+      // S-curve for better visual
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const cx1 = from.x + dx * 0.4;
+      const cy1 = from.y + dy * 0.1;
+      const cx2 = to.x - dx * 0.4;
+      const cy2 = to.y - dy * 0.1;
+      ctx.moveTo(from.x, from.y);
+      ctx.bezierCurveTo(cx1, cy1, cx2, cy2, to.x, to.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
 
     // Draw nodes
-    const nodePositions = []; // for hover detection
+    const nodePositions = [];
     for (const n of nodes) {
       const pos = positions[n.id];
       if (!pos) continue;
 
       const discColor = disciplines[n.discipline]?.color || '#666';
-      let fillColor;
+      let fillColor, glowColor;
       switch (n.mastery) {
-        case 'mastered': fillColor = '#44aa44'; break;
-        case 'learning': fillColor = '#1a4a8a'; break;
-        case 'started': fillColor = '#1a4a8a'; break;
-        default: fillColor = '#2a2a2a';
+        case 'mastered':
+          fillColor = '#44aa44';
+          glowColor = 'rgba(68, 170, 68, 0.3)';
+          break;
+        case 'learning':
+          fillColor = '#1a4a8a';
+          glowColor = 'rgba(74, 126, 255, 0.2)';
+          break;
+        case 'started':
+          fillColor = '#1a4a8a';
+          glowColor = null;
+          break;
+        default:
+          fillColor = '#1e1e1e';
+          glowColor = null;
       }
 
+      // Glow for mastered/learning nodes
+      if (glowColor) {
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, nodeRadius + 4, 0, Math.PI * 2);
+        ctx.fillStyle = glowColor;
+        ctx.fill();
+      }
+
+      // Node circle
       ctx.beginPath();
       ctx.arc(pos.x, pos.y, nodeRadius, 0, Math.PI * 2);
       ctx.fillStyle = fillColor;
       ctx.fill();
-      ctx.strokeStyle = discColor;
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = n.mastery === 'not_started' ? '#333' : discColor;
+      ctx.lineWidth = n.mastery === 'not_started' ? 1 : 1.5;
       ctx.stroke();
 
       // Label
       ctx.font = '10px system-ui, sans-serif';
-      ctx.fillStyle = n.mastery === 'not_started' ? '#555' : '#aaa';
+      ctx.fillStyle = n.mastery === 'not_started' ? '#444' : n.mastery === 'mastered' ? '#ccc' : '#888';
       ctx.textAlign = 'left';
       ctx.fillText(n.label, pos.x + nodeRadius + 5, pos.y + 3);
 
-      nodePositions.push({ ...pos, r: nodeRadius + 40, node: n }); // wider hit area for label
+      nodePositions.push({ ...pos, r: nodeRadius + 50, node: n });
     }
 
-    // Tooltip on hover
+    // Tooltip
     canvas.onmousemove = (e) => {
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
@@ -881,10 +940,14 @@ const Dashboard = (() => {
       const tooltip = els.knowledgeTooltip;
       if (hit) {
         const n = hit.node;
-        const conf = typeof SpacedRepetition !== 'undefined' ? SpacedRepetition.LABELS[n.confidence] : '';
-        tooltip.textContent = `${n.label} (${n.discipline}) · ${n.passes}/${n.attempts} · ${conf || n.mastery}`;
+        const confLabel = (typeof SpacedRepetition !== 'undefined' && SpacedRepetition.LABELS)
+          ? SpacedRepetition.LABELS[n.confidence] : n.mastery;
+        const edgeCount = edges.filter(e => e.from === n.id || e.to === n.id).length;
+        let text = `${n.label} (${n.discipline}) · ${n.passes}/${n.attempts} · ${confLabel}`;
+        if (edgeCount > 0) text += ` · ${edgeCount} connection${edgeCount > 1 ? 's' : ''}`;
+        tooltip.textContent = text;
         tooltip.style.left = (mx + 12) + 'px';
-        tooltip.style.top = (my - 24) + 'px';
+        tooltip.style.top = (my - 28) + 'px';
         tooltip.classList.remove('hidden');
       } else {
         tooltip.classList.add('hidden');

@@ -492,6 +492,10 @@ button.toggle-btn.active {
 #knowledge-wrapper {
   position: relative;
   overflow-x: auto;
+  background: #0d0d0d;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 0;
 }
 
 #knowledge-canvas {
@@ -500,13 +504,14 @@ button.toggle-btn.active {
 
 #knowledge-tooltip {
   position: absolute;
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 4px 8px;
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  padding: 6px 10px;
   font-family: var(--mono);
   font-size: 11px;
   color: var(--text);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   white-space: nowrap;
   pointer-events: none;
   z-index: 10;

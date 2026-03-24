@@ -68,7 +68,7 @@ const TerminalChallengeProvider = (() => {
 
   // ── Build mentor prompt ─────────────────────────────────────────────────
 
-  function buildMentorPrompt(profile, isSettingsGate) {
+  function buildMentorPrompt(profile, isSettingsGate, crossDisciplineContext) {
     const currentTopic = TERMINAL_CURRICULUM[profile.currentTopicIndex] || TERMINAL_CURRICULUM[0];
     const tier = currentTopic.tier;
 
@@ -121,7 +121,7 @@ ${weakList || '(None identified)'}
 
 ## Recent Challenges
 ${recentSummary || '  (None yet)'}
-${reviewContext}
+${reviewContext}${crossDisciplineContext || ''}
 ## Instructions
 Generate a challenge that is ${difficulty}. Focus on the current topic: "${currentTopic.name}".
 
@@ -232,9 +232,24 @@ IMPORTANT: The "filesystem" field must be a flat object mapping path strings to 
   // ── Generate via Claude API ────────────────────────────────────────────
 
   async function generateFromClaude(profile, isSettingsGate) {
-    const prompt = buildMentorPrompt(profile, isSettingsGate);
     const currentTopic = TERMINAL_CURRICULUM[profile.currentTopicIndex] || TERMINAL_CURRICULUM[0];
     const useOpus = currentTopic.tier >= 5;
+
+    // Fetch cross-discipline context
+    let crossCtx = '';
+    if (typeof CrossDiscipline !== 'undefined') {
+      try {
+        const [pyProfile, gitProfile] = await Promise.all([
+          browser.runtime.sendMessage({ type: 'getLearningProfile' }),
+          browser.runtime.sendMessage({ type: 'getGitLearningProfile' })
+        ]);
+        crossCtx = CrossDiscipline.getContext('terminal', currentTopic.id, {
+          python: pyProfile, terminal: profile, git: gitProfile
+        });
+      } catch {}
+    }
+
+    const prompt = buildMentorPrompt(profile, isSettingsGate, crossCtx);
 
     try {
       const response = await browser.runtime.sendMessage({

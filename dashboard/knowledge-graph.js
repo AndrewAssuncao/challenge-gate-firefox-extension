@@ -1,7 +1,10 @@
-/* Knowledge Graph — Cross-discipline dependency map for the dashboard.
+/* Knowledge Graph — Cross-discipline dependency map.
 
    Defines nodes (all topics from all curricula) and edges
-   (cross-discipline dependencies that show compound learning). */
+   (cross-discipline dependencies that show compound learning).
+
+   Also provides getCrossDisciplineContext() which mentor prompts
+   use to tell Claude about related mastered topics in other disciplines. */
 
 'use strict';
 
@@ -15,35 +18,57 @@ const KNOWLEDGE_GRAPH = {
 
   // Cross-discipline edges (same-discipline edges are implicit from curriculum order)
   edges: [
-    // Terminal ↔ Python
+    // ── Terminal ↔ Python (Tier 1-2: Foundations) ─────────────────────
+    { from: 'py:basics', to: 'term:navigation', label: 'First steps in both' },
+    { from: 'py:strings', to: 'term:grep_search', label: 'Pattern matching' },
+    { from: 'py:loops', to: 'term:shell_scripting', label: 'Loop constructs' },
+    { from: 'py:dicts', to: 'term:environment', label: 'Key-value mappings' },
+
+    // ── Terminal ↔ Python (Tier 2-3: Intermediate) ───────────────────
     { from: 'term:redirection', to: 'py:file_patterns', label: 'I/O concepts' },
-    { from: 'py:functions', to: 'term:shell_scripting', label: 'Function patterns' },
+    { from: 'py:sorting', to: 'term:text_processing', label: 'Sort & filter' },
     { from: 'py:error_handling', to: 'term:environment', label: 'Debugging with env' },
+    { from: 'py:recursion', to: 'term:remove_find', label: 'Recursive traversal' },
+
+    // ── Terminal ↔ Python (Tier 3-5: Advanced) ───────────────────────
+    { from: 'py:functions', to: 'term:shell_scripting', label: 'Function patterns' },
     { from: 'py:classes', to: 'term:docker_basics', label: 'OOP in containers' },
+    { from: 'py:concurrency', to: 'term:processes', label: 'Processes & threads' },
     { from: 'term:package_managers', to: 'py:testing', label: 'pip + pytest' },
     { from: 'py:data_pipelines', to: 'term:text_processing', label: 'Data transforms' },
+    { from: 'term:sed_awk', to: 'py:string_ops', label: 'Text processing' },
+    { from: 'term:docker_compose', to: 'py:api_patterns', label: 'Service architecture' },
 
-    // Terminal ↔ Git
+    // ── Terminal ↔ Git ───────────────────────────────────────────────
     { from: 'term:git_basics', to: 'git:git_init', label: 'Git fundamentals' },
     { from: 'term:git_branching', to: 'git:git_branch_create', label: 'Branching' },
     { from: 'term:git_advanced', to: 'git:git_rebase', label: 'Advanced git' },
     { from: 'term:ssh', to: 'git:git_workflows', label: 'Remote workflows' },
+    { from: 'term:permissions', to: 'git:git_init', label: 'File ownership' },
+    { from: 'term:aliases_history', to: 'git:git_log', label: 'History & shortcuts' },
 
-    // Python ↔ Git
+    // ── Python ↔ Git ─────────────────────────────────────────────────
     { from: 'py:testing', to: 'git:git_workflows', label: 'CI/CD patterns' },
     { from: 'py:refactoring', to: 'git:git_rebase', label: 'Clean history' },
-    { from: 'py:composition', to: 'git:git_merge_3way', label: 'Collaboration' }
+    { from: 'py:composition', to: 'git:git_merge_3way', label: 'Collaboration' },
+    { from: 'py:error_handling', to: 'git:git_bisect', label: 'Systematic debugging' },
+    { from: 'py:data_structs', to: 'git:git_stash', label: 'Stack operations' },
+    { from: 'py:algorithms', to: 'git:git_rebase_interactive', label: 'Reordering logic' },
+    { from: 'py:design_patterns', to: 'git:git_workflows', label: 'Workflow patterns' },
+
+    // ── Git ↔ Terminal (reverse direction for some) ──────────────────
+    { from: 'git:git_log', to: 'term:grep_search', label: 'Searching history' },
+    { from: 'git:git_stash', to: 'term:aliases_history', label: 'Workflow shortcuts' }
   ]
 };
 
 /**
  * Build the full node list from available learning profiles.
- * Each node: { id, label, discipline, tier, mastery, passes, attempts }
+ * Each node: { id, label, discipline, tier, mastery, confidence, passes, attempts }
  */
 function buildKnowledgeNodes(pythonProfile, terminalProfile, gitProfile) {
   const nodes = [];
 
-  // Python topics
   const PY_TOPICS = [
     { id: 'basics', name: 'Variables & types', tier: 1 },
     { id: 'strings', name: 'Strings', tier: 1 },
@@ -160,4 +185,65 @@ function buildKnowledgeNodes(pythonProfile, terminalProfile, gitProfile) {
   addTopics(GIT_TOPICS, 'git', 'git', gitProfile);
 
   return nodes;
+}
+
+/**
+ * Get cross-discipline context for a mentor prompt.
+ * Given a discipline and topic, returns mastered related topics in OTHER disciplines.
+ * This is called by providers before generating challenges.
+ *
+ * @param {string} discipline - 'python', 'terminal', or 'git'
+ * @param {string} topicId - Current topic being challenged (e.g., 'shell_scripting')
+ * @param {object} allProfiles - { python: profile, terminal: profile, git: profile }
+ * @returns {string} Context paragraph for the mentor prompt, or empty string
+ */
+function getCrossDisciplineContext(discipline, topicId, allProfiles) {
+  if (!allProfiles) return '';
+
+  const prefixMap = { python: 'py', terminal: 'term', git: 'git' };
+  const prefix = prefixMap[discipline];
+  if (!prefix) return '';
+
+  const nodeId = `${prefix}:${topicId}`;
+  const edges = KNOWLEDGE_GRAPH.edges;
+
+  // Find all edges connected to this topic
+  const related = [];
+  for (const edge of edges) {
+    let otherNodeId = null;
+    let edgeLabel = edge.label;
+    if (edge.from === nodeId) otherNodeId = edge.to;
+    else if (edge.to === nodeId) otherNodeId = edge.from;
+    if (!otherNodeId) continue;
+
+    // Parse other node: "py:functions" → discipline=python, topicId=functions
+    const [otherPrefix, otherTopicId] = otherNodeId.split(':');
+    const otherDisc = Object.entries(prefixMap).find(([_, p]) => p === otherPrefix)?.[0];
+    if (!otherDisc || otherDisc === discipline) continue; // skip same-discipline
+
+    // Check if the user has mastered this related topic
+    const otherProfile = allProfiles[otherDisc];
+    if (!otherProfile?.topicHistory?.[otherTopicId]) continue;
+    const stats = otherProfile.topicHistory[otherTopicId];
+    if (!stats || stats.passes === 0) continue;
+
+    const confidence = stats.confidenceLevel || 0;
+    const label = confidence >= 3 ? 'mastered' : confidence >= 1 ? 'familiar with' : 'seen';
+
+    related.push({
+      discipline: otherDisc,
+      topicId: otherTopicId,
+      edgeLabel,
+      confidence,
+      label
+    });
+  }
+
+  if (related.length === 0) return '';
+
+  const lines = related.map(r =>
+    `  - The user has ${r.label} "${r.topicId}" in ${r.discipline} (${r.edgeLabel})`
+  );
+
+  return `\n## Cross-Discipline Knowledge\nThis topic connects to concepts the user has studied in other disciplines. Leverage this existing knowledge when teaching:\n${lines.join('\n')}\n`;
 }

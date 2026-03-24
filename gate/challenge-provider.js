@@ -81,7 +81,7 @@ const ChallengeProvider = (() => {
 
   // ── Build mentor prompt ─────────────────────────────────────────────────
 
-  function buildMentorPrompt(profile, isSettingsGate) {
+  function buildMentorPrompt(profile, isSettingsGate, crossDisciplineContext) {
     const currentTopic = CURRICULUM[profile.currentTopicIndex] || CURRICULUM[0];
     const tier = currentTopic.tier;
 
@@ -134,7 +134,7 @@ ${weakList || '(None identified)'}
 
 ## Recent Challenges
 ${recentSummary || '  (None yet)'}
-${reviewContext}
+${reviewContext}${crossDisciplineContext || ''}
 ## Instructions
 Generate a challenge that is ${difficulty}. Focus on the current topic: "${currentTopic.name}".
 
@@ -407,8 +407,23 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
   // ── Generate via Claude API (called through background script) ──────────
 
   async function generateFromClaude(profile, isSettingsGate) {
-    const prompt = buildMentorPrompt(profile, isSettingsGate);
     const currentTopic = CURRICULUM[profile.currentTopicIndex] || CURRICULUM[0];
+
+    // Fetch cross-discipline context
+    let crossCtx = '';
+    if (typeof CrossDiscipline !== 'undefined') {
+      try {
+        const [termProfile, gitProfile] = await Promise.all([
+          browser.runtime.sendMessage({ type: 'getTerminalLearningProfile' }),
+          browser.runtime.sendMessage({ type: 'getGitLearningProfile' })
+        ]);
+        crossCtx = CrossDiscipline.getContext('python', currentTopic.id, {
+          python: profile, terminal: termProfile, git: gitProfile
+        });
+      } catch {}
+    }
+
+    const prompt = buildMentorPrompt(profile, isSettingsGate, crossCtx);
     const useOpus = currentTopic.tier >= 5;
 
     try {
