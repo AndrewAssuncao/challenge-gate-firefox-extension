@@ -27,9 +27,9 @@ let progression = {
   typingAvgWpm: 0,
   totalChallengesCompleted: 0
 };
-let learningProfile = null; // loaded from storage
-let terminalLearningProfile = null; // loaded from storage
-let typingHistory = []; // array of { wpm, accuracy, wordCount, passed, timestamp }
+let learningProfile = null;
+let terminalLearningProfile = null;
+let typingHistory = [];
 
 // ── Default blocked sites for first run ─────────────────────────────────────
 
@@ -51,7 +51,6 @@ async function loadState() {
     ]);
 
     if (!data.blockedSites) {
-      // First run — seed defaults
       blockedSites = DEFAULT_SITES;
       await browser.storage.local.set({ blockedSites }).catch(logStorageError);
     } else {
@@ -173,29 +172,35 @@ browser.webRequest.onBeforeRequest.addListener(
 let activeTrack = null; // { domain, startTime }
 let isIdle = false;
 let windowFocused = true;
+let flushInProgress = false; // guard against concurrent flushes
 
 async function flushActiveTrack() {
-  if (!activeTrack) return;
-  const elapsed = Math.round((Date.now() - activeTrack.startTime) / 1000);
-  if (elapsed <= 0) return;
+  if (!activeTrack || flushInProgress) return;
+  flushInProgress = true;
 
-  const today = todayKey();
-  if (!timeTracking[today]) timeTracking[today] = {};
-  timeTracking[today][activeTrack.domain] =
-    (timeTracking[today][activeTrack.domain] || 0) + elapsed;
+  try {
+    const elapsed = Math.round((Date.now() - activeTrack.startTime) / 1000);
+    if (elapsed <= 0) return;
 
-  activeTrack.startTime = Date.now();
+    const today = todayKey();
+    if (!timeTracking[today]) timeTracking[today] = {};
+    timeTracking[today][activeTrack.domain] =
+      (timeTracking[today][activeTrack.domain] || 0) + elapsed;
 
-  // Check if daily cap is now exceeded
-  const site = blockedSites.find(s => s.domain === activeTrack.domain);
-  if (site && isDailyCapExceeded(site)) {
-    // Revoke unlock
-    delete unlocks[activeTrack.domain];
-    await saveUnlocks();
-    activeTrack = null;
+    activeTrack.startTime = Date.now();
+
+    // Check if daily cap is now exceeded
+    const site = blockedSites.find(s => s.domain === activeTrack.domain);
+    if (site && isDailyCapExceeded(site)) {
+      delete unlocks[activeTrack.domain];
+      await saveUnlocks();
+      activeTrack = null;
+    }
+
+    await saveTimeTracking();
+  } finally {
+    flushInProgress = false;
   }
-
-  await saveTimeTracking();
 }
 
 async function updateActiveTab() {
@@ -221,7 +226,6 @@ async function updateActiveTab() {
     }
 
     if (activeTrack && activeTrack.domain === site.domain) {
-      // Same domain, keep tracking
       return;
     }
 
@@ -244,12 +248,22 @@ browser.windows.onFocusChanged.addListener((windowId) => {
 });
 
 browser.idle.setDetectionInterval(settings.idleTimeoutSeconds || 120);
-browser.idle.onStateChanged.addListener((state) => {
-  isIdle = state !== 'active';
+
+// ── Single idle listener (handles both tracking + flush) ────────────────────
+// Previously there were two separate idle listeners causing duplicate events
+// and race conditions. Now merged into one.
+
+browser.idle.onStateChanged.addListener((newState) => {
+  isIdle = newState !== 'active';
   updateActiveTab();
+
+  // On sleep/lock, flush all state to storage
+  if (newState === 'locked' || newState === 'idle') {
+    flushAllState();
+  }
 });
 
-// Safety-net flush every 30s (store ID so it could be cleared if needed)
+// Safety-net flush every 30s
 let flushIntervalId = setInterval(() => flushActiveTrack(), 30000);
 
 // ── Message handling (from gate, popup, dashboard) ──────────────────────────
@@ -257,17 +271,14 @@ let flushIntervalId = setInterval(() => flushActiveTrack(), 30000);
 browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   const handler = messageHandlers[msg.type];
   if (handler) {
-    // Return a promise for async handlers
     return handler(msg, sender);
   }
 });
 
 const messageHandlers = {
   async getState() {
-    // Flush active tracking so data is fresh
     await flushActiveTrack();
 
-    // Clean expired unlocks
     const now = Date.now();
     let changed = false;
     for (const domain in unlocks) {
@@ -292,7 +303,6 @@ const messageHandlers = {
   },
 
   async unlock(msg) {
-    // Per-site unlock duration overrides global default
     const site = blockedSites.find(s => s.domain === msg.domain);
     const durationMin = (site && site.unlockDurationMinutes) || settings.unlockDurationMinutes || 30;
     const duration = durationMin * 60 * 1000;
@@ -422,7 +432,6 @@ const messageHandlers = {
 
   async saveTypingResult(msg) {
     typingHistory.push(msg.result);
-    // Keep last 500 results
     if (typingHistory.length > 500) {
       typingHistory = typingHistory.slice(-500);
     }
@@ -436,26 +445,34 @@ const messageHandlers = {
 };
 
 // ── Suspend / shutdown handler ───────────────────────────────────────────────
-// Flush in-memory state to storage before the background script is unloaded
-// (e.g. system sleep, browser shutdown, extension update).
+// Flush all in-memory state to storage. Called on sleep/idle and startup.
+// Uses Promise.allSettled so one failing save doesn't block the rest.
 
-function flushAllState() {
-  // Use synchronous-ish best-effort saves. In MV2 background scripts,
-  // the browser may kill us shortly after this fires, so we fire-and-forget.
-  flushActiveTrack().catch(logStorageError);
-  saveUnlocks().catch(logStorageError);
-  saveTimeTracking().catch(logStorageError);
-  saveProgression().catch(logStorageError);
-  saveSettings().catch(logStorageError);
-  saveBlockedSites().catch(logStorageError);
+async function flushAllState() {
+  await Promise.allSettled([
+    flushActiveTrack(),
+    saveUnlocks(),
+    saveTimeTracking(),
+    saveProgression(),
+    saveSettings(),
+    saveBlockedSites()
+  ]);
 }
 
-// idle state "locked" fires when the OS is about to sleep (screen locks)
-// We already handle idle → updateActiveTab, but also flush everything.
-browser.idle.onStateChanged.addListener((state) => {
-  if (state === 'locked' || state === 'idle') {
-    flushAllState();
-  }
+// ── Startup handler ──────────────────────────────────────────────────────────
+// Re-initialize state cleanly on browser restart / extension reload.
+
+browser.runtime.onStartup.addListener(() => {
+  loadState().then(() => {
+    console.log('[Challenge Gate] Startup reload complete.');
+  });
+});
+
+// Also reload on install/update
+browser.runtime.onInstalled.addListener(() => {
+  loadState().then(() => {
+    console.log('[Challenge Gate] Install/update reload complete.');
+  });
 });
 
 // ── Init ────────────────────────────────────────────────────────────────────
