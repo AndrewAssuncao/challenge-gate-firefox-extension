@@ -1186,7 +1186,7 @@ const GitChallenge = (() => {
   const els = {};
 
   function cacheEls() {
-    els.container = document.getElementById('git-terminal');
+    els.container = document.getElementById('git-container');
     els.output = document.getElementById('git-output');
     els.input = document.getElementById('git-input');
     els.inputDisplay = document.getElementById('git-input-display');
@@ -1201,8 +1201,8 @@ const GitChallenge = (() => {
     els.skipBtn = document.getElementById('git-skip');
     els.result = document.getElementById('git-result');
     els.objectivesPanel = document.getElementById('git-objectives');
-    els.targetGraph = document.getElementById('git-graph-target');
-    els.currentGraph = document.getElementById('git-graph-current');
+    els.targetGraph = document.getElementById('git-target-svg');
+    els.currentGraph = document.getElementById('git-current-svg');
   }
 
   function escapeHtml(str) {
@@ -1376,7 +1376,7 @@ const GitChallenge = (() => {
       els.suggestion.textContent = '';
 
       // Update current graph
-      renderGraph(GitSim.serialize(), 'git-graph-current');
+      renderGraph(GitSim.serialize(), 'git-current-svg');
 
       // Check objectives
       const check = checkObjectives();
@@ -1627,9 +1627,9 @@ Give a brief, helpful hint without giving away the exact answer. 2-3 sentences m
 
     // Render graphs
     if (challenge.targetState) {
-      renderGraph(challenge.targetState, 'git-graph-target');
+      renderGraph(challenge.targetState, 'git-target-svg');
     }
-    renderGraph(GitSim.serialize(), 'git-graph-current');
+    renderGraph(GitSim.serialize(), 'git-current-svg');
 
     // Show prompt
     els.ps1.innerHTML = renderPrompt();
