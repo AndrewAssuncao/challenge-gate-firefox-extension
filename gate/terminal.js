@@ -20,6 +20,9 @@ const TerminalChallenge = (() => {
   let commandsExecuted = [];
   let challengeStartTime = 0;
   let helpUsedThisChallenge = false;
+  let currentChain = null;
+  let chainStep = 0;
+  let chainVFSSnapshot = null;
   let aliases = {};
 
   // ── Virtual Filesystem ────────────────────────────────────────────────
@@ -355,10 +358,22 @@ const TerminalChallenge = (() => {
       return absPath;
     }
 
+    function serialize() {
+      return { root: JSON.parse(JSON.stringify(root)), cwd };
+    }
+
+    function restore(snapshot) {
+      if (snapshot && snapshot.root) {
+        root = snapshot.root;
+        cwd = snapshot.cwd || HOME;
+      }
+    }
+
     return {
       init, resolvePath, getNode, getCwd, setCwd, getHome, toDisplay,
       mkdir, touch, rm, cp, mv, readFile, writeFile, appendFile,
-      listDir, findFiles, chmod, stat, basename, ensureDir
+      listDir, findFiles, chmod, stat, basename, ensureDir,
+      serialize, restore
     };
   })();
 
@@ -1727,13 +1742,36 @@ const TerminalChallenge = (() => {
     els.tier.textContent = `Tier ${topic.tier}`;
     els.progress.textContent = `${topic.name}`;
 
-    // Initialize VFS with challenge filesystem
-    VFS.init(challenge.filesystem, challenge.startDir);
+    // Initialize VFS — restore chain state if continuing a chain
+    if (challenge.chain && chainVFSSnapshot && chainStep > 0) {
+      VFS.restore(chainVFSSnapshot);
+      // Apply any additional filesystem overlay for this step
+      if (challenge.filesystem) {
+        for (const [path, entry] of Object.entries(challenge.filesystem)) {
+          if (entry.type === 'dir') VFS.mkdir(path, true);
+          else if (entry.type === 'file') VFS.writeFile(path, entry.content || '');
+        }
+      }
+      if (challenge.startDir) {
+        const abs = VFS.resolvePath(challenge.startDir);
+        if (VFS.getNode(abs)) VFS.setCwd(abs);
+      }
+    } else {
+      VFS.init(challenge.filesystem, challenge.startDir);
+    }
     initEnv();
     env.PWD = VFS.getCwd();
 
     // Render scenario
     els.promptArea.innerHTML = '';
+
+    // Chain progress indicator
+    if (challenge.chain) {
+      const chainInfo = document.createElement('div');
+      chainInfo.className = 'terminal-chain-info';
+      chainInfo.innerHTML = `<span class="chain-title">${escapeHtml(challenge.chainTitle || challenge.chain)}</span> <span class="chain-step">Step ${challenge.chainStep || 1}/${challenge.chainTotal || '?'}</span>`;
+      els.promptArea.appendChild(chainInfo);
+    }
     if (challenge.teachingNote) {
       const note = document.createElement('div');
       note.className = 'terminal-teaching-note';
@@ -1979,6 +2017,47 @@ const TerminalChallenge = (() => {
       prog.totalChallengesCompleted = (prog.totalChallengesCompleted || 0) + 1;
       await browser.runtime.sendMessage({ type: 'updateProgression', progression: prog });
     } catch {}
+
+    // Chain handling: if part of a chain and more steps remain, auto-advance
+    if (challenge.chain && challenge.chainStep < challenge.chainTotal) {
+      chainVFSSnapshot = VFS.serialize();
+      chainStep = challenge.chainStep;
+      currentChain = challenge.chain;
+
+      appendOutput('');
+      appendOutput(`<span class="term-dim">Advancing to step ${challenge.chainStep + 1}/${challenge.chainTotal}...</span>`);
+
+      setTimeout(async () => {
+        challengeResolved = false;
+        commandsExecuted = [];
+        lastOutput = '';
+        lastExitCode = 0;
+        hintsUsed = 0;
+        els.hintBtn.disabled = false;
+
+        const { challenge: nextCh, source } = await TerminalChallengeProvider.getChallenge(profile, config.isSettingsGate);
+        if (nextCh) {
+          nextCh.chain = nextCh.chain || currentChain;
+          nextCh.chainStep = (challenge.chainStep || 1) + 1;
+          nextCh.chainTotal = challenge.chainTotal;
+          nextCh.chainTitle = challenge.chainTitle;
+          challenge = nextCh;
+          challengeSource = source;
+          renderChallenge();
+        } else {
+          Gate.showContinuePrompt();
+        }
+      }, 1500);
+      return;
+    }
+
+    // Chain completed or standalone
+    if (challenge.chain && challenge.chainStep >= challenge.chainTotal) {
+      appendOutput('<span class="term-success">Scenario complete! All steps finished.</span>');
+      currentChain = null;
+      chainStep = 0;
+      chainVFSSnapshot = null;
+    }
 
     Gate.showContinuePrompt();
   }

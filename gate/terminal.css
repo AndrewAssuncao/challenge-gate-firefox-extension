@@ -232,6 +232,30 @@
   border-radius: 0 4px 4px 0;
 }
 
+/* ── Chain progress ──────────────────────────────────────────────────── */
+
+.terminal-chain-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 10px;
+  background: rgba(74, 126, 255, 0.08);
+  border-radius: 5px;
+  border: 1px solid rgba(74, 126, 255, 0.15);
+}
+
+.chain-title {
+  color: var(--term-prompt-dir);
+  font-weight: 600;
+}
+
+.chain-step {
+  color: var(--term-dim);
+}
+
 /* ── Actions bar ─────────────────────────────────────────────────────── */
 
 #terminal-actions {
