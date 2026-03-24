@@ -87,7 +87,7 @@
   margin-bottom: 12px;
 }
 
-.git-graph-panel {
+.git-graph-col {
   background: var(--git-graph-bg);
   border: 1px solid var(--git-graph-border);
   border-radius: 8px;
@@ -140,7 +140,7 @@
 
 /* ── Terminal container ─────────────────────────────────────────────── */
 
-#git-terminal {
+#git-container {
   background: var(--term-bg);
   border: 1px solid var(--term-border);
   border-radius: 8px;
@@ -155,15 +155,15 @@
   position: relative;
 }
 
-#git-terminal::-webkit-scrollbar {
+#git-container::-webkit-scrollbar {
   width: 6px;
 }
 
-#git-terminal::-webkit-scrollbar-track {
+#git-container::-webkit-scrollbar-track {
   background: transparent;
 }
 
-#git-terminal::-webkit-scrollbar-thumb {
+#git-container::-webkit-scrollbar-thumb {
   background: var(--term-border);
   border-radius: 3px;
 }
@@ -249,11 +249,11 @@
 
 /* ── Focus state ────────────────────────────────────────────────────── */
 
-#git-terminal:focus-within {
+#git-container:focus-within {
   border-color: var(--border-focus);
 }
 
-#git-terminal:not(:focus-within) .term-cursor {
+#git-container:not(:focus-within) .term-cursor {
   animation: none;
   opacity: 0.3;
 }

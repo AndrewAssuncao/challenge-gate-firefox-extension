@@ -60,6 +60,14 @@ const Gate = (() => {
   }
 
   function showChallenge(type) {
+    // Destroy previous challenge to clean up event listeners
+    if (activeChallenge === 'terminal' && typeof TerminalChallenge !== 'undefined' && TerminalChallenge.destroy) {
+      TerminalChallenge.destroy();
+    }
+    if (activeChallenge === 'git' && typeof GitChallenge !== 'undefined' && GitChallenge.destroy) {
+      GitChallenge.destroy();
+    }
+
     document.getElementById('typing-challenge').classList.add('hidden');
     document.getElementById('python-challenge').classList.add('hidden');
     document.getElementById('terminal-challenge').classList.add('hidden');

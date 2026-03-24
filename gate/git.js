@@ -1667,7 +1667,8 @@ Give a brief, helpful hint without giving away the exact answer. 2-3 sentences m
     els.skipBtn.addEventListener('click', skipChallenge);
 
     // Focus management
-    els.container.addEventListener('click', () => els.input.focus());
+    els._containerClick = () => els.input.focus();
+    els.container.addEventListener('click', els._containerClick);
 
     await getChallenge();
   }
@@ -1683,6 +1684,9 @@ Give a brief, helpful hint without giving away the exact answer. 2-3 sentences m
     if (els.hintBtn) els.hintBtn.removeEventListener('click', showHint);
     if (els.helpBtn) els.helpBtn.removeEventListener('click', askForHelp);
     if (els.skipBtn) els.skipBtn.removeEventListener('click', skipChallenge);
+    if (els.container && els._containerClick) {
+      els.container.removeEventListener('click', els._containerClick);
+    }
   }
 
   return { init, destroy };
