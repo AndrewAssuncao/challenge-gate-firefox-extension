@@ -584,13 +584,17 @@ const Dashboard = (() => {
     if (!canvas) return;
     const log = state.dailyChallengeLog || {};
 
-    const cellSize = 13;
-    const gap = 3;
-    const step = cellSize + gap;
     const weeks = 52;
     const days = 7;
-    const padLeft = 30;
-    const padTop = 20;
+    const padLeft = 28;
+    const padTop = 18;
+
+    // Responsive: fit to container width
+    const container = canvas.parentElement;
+    const availWidth = container ? container.clientWidth : 860;
+    const step = Math.max(10, Math.floor((availWidth - padLeft - 4) / weeks));
+    const cellSize = Math.max(7, step - 2);
+    const gap = step - cellSize;
 
     const width = padLeft + weeks * step + gap;
     const height = padTop + days * step + gap;

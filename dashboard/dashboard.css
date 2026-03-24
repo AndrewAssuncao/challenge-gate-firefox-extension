@@ -333,7 +333,7 @@ button.toggle-btn.active {
 
 #heatmap-wrapper {
   position: relative;
-  overflow-x: auto;
+  overflow: hidden;
   margin-bottom: 12px;
 }
 
