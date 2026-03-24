@@ -103,6 +103,7 @@ const PythonChallenge = (() => {
 
   function renderChallenge() {
     let html = '';
+    const isCodeReview = challenge.type === 'code_review';
 
     // Teaching note (when Claude introduces a new concept)
     if (challenge.teachingNote) {
@@ -123,7 +124,24 @@ const PythonChallenge = (() => {
     }
 
     promptEl.innerHTML = html;
-    editorEl.value = challenge.starterCode || '';
+
+    // Code review mode: show code to review + text area
+    const reviewCodeEl = document.getElementById('python-review-code');
+    if (isCodeReview && reviewCodeEl) {
+      reviewCodeEl.classList.remove('hidden');
+      reviewCodeEl.innerHTML = `<div class="review-code-header">Code to review:</div><pre class="review-code-block">${escapeHtml(challenge.codeToReview || '')}</pre>`;
+      editorEl.value = '';
+      editorEl.placeholder = 'Type your analysis here. What issues do you see? How would you fix them?';
+      editorEl.style.minHeight = '120px';
+      runBtn.textContent = 'Submit';
+    } else {
+      if (reviewCodeEl) reviewCodeEl.classList.add('hidden');
+      editorEl.placeholder = '';
+      editorEl.style.minHeight = '';
+      runBtn.textContent = 'Run';
+      editorEl.value = challenge.starterCode || '';
+    }
+
     updateHighlight();
     updateLineNumbers();
     editorEl.focus();
@@ -302,7 +320,15 @@ const PythonChallenge = (() => {
   }
 
   async function runCode() {
-    if (!pyodideReady || !challenge || challengeResolved) return;
+    if (challengeResolved) return;
+
+    // Code review mode: send text to Claude for validation
+    if (challenge.type === 'code_review') {
+      await submitCodeReview();
+      return;
+    }
+
+    if (!pyodideReady || !challenge) return;
 
     runBtn.disabled = true;
     runBtn.textContent = 'Running…';
@@ -315,6 +341,87 @@ const PythonChallenge = (() => {
       testCases: challenge.testCases,
       functionName: challenge.functionName
     });
+  }
+
+  async function submitCodeReview() {
+    const userAnswer = editorEl.value.trim();
+    if (!userAnswer) return;
+
+    runBtn.disabled = true;
+    runBtn.textContent = 'Evaluating…';
+    outputEl.classList.remove('hidden');
+    resultsEl.innerHTML = '<div class="test-summary">Evaluating your answer...</div>';
+
+    try {
+      const validationPrompt = `You are evaluating a code review response. The student was shown this code:
+
+\`\`\`python
+${challenge.codeToReview}
+\`\`\`
+
+They were asked: "${challenge.prompt}"
+
+Validation criteria: ${challenge.validationCriteria}
+
+The student's answer:
+"${userAnswer}"
+
+Evaluate their response. Did they identify the key issues? Is their analysis correct?
+
+Respond with ONLY valid JSON:
+{
+  "correct": true/false,
+  "score": 0-100,
+  "feedback": "Specific feedback on what they got right/wrong. 2-3 sentences max.",
+  "missingPoints": ["any key points they missed"]
+}`;
+
+      const response = await browser.runtime.sendMessage({
+        type: 'claudeGenerate',
+        prompt: validationPrompt,
+        model: 'claude-opus-4-20250514',
+        maxTokens: 1024
+      });
+
+      runBtn.disabled = false;
+      runBtn.textContent = 'Submit';
+
+      if (response.error) {
+        resultsEl.innerHTML = '<div class="test-summary some-fail">Could not validate (no API key). Try again.</div>';
+        return;
+      }
+
+      const cleaned = (response.content || '').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      let result;
+      try {
+        result = JSON.parse(cleaned);
+      } catch {
+        result = { correct: false, feedback: response.content || 'Could not parse response.', score: 0 };
+      }
+
+      let html = '';
+      if (result.correct || result.score >= 70) {
+        html += `<div class="test-summary all-pass">Good analysis! (${result.score || 100}%)</div>`;
+        html += `<div class="test-detail">${escapeHtml(result.feedback || '')}</div>`;
+        if (challenge.afterSolve) {
+          html += `<div class="after-solve">${escapeHtml(challenge.afterSolve)}</div>`;
+        }
+        resultsEl.innerHTML = html;
+        onPassed();
+      } else {
+        html += `<div class="test-summary some-fail">Not quite. (${result.score || 0}%)</div>`;
+        html += `<div class="test-detail">${escapeHtml(result.feedback || '')}</div>`;
+        if (result.missingPoints && result.missingPoints.length > 0) {
+          html += `<div class="test-detail" style="margin-top: 6px;">Missing: ${result.missingPoints.map(p => escapeHtml(p)).join(', ')}</div>`;
+        }
+        resultsEl.innerHTML = html;
+        failedBeforePass++;
+      }
+    } catch (err) {
+      runBtn.disabled = false;
+      runBtn.textContent = 'Submit';
+      resultsEl.innerHTML = `<div class="test-summary some-fail">Evaluation error: ${escapeHtml(err.message)}</div>`;
+    }
   }
 
   function handleResult(data) {

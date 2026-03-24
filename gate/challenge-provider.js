@@ -15,28 +15,53 @@ const ChallengeProvider = (() => {
   // Ordered topics. The mentor advances through these, but can revisit.
 
   const CURRICULUM = [
+    // Tier 1 — Fundamentals
     { id: 'basics',        name: 'Variables, types, basic operations',    tier: 1 },
     { id: 'strings',       name: 'Strings and string methods',           tier: 1 },
     { id: 'conditionals',  name: 'Conditionals (if/elif/else)',          tier: 1 },
     { id: 'loops',         name: 'Loops (for, while, break, continue)',  tier: 1 },
+
+    // Tier 2 — Data Structures & Functions
     { id: 'lists',         name: 'Lists and list operations',            tier: 2 },
     { id: 'dicts',         name: 'Dictionaries',                         tier: 2 },
     { id: 'sets_tuples',   name: 'Sets and tuples',                      tier: 2 },
     { id: 'comprehensions',name: 'List/dict/set comprehensions',         tier: 2 },
     { id: 'functions',     name: 'Functions, scope, default args',       tier: 2 },
+
+    // Tier 3 — Intermediate
     { id: 'string_ops',    name: 'String parsing and manipulation',      tier: 3 },
     { id: 'error_handling',name: 'Try/except, error types, raising',     tier: 3 },
     { id: 'file_patterns', name: 'File I/O patterns (conceptual)',       tier: 3 },
     { id: 'sorting',       name: 'Sorting, key functions, custom sorts', tier: 3 },
     { id: 'recursion',     name: 'Recursion and recursive thinking',     tier: 3 },
+
+    // Tier 4 — Advanced Concepts
     { id: 'classes',       name: 'Classes, OOP basics, dunder methods',  tier: 4 },
     { id: 'generators',    name: 'Generators, iterators, yield',         tier: 4 },
     { id: 'decorators',    name: 'Decorators and higher-order functions',tier: 4 },
     { id: 'data_structs',  name: 'Stacks, queues, linked structures',    tier: 4 },
     { id: 'algorithms',    name: 'Two pointers, sliding window, binary search', tier: 4 },
+
+    // Tier 5 — Expert Algorithms
     { id: 'dp',            name: 'Dynamic programming',                  tier: 5 },
     { id: 'graphs',        name: 'Graph traversal (BFS, DFS)',           tier: 5 },
-    { id: 'advanced',      name: 'Context managers, metaclasses, advanced patterns', tier: 5 }
+    { id: 'advanced',      name: 'Context managers, metaclasses, advanced patterns', tier: 5 },
+    { id: 'functional',    name: 'Functional programming patterns',      tier: 5 },
+    { id: 'concurrency',   name: 'Threading and async basics',           tier: 5 },
+
+    // Tier 6 — Multi-function & System Design
+    { id: 'composition',     name: 'Multi-function composition',           tier: 6 },
+    { id: 'testing',         name: 'Testing patterns (unittest, pytest)',   tier: 6 },
+    { id: 'api_patterns',    name: 'API design patterns',                  tier: 6 },
+    { id: 'data_pipelines',  name: 'Data transformation pipelines',        tier: 6 },
+    { id: 'design_patterns', name: 'Design patterns (strategy, observer)', tier: 6 },
+
+    // Tier 7 — Code Review & Architecture
+    { id: 'code_review_bugs',    name: 'Code review: finding bugs',              tier: 7 },
+    { id: 'code_review_perf',    name: 'Code review: performance issues',        tier: 7 },
+    { id: 'code_review_style',   name: 'Code review: style and best practices',  tier: 7 },
+    { id: 'refactoring',         name: 'Refactoring legacy code',                tier: 7 },
+    { id: 'architecture',        name: 'Architectural patterns',                 tier: 7 }
   ];
 
   // ── Default learning profile ────────────────────────────────────────────
@@ -94,7 +119,7 @@ const ChallengeProvider = (() => {
 - Gradually increase complexity within a topic before moving to the next.
 
 ## Current Curriculum Position
-Topic: ${currentTopic.name} (Tier ${tier}/5)
+Topic: ${currentTopic.name} (Tier ${tier}/7)
 Curriculum position: ${profile.currentTopicIndex + 1}/${CURRICULUM.length}
 Total sessions: ${profile.totalSessions}
 
@@ -117,14 +142,35 @@ ${profile.totalSessions === 0 ? 'This is the user\'s FIRST challenge ever. Start
 ${profile.weakAreas.length > 0 ? `Consider revisiting: ${weakList}` : ''}
 
 If the user has been passing consistently on this topic (3+ passes), introduce a slightly harder variant or begin transitioning to the next concept.
-Every test case input must be a valid Python argument list fragment that can be inserted directly into \`function_name(<input>)\`.
+
+${tier <= 5 ? `Every test case input must be a valid Python argument list fragment that can be inserted directly into \`function_name(<input>)\`.
 If a test case uses a string, the string MUST be quoted inside the JSON string.
 Examples:
 - Good single string input: "\\"Hello World\\""
 - Good mixed input: "[1, 2, 3], 5"
-- Bad input: "Hello World"
+- Bad input: "Hello World"` : ''}
 
-Respond with ONLY valid JSON (no markdown fences, no commentary):
+${tier === 6 ? `For Tier 6 challenges: generate multi-function challenges where the user writes 2-3 functions that work together. The starterCode should contain multiple function stubs. Test cases should test the main/top-level function.` : ''}
+
+${tier === 7 ? `For Tier 7 code review challenges: generate a "code_review" type challenge. Show buggy or inefficient code that the user must analyze and explain what's wrong in free text. The user's text answer will be sent to Claude for validation.
+
+Respond with ONLY valid JSON for code review:
+{
+  "id": "m-<unique-8-char-id>",
+  "type": "code_review",
+  "topic": "${currentTopic.id}",
+  "conceptIntroduced": "brief name of concept or null",
+  "teachingNote": "explanation if new concept, null if reinforcing",
+  "prompt": "What issues do you see in this code? Explain what's wrong and how to fix it.",
+  "codeToReview": "def process(data):\\n    ...",
+  "validationCriteria": "The user should identify: 1) ... 2) ... Key points to look for in their answer.",
+  "hints": ["Subtle hint", "More direct hint"],
+  "afterSolve": "Teaching note about the issues found."
+}
+
+IMPORTANT: For code_review type, do NOT include functionName, starterCode, or testCases.` : ''}
+
+${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
 {
   "id": "m-<unique-8-char-id>",
   "topic": "${currentTopic.id}",
@@ -138,7 +184,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
   ],
   "hints": ["Subtle hint", "More direct hint"],
   "afterSolve": "1-2 sentence note about what they just learned or a related tip. Shown after passing."
-}`;
+}` : ''}`;
   }
 
   function extractFunctionParamInfo(starterCode, functionName) {
@@ -296,6 +342,22 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
   function sanitizeChallenge(challenge) {
     if (!challenge || typeof challenge !== 'object') return null;
 
+    // Handle code_review type (Tier 7)
+    if (challenge.type === 'code_review') {
+      return {
+        ...challenge,
+        type: 'code_review',
+        id: String(challenge.id || `m-${Math.random().toString(36).slice(2, 10)}`),
+        prompt: String(challenge.prompt || ''),
+        codeToReview: String(challenge.codeToReview || ''),
+        validationCriteria: String(challenge.validationCriteria || ''),
+        teachingNote: challenge.teachingNote ? String(challenge.teachingNote) : null,
+        conceptIntroduced: challenge.conceptIntroduced ? String(challenge.conceptIntroduced) : null,
+        afterSolve: challenge.afterSolve ? String(challenge.afterSolve) : '',
+        hints: Array.isArray(challenge.hints) ? challenge.hints.map(h => String(h)).filter(Boolean) : []
+      };
+    }
+
     const sanitized = {
       ...challenge,
       id: String(challenge.id || `m-${Math.random().toString(36).slice(2, 10)}`),
@@ -370,8 +432,13 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
       const challenge = sanitizeChallenge(JSON.parse(cleaned));
 
       // Validate
-      if (!challenge || !challenge.functionName || !challenge.testCases || !challenge.starterCode) {
+      if (!challenge) {
         console.error('[Mentor] Invalid challenge structure');
+        return null;
+      }
+      // Code review challenges don't need functionName/testCases
+      if (challenge.type !== 'code_review' && (!challenge.functionName || !challenge.testCases || !challenge.starterCode)) {
+        console.error('[Mentor] Invalid standard challenge structure');
         return null;
       }
 
