@@ -16,6 +16,7 @@ const TypingChallenge = (() => {
   let currentInput = '';
   let startTime = null;
   let finished = false;
+  let lastTestPassed = false;
   let focused = false;
   let caretBlinkTimeout = null;
   let lineHeight = 0;
@@ -42,6 +43,7 @@ const TypingChallenge = (() => {
   async function init(cfg, overrideWordCount) {
     config = cfg;
     finished = false;
+    lastTestPassed = false;
     currentWordIndex = 0;
     currentLetterIndex = 0;
     inputHistory = [];
@@ -186,8 +188,8 @@ const TypingChallenge = (() => {
   }
 
   function handleKeydown(e) {
-    // Cmd/Ctrl+Enter restarts — works even when finished
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    // Cmd/Ctrl+Enter restarts — only when failed (when passed, gate continue prompt handles it)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && finished && !lastTestPassed) {
       e.preventDefault();
       init(config, wordCount);
       return;
@@ -510,6 +512,7 @@ const TypingChallenge = (() => {
     resultTextEl.className = passed ? 'pass' : 'fail';
 
     if (passed) {
+      lastTestPassed = true;
       resultTextEl.textContent = `${wpm} wpm · ${accuracy}% — passed`;
       browser.runtime.sendMessage({
         type: 'updateProgression',
@@ -518,7 +521,7 @@ const TypingChallenge = (() => {
           totalChallengesCompleted: (config._totalCompleted || 0) + 1
         }
       }).catch(() => {});
-      setTimeout(() => Gate.onChallengeComplete(), 800);
+      Gate.showContinuePrompt();
     } else {
       const reasons = [];
       if (wpm < wpmThreshold) reasons.push(`${wpm} wpm (need ${wpmThreshold})`);

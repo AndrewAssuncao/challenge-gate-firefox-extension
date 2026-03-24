@@ -1855,8 +1855,7 @@ const TerminalChallenge = (() => {
       await browser.runtime.sendMessage({ type: 'updateProgression', progression: prog });
     } catch {}
 
-    // Unlock
-    setTimeout(() => Gate.onChallengeComplete(), 1500);
+    Gate.showContinuePrompt();
   }
 
   function showHint() {

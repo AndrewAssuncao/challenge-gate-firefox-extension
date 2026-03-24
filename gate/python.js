@@ -399,7 +399,7 @@ const PythonChallenge = (() => {
 
     await browser.runtime.sendMessage({ type: 'updateProgression', progression: prog });
 
-    setTimeout(() => Gate.onChallengeComplete(), 1500);
+    Gate.showContinuePrompt();
   }
 
   async function onFailed() {
@@ -606,7 +606,7 @@ ${formatDiagnosticsForHelp(lastRunDiagnostics)}
       await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
     }
 
-    setTimeout(() => Gate.onChallengeComplete(), 1500);
+    Gate.showContinuePrompt();
   }
 
   function escapeHtml(str) {

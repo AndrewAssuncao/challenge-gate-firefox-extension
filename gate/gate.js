@@ -10,6 +10,7 @@ const Gate = (() => {
   const reason = params.get('reason') || '';
   const isSettingsGate = params.get('settingsGate') === '1';
   let activeChallenge = null;
+  let continueListenerActive = false;
 
   function init() {
     document.getElementById('gate-domain').textContent = domain;
@@ -32,6 +33,7 @@ const Gate = (() => {
       btn.addEventListener('click', () => {
         btns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        hideContinuePrompt();
         showChallenge(btn.dataset.challenge);
       });
     });
@@ -79,6 +81,66 @@ const Gate = (() => {
     return { domain, originalUrl, isSettingsGate };
   }
 
+  // ── Continue prompt (post-solve) ──────────────────────────────────────
+
+  function showContinuePrompt() {
+    const el = document.getElementById('gate-continue');
+    if (!el) return;
+
+    // Settings gate skips the continue prompt — just unlock immediately
+    if (isSettingsGate) {
+      onChallengeComplete();
+      return;
+    }
+
+    const isMac = navigator.platform.toUpperCase().includes('MAC');
+    const modKey = isMac ? '⌘' : 'Ctrl';
+
+    el.innerHTML = `<span class="continue-keys"><kbd>Enter</kbd> continue to <span class="continue-domain">${domain}</span></span><span class="continue-sep">·</span><span class="continue-keys"><kbd>${modKey}</kbd> + <kbd>Enter</kbd> next challenge</span>`;
+    el.classList.remove('hidden');
+
+    // Unlock the domain immediately (so timer starts), but don't navigate
+    browser.runtime.sendMessage({ type: 'unlock', domain }).catch(() => {});
+
+    if (!continueListenerActive) {
+      continueListenerActive = true;
+      document.addEventListener('keydown', handleContinueKey);
+    }
+  }
+
+  function hideContinuePrompt() {
+    const el = document.getElementById('gate-continue');
+    if (el) {
+      el.classList.add('hidden');
+      el.innerHTML = '';
+    }
+    if (continueListenerActive) {
+      continueListenerActive = false;
+      document.removeEventListener('keydown', handleContinueKey);
+    }
+  }
+
+  function handleContinueKey(e) {
+    if (e.key !== 'Enter') return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (e.metaKey || e.ctrlKey) {
+      // Cmd/Ctrl + Enter → new challenge of the same type
+      hideContinuePrompt();
+      showChallenge(activeChallenge);
+    } else {
+      // Enter → navigate to the page
+      hideContinuePrompt();
+      if (originalUrl) {
+        window.location.href = originalUrl;
+      }
+    }
+  }
+
+  // ── Legacy direct-complete (for settings gate and bypasses) ───────────
+
   async function onChallengeComplete() {
     if (isSettingsGate) {
       window.opener?.postMessage({ type: 'settingsUnlocked' }, window.opener.origin || '*');
@@ -98,5 +160,5 @@ const Gate = (() => {
 
   init();
 
-  return { onChallengeComplete, domain, isSettingsGate };
+  return { onChallengeComplete, showContinuePrompt, hideContinuePrompt, domain, isSettingsGate };
 })();
