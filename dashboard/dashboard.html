@@ -18,231 +18,242 @@
       </div>
     </header>
 
-    <!-- Sites Table -->
-    <section id="sites-section">
-      <div class="section-header">
-        <h2>Blocked Sites</h2>
-        <button id="add-site-btn" class="dash-btn">Add site</button>
-      </div>
+    <!-- Dashboard Tabs -->
+    <div id="dash-tabs">
+      <button class="dash-tab active" data-tab="overview">Overview</button>
+      <button class="dash-tab" data-tab="learning">Learning</button>
+    </div>
 
-      <!-- Add site form (hidden by default) -->
-      <div id="add-site-form" class="hidden">
-        <div class="form-row">
-          <input type="text" id="new-domain" placeholder="example.com" spellcheck="false" autocomplete="off">
-          <select id="new-challenge-type">
-            <option value="typing">Typing</option>
-            <option value="python">Python</option>
-            <option value="terminal">Terminal</option>
-            <option value="git">Git</option>
-            <option value="both">Both</option>
-          </select>
-          <input type="number" id="new-daily-limit" placeholder="Daily limit (min)" min="1" max="1440">
-          <input type="number" id="new-unlock-duration" placeholder="Unlock (min)" min="1" max="1440">
-          <button id="confirm-add-btn" class="dash-btn">Add</button>
-          <button id="cancel-add-btn" class="dash-btn dash-btn-ghost">Cancel</button>
-        </div>
-      </div>
+    <!-- ═══ OVERVIEW TAB ═══ -->
+    <div id="tab-overview">
 
-      <table id="sites-table">
-        <thead>
-          <tr>
-            <th>Domain</th>
-            <th>Status</th>
-            <th>Expires</th>
-            <th>Cap</th>
-            <th>Used</th>
-            <th>Remaining</th>
-            <th>Challenge</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="sites-tbody"></tbody>
-      </table>
-
-      <div id="no-sites" class="hidden">
-        <p>No blocked sites configured.</p>
-      </div>
-    </section>
-
-    <!-- Usage Section -->
-    <section id="usage-section">
-      <h2>Today's Usage</h2>
-      <div id="usage-bars"></div>
-      <div id="no-usage" class="hidden">
-        <p>No usage recorded today.</p>
-      </div>
-    </section>
-
-    <!-- Activity Heatmap -->
-    <section id="heatmap-section">
-      <h2>Activity</h2>
-      <div id="heatmap-wrapper">
-        <canvas id="heatmap-canvas"></canvas>
-        <div id="heatmap-tooltip" class="hidden"></div>
-      </div>
-      <div id="time-metrics">
-        <div class="time-metric-row">
-          <span class="time-label">This week</span>
-          <span id="time-week-detail" class="time-detail"></span>
-        </div>
-        <div class="time-metric-row">
-          <span class="time-label">All time</span>
-          <span id="time-total-detail" class="time-detail"></span>
-        </div>
-      </div>
-    </section>
-
-    <!-- Progress Section (toggle: typing speed / python progress) -->
-    <section id="progress-section">
-      <div class="section-header">
-        <div id="progress-toggle">
-          <button class="toggle-btn active" data-view="typing">typing</button>
-          <button class="toggle-btn" data-view="python">python</button>
-          <button class="toggle-btn" data-view="terminal">terminal</button>
-          <button class="toggle-btn" data-view="git">git</button>
-        </div>
-      </div>
-
-      <!-- Typing speed scatter plot -->
-      <div id="typing-speed-view">
-        <canvas id="typing-chart"></canvas>
-        <div id="typing-chart-stats"></div>
-      </div>
-
-      <!-- Python curriculum (hidden by default) -->
-      <div id="python-progress-view" class="hidden">
-        <div id="learning-curriculum"></div>
-        <div id="learning-stats"></div>
-      </div>
-
-      <!-- Terminal curriculum (hidden by default) -->
-      <div id="terminal-progress-view" class="hidden">
-        <div id="terminal-curriculum"></div>
-        <div id="terminal-stats"></div>
-      </div>
-
-      <!-- Git curriculum (hidden by default) -->
-      <div id="git-progress-view" class="hidden">
-        <div id="git-curriculum"></div>
-        <div id="git-stats"></div>
-      </div>
-    </section>
-
-    <!-- Knowledge Map -->
-    <section id="knowledge-section">
-      <h2>Knowledge Map</h2>
-      <div id="knowledge-legend">
-        <span class="legend-item"><span class="legend-dot" style="background:#4a7eff"></span>Python</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#9ece6a"></span>Terminal</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#bb9af7"></span>Git</span>
-        <span class="legend-sep">·</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#2a2a2a"></span>Not started</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#1a4a8a"></span>Started</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#44aa44"></span>Mastered</span>
-      </div>
-      <div id="knowledge-wrapper">
-        <canvas id="knowledge-canvas"></canvas>
-        <div id="knowledge-tooltip" class="hidden"></div>
-      </div>
-    </section>
-
-    <!-- Settings Section -->
-    <section id="settings-section">
-      <div class="section-header">
-        <h2>Settings</h2>
-        <div id="settings-lock-indicator">
-          <span id="settings-lock-text">Locked</span>
-          <button id="unlock-settings-btn" class="dash-btn dash-btn-sm">Unlock</button>
-        </div>
-      </div>
-
-      <div id="settings-overlay" class="settings-locked">
-        <div class="overlay-text">Settings are protected. Complete a challenge to edit.</div>
-      </div>
-
-      <div id="settings-form">
-        <div class="settings-group">
-          <div class="settings-group-label">General</div>
-          <div class="setting-row">
-            <label for="setting-unlock-duration">Unlock duration (minutes)</label>
-            <input type="number" id="setting-unlock-duration" min="1" max="480" value="30">
-          </div>
-          <div class="setting-row">
-            <label for="setting-idle-timeout">Idle timeout (seconds)</label>
-            <input type="number" id="setting-idle-timeout" min="30" max="600" value="120">
-          </div>
-          <div class="setting-row">
-            <label>
-              <input type="checkbox" id="setting-protected" checked>
-              Protect settings with challenge
-            </label>
-          </div>
+      <!-- Sites Table -->
+      <section id="sites-section">
+        <div class="section-header">
+          <h2>Blocked Sites</h2>
+          <button id="add-site-btn" class="dash-btn">Add site</button>
         </div>
 
-        <div class="settings-group">
-          <div class="settings-group-label">Typing</div>
-          <div class="setting-row">
-            <label for="setting-word-count">Default word count</label>
-            <select id="setting-word-count">
-              <option value="25">25 words</option>
-              <option value="50">50 words</option>
+        <div id="add-site-form" class="hidden">
+          <div class="form-row">
+            <input type="text" id="new-domain" placeholder="example.com" spellcheck="false" autocomplete="off">
+            <select id="new-challenge-type">
+              <option value="typing">Typing</option>
+              <option value="python">Python</option>
+              <option value="terminal">Terminal</option>
+              <option value="git">Git</option>
+              <option value="both">Both</option>
             </select>
-          </div>
-          <div class="setting-row">
-            <label for="setting-wpm-25">WPM threshold (25 words)</label>
-            <input type="number" id="setting-wpm-25" min="10" max="200" value="90">
-          </div>
-          <div class="setting-row">
-            <label for="setting-wpm-50">WPM threshold (50 words)</label>
-            <input type="number" id="setting-wpm-50" min="10" max="200" value="80">
-          </div>
-          <div class="setting-row">
-            <label for="setting-typing-acc">Accuracy threshold (%)</label>
-            <input type="number" id="setting-typing-acc" min="50" max="100" value="95">
-          </div>
-          <div class="setting-row">
-            <label for="setting-settings-wpm">Settings gate WPM (harder)</label>
-            <input type="number" id="setting-settings-wpm" min="10" max="200" value="100">
+            <input type="number" id="new-daily-limit" placeholder="Daily limit (min)" min="1" max="1440">
+            <input type="number" id="new-unlock-duration" placeholder="Unlock (min)" min="1" max="1440">
+            <button id="confirm-add-btn" class="dash-btn">Add</button>
+            <button id="cancel-add-btn" class="dash-btn dash-btn-ghost">Cancel</button>
           </div>
         </div>
 
-        <div class="settings-group">
-          <div class="settings-group-label">Difficulty Schedule</div>
-          <div class="setting-row">
-            <label for="setting-difficulty-weekday">Weekday default</label>
-            <select id="setting-difficulty-weekday">
-              <option value="easy">Easy</option>
-              <option value="normal" selected>Normal</option>
-              <option value="hard">Hard</option>
-              <option value="extreme">Extreme</option>
-            </select>
+        <table id="sites-table">
+          <thead>
+            <tr>
+              <th>Domain</th>
+              <th>Status</th>
+              <th>Expires</th>
+              <th>Cap</th>
+              <th>Used</th>
+              <th>Remaining</th>
+              <th>Challenge</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="sites-tbody"></tbody>
+        </table>
+
+        <div id="no-sites" class="hidden">
+          <p>No blocked sites configured.</p>
+        </div>
+      </section>
+
+      <!-- Usage Section -->
+      <section id="usage-section">
+        <h2>Today's Usage</h2>
+        <div id="usage-bars"></div>
+        <div id="no-usage" class="hidden">
+          <p>No usage recorded today.</p>
+        </div>
+      </section>
+
+      <!-- Activity Heatmap -->
+      <section id="heatmap-section">
+        <h2>Activity</h2>
+        <div id="heatmap-wrapper">
+          <canvas id="heatmap-canvas"></canvas>
+          <div id="heatmap-tooltip" class="hidden"></div>
+        </div>
+        <div id="time-metrics">
+          <div class="time-metric-row">
+            <span class="time-label">This week</span>
+            <span id="time-week-detail" class="time-detail"></span>
           </div>
-          <div class="setting-row">
-            <label for="setting-difficulty-weekend">Weekend default</label>
-            <select id="setting-difficulty-weekend">
-              <option value="easy">Easy</option>
-              <option value="normal">Normal</option>
-              <option value="hard" selected>Hard</option>
-              <option value="extreme">Extreme</option>
-            </select>
+          <div class="time-metric-row">
+            <span class="time-label">All time</span>
+            <span id="time-total-detail" class="time-detail"></span>
           </div>
-          <div class="setting-hint">Harder difficulty generates tougher challenges. Weekends default to hard — you have more time then.</div>
+        </div>
+      </section>
+
+    </div><!-- /tab-overview -->
+
+    <!-- ═══ LEARNING TAB ═══ -->
+    <div id="tab-learning" class="hidden">
+
+      <!-- Progress Section -->
+      <section id="progress-section">
+        <div class="section-header">
+          <div id="progress-toggle">
+            <button class="toggle-btn active" data-view="typing">typing</button>
+            <button class="toggle-btn" data-view="python">python</button>
+            <button class="toggle-btn" data-view="terminal">terminal</button>
+            <button class="toggle-btn" data-view="git">git</button>
+          </div>
         </div>
 
-        <div class="settings-group">
-          <div class="settings-group-label">Python Mentor</div>
-          <div class="setting-row">
-            <label for="setting-api-key">Anthropic API key</label>
-            <input type="password" id="setting-api-key" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
-          </div>
-          <div class="setting-hint">Powers the Claude mentor. Without a key, uses local problem bank. Key stored locally in extension storage only.</div>
+        <div id="typing-speed-view">
+          <canvas id="typing-chart"></canvas>
+          <div id="typing-chart-stats"></div>
         </div>
 
-        <div class="setting-actions">
-          <button id="save-settings-btn" class="dash-btn">Save settings</button>
+        <div id="python-progress-view" class="hidden">
+          <div id="learning-curriculum"></div>
+          <div id="learning-stats"></div>
         </div>
-      </div>
-    </section>
+
+        <div id="terminal-progress-view" class="hidden">
+          <div id="terminal-curriculum"></div>
+          <div id="terminal-stats"></div>
+        </div>
+
+        <div id="git-progress-view" class="hidden">
+          <div id="git-curriculum"></div>
+          <div id="git-stats"></div>
+        </div>
+      </section>
+
+      <!-- Knowledge Map -->
+      <section id="knowledge-section">
+        <h2>Knowledge Map</h2>
+        <div id="knowledge-legend">
+          <span class="legend-item"><span class="legend-dot" style="background:#4a7eff"></span>Python</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#9ece6a"></span>Terminal</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#bb9af7"></span>Git</span>
+          <span class="legend-sep">·</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#2a2a2a"></span>Not started</span>
+          <span class="legend-item"><span class="legend-dot" style="background:rgba(74,126,255,0.5)"></span>Learning</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#44aa44"></span>Mastered</span>
+        </div>
+        <div id="knowledge-wrapper">
+          <canvas id="knowledge-canvas"></canvas>
+          <div id="knowledge-tooltip" class="hidden"></div>
+        </div>
+      </section>
+
+      <!-- Settings Section -->
+      <section id="settings-section">
+        <div class="section-header">
+          <h2>Settings</h2>
+          <div id="settings-lock-indicator">
+            <span id="settings-lock-text">Locked</span>
+            <button id="unlock-settings-btn" class="dash-btn dash-btn-sm">Unlock</button>
+          </div>
+        </div>
+
+        <div id="settings-overlay" class="settings-locked">
+          <div class="overlay-text">Settings are protected. Complete a challenge to edit.</div>
+        </div>
+
+        <div id="settings-form">
+          <div class="settings-group">
+            <div class="settings-group-label">General</div>
+            <div class="setting-row">
+              <label for="setting-unlock-duration">Unlock duration (minutes)</label>
+              <input type="number" id="setting-unlock-duration" min="1" max="480" value="30">
+            </div>
+            <div class="setting-row">
+              <label for="setting-idle-timeout">Idle timeout (seconds)</label>
+              <input type="number" id="setting-idle-timeout" min="30" max="600" value="120">
+            </div>
+            <div class="setting-row">
+              <label>
+                <input type="checkbox" id="setting-protected" checked>
+                Protect settings with challenge
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-group-label">Typing</div>
+            <div class="setting-row">
+              <label for="setting-word-count">Default word count</label>
+              <select id="setting-word-count">
+                <option value="25">25 words</option>
+                <option value="50">50 words</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <label for="setting-wpm-25">WPM threshold (25 words)</label>
+              <input type="number" id="setting-wpm-25" min="10" max="200" value="90">
+            </div>
+            <div class="setting-row">
+              <label for="setting-wpm-50">WPM threshold (50 words)</label>
+              <input type="number" id="setting-wpm-50" min="10" max="200" value="80">
+            </div>
+            <div class="setting-row">
+              <label for="setting-typing-acc">Accuracy threshold (%)</label>
+              <input type="number" id="setting-typing-acc" min="50" max="100" value="95">
+            </div>
+            <div class="setting-row">
+              <label for="setting-settings-wpm">Settings gate WPM (harder)</label>
+              <input type="number" id="setting-settings-wpm" min="10" max="200" value="100">
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-group-label">Difficulty Schedule</div>
+            <div class="setting-row">
+              <label for="setting-difficulty-weekday">Weekday default</label>
+              <select id="setting-difficulty-weekday">
+                <option value="easy">Easy</option>
+                <option value="normal" selected>Normal</option>
+                <option value="hard">Hard</option>
+                <option value="extreme">Extreme</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <label for="setting-difficulty-weekend">Weekend default</label>
+              <select id="setting-difficulty-weekend">
+                <option value="easy">Easy</option>
+                <option value="normal">Normal</option>
+                <option value="hard" selected>Hard</option>
+                <option value="extreme">Extreme</option>
+              </select>
+            </div>
+            <div class="setting-hint">Harder difficulty generates tougher challenges. Weekends default to hard — you have more time then.</div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-group-label">Python Mentor</div>
+            <div class="setting-row">
+              <label for="setting-api-key">Anthropic API key</label>
+              <input type="password" id="setting-api-key" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+            </div>
+            <div class="setting-hint">Powers the Claude mentor. Without a key, uses local problem bank. Key stored locally in extension storage only.</div>
+          </div>
+
+          <div class="setting-actions">
+            <button id="save-settings-btn" class="dash-btn">Save settings</button>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /tab-learning -->
   </div>
 
   <!-- Edit modal -->

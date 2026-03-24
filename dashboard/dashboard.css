@@ -35,6 +35,36 @@ html, body {
   padding: 48px 32px 64px;
 }
 
+/* Dashboard Tabs */
+#dash-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+
+.dash-tab {
+  all: unset;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-dim);
+  padding: 10px 20px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+
+.dash-tab:hover {
+  color: var(--text);
+}
+
+.dash-tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
 /* Header */
 #dash-header {
   display: flex;
@@ -491,11 +521,11 @@ button.toggle-btn.active {
 
 #knowledge-wrapper {
   position: relative;
-  overflow-x: auto;
-  background: #0d0d0d;
+  overflow: hidden;
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 0;
+  padding: 4px 0;
 }
 
 #knowledge-canvas {

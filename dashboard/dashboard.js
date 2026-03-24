@@ -8,9 +8,12 @@ const Dashboard = (() => {
   let editingDomain = null;
   let refreshTimer = null;
   let activeProgressView = 'typing'; // 'typing', 'python', 'terminal', or 'git'
+  let activeTab = 'overview'; // 'overview' or 'learning'
 
   // Elements
   const els = {
+    tabOverview: document.getElementById('tab-overview'),
+    tabLearning: document.getElementById('tab-learning'),
     statChallenges: document.getElementById('stat-challenges'),
     statTier: document.getElementById('stat-tier'),
     sitesTbody: document.getElementById('sites-tbody'),
@@ -727,7 +730,13 @@ const Dashboard = (() => {
     if (els.timeTotalDetail) els.timeTotalDetail.textContent = fmt(totalCounts);
   }
 
-  // ── Knowledge Tree ─────────────────────────────────────────────────────
+  // ── Knowledge Tree (Radial) ────────────────────────────────────────────
+
+  const CLUSTER_NAMES = {
+    python: { 1: 'Fundamentals', 2: 'Data & Logic', 3: 'Intermediate', 4: 'Advanced', 5: 'Expert', 6: 'System Design', 7: 'Code Review' },
+    terminal: { 1: 'Shell Basics', 2: 'File Ops', 3: 'Power User', 4: 'Dev Tools', 5: 'Mastery' },
+    git: { 1: 'Basics', 2: 'Branching', 3: 'History', 4: 'Advanced', 5: 'Workflows' }
+  };
 
   function renderKnowledgeTree() {
     const canvas = els.knowledgeCanvas;
@@ -741,18 +750,22 @@ const Dashboard = (() => {
     const edges = KNOWLEDGE_GRAPH.edges;
     const disciplines = KNOWLEDGE_GRAPH.disciplines;
 
-    // Layout parameters
-    const colWidth = 260;
-    const rowHeight = 26;
-    const tierGap = 14; // extra gap between tiers
-    const padLeft = 40;
-    const padTop = 38;
-    const nodeRadius = 7;
+    // ── Radial tree layout ──────────────────────────────────────────
+    const container = canvas.parentElement;
+    const availWidth = container ? container.clientWidth : 860;
+    const width = Math.max(700, availWidth);
+    const cx = width / 2; // center x
+    const rootY = 40;     // root node position
+    const nodeRadius = 6;
 
-    const positions = {};
-    const tierBounds = {}; // track y-range per tier for dividers
+    // Branch angles: Python left (-55°), Terminal center (0°/down), Git right (55°)
+    const branchAngles = {
+      python: -55 * Math.PI / 180,
+      terminal: 0,
+      git: 55 * Math.PI / 180
+    };
 
-    // Group by discipline and tier
+    // Group nodes by discipline and tier
     const groups = {};
     for (const n of nodes) {
       const key = `${n.discipline}:${n.tier}`;
@@ -760,37 +773,36 @@ const Dashboard = (() => {
       groups[key].push(n);
     }
 
-    // Position nodes with tier gaps
-    let maxY = 0;
-    const allTiers = [...new Set(nodes.map(n => n.tier))].sort((a, b) => a - b);
+    // Compute positions: each tier radiates outward from root along the branch angle
+    const positions = {};
+    const tierRadius = 70; // distance between tiers
+    const nodeSpread = 18; // vertical spread within a tier
 
+    let maxY = rootY;
     for (const n of nodes) {
-      const colIdx = n.discipline === 'python' ? 0 : n.discipline === 'terminal' ? 1 : 2;
-      const tierNodes = groups[`${n.discipline}:${n.tier}`];
+      const angle = branchAngles[n.discipline];
+      const tierNodes = groups[`${n.discipline}:${n.tier}`] || [];
       const idxInTier = tierNodes.indexOf(n);
+      const tierCenter = tierNodes.length / 2;
 
-      // Count nodes in previous tiers for this discipline
-      let yOffset = 0;
-      for (const t of allTiers) {
-        if (t >= n.tier) break;
-        const count = (groups[`${n.discipline}:${t}`] || []).length;
-        yOffset += count * rowHeight + tierGap;
-      }
-      yOffset += idxInTier * rowHeight;
+      // Distance from root increases per tier
+      const dist = 60 + (n.tier - 1) * tierRadius;
 
-      const x = padLeft + colIdx * colWidth + colWidth / 2;
-      const y = padTop + yOffset;
+      // Base position along branch direction
+      const baseX = cx + Math.sin(angle) * dist;
+      const baseY = rootY + Math.cos(angle) * dist * 0.85; // compress vertical slightly
+
+      // Spread nodes within tier perpendicular to branch direction
+      const spread = (idxInTier - tierCenter + 0.5) * nodeSpread;
+      const perpAngle = angle + Math.PI / 2;
+      const x = baseX + Math.sin(perpAngle) * spread;
+      const y = baseY + Math.cos(perpAngle) * spread * 0.4; // less vertical spread
+
       positions[n.id] = { x, y, node: n };
       if (y > maxY) maxY = y;
-
-      // Track tier bounds for dividers
-      if (!tierBounds[n.tier]) tierBounds[n.tier] = { minY: y, maxY: y };
-      tierBounds[n.tier].minY = Math.min(tierBounds[n.tier].minY, y);
-      tierBounds[n.tier].maxY = Math.max(tierBounds[n.tier].maxY, y);
     }
 
-    const width = padLeft + 3 * colWidth;
-    const height = maxY + padTop + 20;
+    const height = maxY + 50;
 
     const dpr = window.devicePixelRatio || 1;
     canvas.width = width * dpr;
@@ -802,33 +814,50 @@ const Dashboard = (() => {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
-    // Tier dividers and labels
+    // ── Root node ───────────────────────────────────────────────────
+    ctx.beginPath();
+    ctx.arc(cx, rootY, 10, 0, Math.PI * 2);
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fill();
+    ctx.strokeStyle = '#4a7eff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
     ctx.font = '9px system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    for (const [tier, bounds] of Object.entries(tierBounds)) {
-      const y = bounds.minY - 10;
-      ctx.fillStyle = '#333';
-      ctx.fillRect(padLeft - 28, y, width - padLeft + 10, 1);
-      ctx.fillStyle = '#444';
-      ctx.fillText(`T${tier}`, 8, y + 4);
-    }
+    ctx.fillStyle = '#666';
+    ctx.textAlign = 'center';
+    ctx.fillText('Your Knowledge', cx, rootY + 22);
 
-    // Column headers with subtle underline
-    ctx.font = 'bold 11px system-ui, sans-serif';
-    for (const [key, disc] of Object.entries(disciplines)) {
-      const colIdx = key === 'python' ? 0 : key === 'terminal' ? 1 : 2;
-      const x = padLeft + colIdx * colWidth + colWidth / 2;
-      ctx.fillStyle = disc.color;
-      ctx.textAlign = 'center';
-      ctx.fillText(disc.label, x, 16);
-      // Underline
-      ctx.fillStyle = disc.color;
+    // ── Branch stems (root → first tier of each discipline) ─────────
+    for (const [disc, angle] of Object.entries(branchAngles)) {
+      const firstTier = groups[`${disc}:1`];
+      if (!firstTier || firstTier.length === 0) continue;
+      const firstPos = positions[firstTier[0].id];
+      if (!firstPos) continue;
+
+      // Average position of first tier
+      const avgX = firstTier.reduce((s, n) => s + (positions[n.id]?.x || 0), 0) / firstTier.length;
+      const avgY = firstTier.reduce((s, n) => s + (positions[n.id]?.y || 0), 0) / firstTier.length;
+
+      ctx.beginPath();
+      ctx.moveTo(cx, rootY + 10);
+      ctx.quadraticCurveTo(cx + (avgX - cx) * 0.3, rootY + (avgY - rootY) * 0.5, avgX, avgY);
+      ctx.strokeStyle = disciplines[disc]?.color || '#666';
       ctx.globalAlpha = 0.2;
-      ctx.fillRect(x - 30, 20, 60, 1);
+      ctx.lineWidth = 2;
+      ctx.stroke();
       ctx.globalAlpha = 1;
+
+      // Discipline label near start of branch
+      const labelDist = 35;
+      const lx = cx + Math.sin(angle) * labelDist;
+      const ly = rootY + Math.cos(angle) * labelDist * 0.85;
+      ctx.font = 'bold 11px system-ui, sans-serif';
+      ctx.fillStyle = disciplines[disc]?.color || '#666';
+      ctx.textAlign = 'center';
+      ctx.fillText(disciplines[disc]?.label || disc, lx, ly);
     }
 
-    // Draw same-discipline edges (sequential)
+    // ── Same-discipline edges (tier connections) ────────────────────
     for (const n of nodes) {
       const idx = nodes.indexOf(n);
       const next = nodes.find((nn, ni) => ni > idx && nn.discipline === n.discipline);
@@ -838,48 +867,62 @@ const Dashboard = (() => {
         if (from && to) {
           ctx.beginPath();
           ctx.strokeStyle = disciplines[n.discipline]?.color || '#666';
-          ctx.globalAlpha = 0.12;
+          ctx.globalAlpha = 0.08;
           ctx.lineWidth = 1;
-          ctx.moveTo(from.x, from.y + nodeRadius);
-          ctx.lineTo(to.x, to.y - nodeRadius);
+          ctx.moveTo(from.x, from.y);
+          ctx.lineTo(to.x, to.y);
           ctx.stroke();
           ctx.globalAlpha = 1;
         }
       }
     }
 
-    // Draw cross-discipline edges with gradient-like coloring
+    // ── Cross-discipline edges ──────────────────────────────────────
     for (const edge of edges) {
       const from = positions[edge.from];
       const to = positions[edge.to];
       if (!from || !to) continue;
 
-      // Both nodes connected? Use brighter line if both are mastered/learning
-      const fromMastery = from.node.mastery;
-      const toMastery = to.node.mastery;
-      const bothActive = fromMastery !== 'not_started' && toMastery !== 'not_started';
+      const bothActive = from.node.mastery !== 'not_started' && to.node.mastery !== 'not_started';
 
       ctx.beginPath();
-      ctx.strokeStyle = bothActive ? '#4a7eff' : '#2a3a5a';
-      ctx.globalAlpha = bothActive ? 0.35 : 0.12;
-      ctx.lineWidth = bothActive ? 1.5 : 0.8;
-      ctx.setLineDash(bothActive ? [] : [3, 4]);
+      ctx.strokeStyle = bothActive ? '#4a7eff' : '#2a2a2a';
+      ctx.globalAlpha = bothActive ? 0.3 : 0.06;
+      ctx.lineWidth = bothActive ? 1.2 : 0.6;
+      ctx.setLineDash(bothActive ? [2, 3] : [2, 5]);
 
-      // S-curve for better visual
       const dx = to.x - from.x;
       const dy = to.y - from.y;
-      const cx1 = from.x + dx * 0.4;
-      const cy1 = from.y + dy * 0.1;
-      const cx2 = to.x - dx * 0.4;
-      const cy2 = to.y - dy * 0.1;
       ctx.moveTo(from.x, from.y);
-      ctx.bezierCurveTo(cx1, cy1, cx2, cy2, to.x, to.y);
+      ctx.bezierCurveTo(from.x + dx * 0.4, from.y + dy * 0.1, to.x - dx * 0.4, to.y - dy * 0.1, to.x, to.y);
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
     }
 
-    // Draw nodes
+    // ── Cluster labels (between tiers along each branch) ────────────
+    ctx.font = 'italic 9px system-ui, sans-serif';
+    for (const [disc, clusters] of Object.entries(CLUSTER_NAMES)) {
+      for (const [tier, name] of Object.entries(clusters)) {
+        const tierNodes = groups[`${disc}:${tier}`];
+        if (!tierNodes || tierNodes.length === 0) continue;
+
+        // Position label offset from the cluster
+        const avgX = tierNodes.reduce((s, n) => s + (positions[n.id]?.x || 0), 0) / tierNodes.length;
+        const avgY = tierNodes.reduce((s, n) => s + (positions[n.id]?.y || 0), 0) / tierNodes.length;
+
+        // Offset label away from center
+        const angle = branchAngles[disc];
+        const offsetX = Math.sin(angle + Math.PI / 2) * (disc === 'terminal' ? -50 : disc === 'python' ? -55 : 55);
+        const offsetY = -2;
+
+        ctx.fillStyle = '#444';
+        ctx.textAlign = disc === 'git' ? 'left' : disc === 'python' ? 'right' : 'left';
+        ctx.fillText(name, avgX + offsetX, avgY + offsetY);
+      }
+    }
+
+    // ── Nodes ───────────────────────────────────────────────────────
     const nodePositions = [];
     for (const n of nodes) {
       const pos = positions[n.id];
@@ -890,22 +933,22 @@ const Dashboard = (() => {
       switch (n.mastery) {
         case 'mastered':
           fillColor = '#44aa44';
-          glowColor = 'rgba(68, 170, 68, 0.3)';
+          glowColor = 'rgba(68, 170, 68, 0.25)';
           break;
         case 'learning':
-          fillColor = '#1a4a8a';
-          glowColor = 'rgba(74, 126, 255, 0.2)';
+          fillColor = 'rgba(74, 126, 255, 0.7)';
+          glowColor = 'rgba(74, 126, 255, 0.15)';
           break;
         case 'started':
-          fillColor = '#1a4a8a';
+          fillColor = 'rgba(74, 126, 255, 0.4)';
           glowColor = null;
           break;
         default:
-          fillColor = '#1e1e1e';
+          fillColor = '#141414';
           glowColor = null;
       }
 
-      // Glow for mastered/learning nodes
+      // Glow
       if (glowColor) {
         ctx.beginPath();
         ctx.arc(pos.x, pos.y, nodeRadius + 4, 0, Math.PI * 2);
@@ -913,25 +956,25 @@ const Dashboard = (() => {
         ctx.fill();
       }
 
-      // Node circle
+      // Circle
       ctx.beginPath();
       ctx.arc(pos.x, pos.y, nodeRadius, 0, Math.PI * 2);
       ctx.fillStyle = fillColor;
       ctx.fill();
-      ctx.strokeStyle = n.mastery === 'not_started' ? '#333' : discColor;
-      ctx.lineWidth = n.mastery === 'not_started' ? 1 : 1.5;
+      ctx.strokeStyle = n.mastery === 'not_started' ? '#2a2a2a' : discColor;
+      ctx.lineWidth = n.mastery === 'not_started' ? 0.8 : 1.5;
       ctx.stroke();
 
       // Label
-      ctx.font = '10px system-ui, sans-serif';
-      ctx.fillStyle = n.mastery === 'not_started' ? '#444' : n.mastery === 'mastered' ? '#ccc' : '#888';
+      ctx.font = '9px system-ui, sans-serif';
+      ctx.fillStyle = n.mastery === 'not_started' ? '#444' : n.mastery === 'mastered' ? '#e0e0e0' : '#666';
       ctx.textAlign = 'left';
-      ctx.fillText(n.label, pos.x + nodeRadius + 5, pos.y + 3);
+      ctx.fillText(n.label, pos.x + nodeRadius + 4, pos.y + 3);
 
-      nodePositions.push({ ...pos, r: nodeRadius + 50, node: n });
+      nodePositions.push({ x: pos.x, y: pos.y, r: 60, node: n });
     }
 
-    // Tooltip
+    // ── Tooltip ─────────────────────────────────────────────────────
     canvas.onmousemove = (e) => {
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
@@ -939,7 +982,7 @@ const Dashboard = (() => {
       const hit = nodePositions.find(p => {
         const dx = mx - p.x;
         const dy = my - p.y;
-        return Math.abs(dy) < 12 && dx > -nodeRadius && dx < p.r;
+        return Math.abs(dy) < 10 && dx > -nodeRadius && dx < p.r;
       });
       const tooltip = els.knowledgeTooltip;
       if (hit) {
@@ -948,7 +991,7 @@ const Dashboard = (() => {
           ? SpacedRepetition.LABELS[n.confidence] : n.mastery;
         const edgeCount = edges.filter(e => e.from === n.id || e.to === n.id).length;
         let text = `${n.label} (${n.discipline}) · ${n.passes}/${n.attempts} · ${confLabel}`;
-        if (edgeCount > 0) text += ` · ${edgeCount} connection${edgeCount > 1 ? 's' : ''}`;
+        if (edgeCount > 0) text += ` · ${edgeCount} cross-links`;
         tooltip.textContent = text;
         tooltip.style.left = (mx + 12) + 'px';
         tooltip.style.top = (my - 28) + 'px';
@@ -993,6 +1036,22 @@ const Dashboard = (() => {
   }
 
   function bindEvents() {
+    // Dashboard tabs
+    document.querySelectorAll('.dash-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        activeTab = tab.dataset.tab;
+        els.tabOverview.classList.toggle('hidden', activeTab !== 'overview');
+        els.tabLearning.classList.toggle('hidden', activeTab !== 'learning');
+        // Re-render the active tab's content (canvases need redraw)
+        if (activeTab === 'learning') {
+          renderProgress();
+          renderKnowledgeTree();
+        }
+      });
+    });
+
     // Add site
     els.addSiteBtn.addEventListener('click', () => {
       if (state.settings.settingsProtected !== false && !settingsUnlocked) {
