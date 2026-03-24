@@ -456,6 +456,62 @@ button.toggle-btn.active {
   padding: 10px 0;
 }
 
+/* Knowledge Map */
+#knowledge-section {
+  margin-bottom: 48px;
+}
+
+#knowledge-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legend-sep {
+  color: var(--text-muted);
+}
+
+#knowledge-wrapper {
+  position: relative;
+  overflow-x: auto;
+}
+
+#knowledge-canvas {
+  display: block;
+}
+
+#knowledge-tooltip {
+  position: absolute;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+}
+
 /* Settings */
 #settings-section {
   position: relative;
