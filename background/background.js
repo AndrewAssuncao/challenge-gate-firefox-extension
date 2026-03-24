@@ -120,6 +120,31 @@ browser.storage.onChanged.addListener((changes) => {
 
 // ── Domain matching ─────────────────────────────────────────────────────────
 
+// Domains and paths that should never be blocked, even if a parent domain is blocked.
+// These are essential services (auth flows, admin consoles, APIs) that share
+// domain suffixes with blocked entertainment sites.
+const ALWAYS_ALLOW = [
+  // Google ecosystem — admin, auth, cloud, workspace (shares infra with youtube.com)
+  'accounts.google.com',
+  'accounts.youtube.com',   // OAuth redirects during Google sign-in
+  'admin.google.com',
+  'console.cloud.google.com',
+  'console.firebase.google.com',
+  'workspace.google.com',
+  'mail.google.com',
+  'calendar.google.com',
+  'docs.google.com',
+  'drive.google.com',
+  'meet.google.com',
+  'studio.youtube.com',     // YouTube Studio (for creators/work)
+  // Meta — business tools (shares infra with instagram.com)
+  'business.facebook.com',
+  'developers.facebook.com',
+  // Twitter/X — developer platform
+  'developer.twitter.com',
+  'developer.x.com'
+];
+
 function findBlockedSite(url) {
   let hostname;
   try {
@@ -127,6 +152,12 @@ function findBlockedSite(url) {
   } catch {
     return null;
   }
+
+  // Check allowlist first — these are never blocked
+  if (ALWAYS_ALLOW.some(allowed => hostname === allowed || hostname.endsWith('.' + allowed))) {
+    return null;
+  }
+
   return blockedSites.find(s =>
     s.enabled && (hostname === s.domain || hostname.endsWith('.' + s.domain))
   );
