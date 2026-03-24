@@ -174,16 +174,15 @@
   caret-color: transparent;
 }
 
-/* Blinking cursor after input display */
-#terminal-input-display::after {
-  content: '';
+/* Blinking cursor positioned within input */
+.term-cursor {
   display: inline-block;
   width: 8px;
   height: 16px;
   background: var(--term-arg);
   vertical-align: text-bottom;
   animation: term-blink 1s step-end infinite;
-  margin-left: 1px;
+  margin: 0 -1px;
 }
 
 @keyframes term-blink {
@@ -255,7 +254,7 @@
   border-color: var(--border-focus);
 }
 
-#terminal-container:not(:focus-within) #terminal-input-display::after {
+#terminal-container:not(:focus-within) .term-cursor {
   animation: none;
   opacity: 0.3;
 }

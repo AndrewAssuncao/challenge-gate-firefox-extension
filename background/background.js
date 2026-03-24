@@ -17,7 +17,12 @@ let settings = {
   typingWpm50: 80,
   typingAccuracyThreshold: 95,
   settingsTypingWpm: 100,
-  anthropicApiKey: ''
+  anthropicApiKey: '',
+  difficultySchedule: {
+    weekdayDefault: 'normal',
+    weekendDefault: 'hard',
+    timeRanges: []
+  }
 };
 let progression = {
   pythonTier: 1,
@@ -30,6 +35,7 @@ let progression = {
 let learningProfile = null;
 let terminalLearningProfile = null;
 let typingHistory = [];
+let dailyChallengeLog = {};
 
 // ── Default blocked sites for first run ─────────────────────────────────────
 
@@ -47,7 +53,7 @@ const DEFAULT_SITES = [
 async function loadState() {
   try {
     const data = await browser.storage.local.get([
-      'blockedSites', 'unlocks', 'timeTracking', 'settings', 'progression', 'learningProfile', 'terminalLearningProfile', 'typingHistory'
+      'blockedSites', 'unlocks', 'timeTracking', 'settings', 'progression', 'learningProfile', 'terminalLearningProfile', 'typingHistory', 'dailyChallengeLog'
     ]);
 
     if (!data.blockedSites) {
@@ -64,6 +70,7 @@ async function loadState() {
     learningProfile = data.learningProfile || null;
     terminalLearningProfile = data.terminalLearningProfile || null;
     typingHistory = data.typingHistory || [];
+    dailyChallengeLog = data.dailyChallengeLog || {};
   } catch (err) {
     console.error('[Challenge Gate] Failed to load state:', err);
   }
@@ -101,6 +108,7 @@ browser.storage.onChanged.addListener((changes) => {
   if (changes.settings) settings = { ...settings, ...(changes.settings.newValue || {}) };
   if (changes.progression) progression = { ...progression, ...(changes.progression.newValue || {}) };
   if (changes.terminalLearningProfile) terminalLearningProfile = changes.terminalLearningProfile.newValue || null;
+  if (changes.dailyChallengeLog) dailyChallengeLog = changes.dailyChallengeLog.newValue || {};
 });
 
 // ── Domain matching ─────────────────────────────────────────────────────────
@@ -298,7 +306,8 @@ const messageHandlers = {
       progression,
       learningProfile,
       terminalLearningProfile,
-      typingHistory
+      typingHistory,
+      dailyChallengeLog
     };
   },
 
@@ -379,8 +388,8 @@ const messageHandlers = {
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1024,
+          model: msg.model || 'claude-sonnet-4-20250514',
+          max_tokens: msg.maxTokens || 1024,
           messages: [
             { role: 'user', content: msg.prompt }
           ]
@@ -441,6 +450,56 @@ const messageHandlers = {
 
   async getTypingHistory() {
     return typingHistory;
+  },
+
+  // Daily challenge log (for heatmap and time metrics)
+  async logChallengeCompletion(msg) {
+    const today = todayKey();
+    if (!dailyChallengeLog[today]) {
+      dailyChallengeLog[today] = { typing: 0, python: 0, terminal: 0, git: 0, totalTime: 0 };
+    }
+    const log = dailyChallengeLog[today];
+    if (msg.challengeType) log[msg.challengeType] = (log[msg.challengeType] || 0) + 1;
+    if (msg.solveTime) log.totalTime = (log.totalTime || 0) + msg.solveTime;
+    // Prune entries older than 1 year
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - 1);
+    const cutoffKey = cutoff.toISOString().slice(0, 10);
+    for (const key of Object.keys(dailyChallengeLog)) {
+      if (key < cutoffKey) delete dailyChallengeLog[key];
+    }
+    await browser.storage.local.set({ dailyChallengeLog }).catch(logStorageError);
+    return { success: true };
+  },
+
+  async getDailyChallengeLog() {
+    return dailyChallengeLog;
+  },
+
+  // Difficulty schedule
+  async getCurrentDifficulty() {
+    const schedule = settings.difficultySchedule || {};
+    const now = new Date();
+    const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    // Check time range overrides first
+    for (const range of (schedule.timeRanges || [])) {
+      if (range.start && range.end) {
+        // Handle overnight ranges (e.g., 22:00-06:00)
+        if (range.start > range.end) {
+          if (currentTime >= range.start || currentTime < range.end) {
+            return { difficulty: range.difficulty };
+          }
+        } else {
+          if (currentTime >= range.start && currentTime < range.end) {
+            return { difficulty: range.difficulty };
+          }
+        }
+      }
+    }
+
+    return { difficulty: isWeekend ? (schedule.weekendDefault || 'normal') : (schedule.weekdayDefault || 'normal') };
   }
 };
 

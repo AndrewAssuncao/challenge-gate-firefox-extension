@@ -14,6 +14,9 @@ const PythonChallenge = (() => {
   let profile = null;
   let challengeResolved = false;
   let lastRunDiagnostics = null;
+  let challengeStartTime = 0;
+  let failedBeforePass = 0;
+  let helpUsedThisChallenge = false;
 
   const promptEl = document.getElementById('python-prompt');
   const editorEl = document.getElementById('python-editor');
@@ -50,6 +53,9 @@ const PythonChallenge = (() => {
     lastErrorOutput = '';
     lastRunDiagnostics = null;
     challengeResolved = false;
+    challengeStartTime = Date.now();
+    failedBeforePass = 0;
+    helpUsedThisChallenge = false;
     outputEl.classList.add('hidden');
     hintBtn.disabled = false;
     helpBtn.disabled = false;
@@ -383,9 +389,14 @@ const PythonChallenge = (() => {
     if (challengeResolved) return;
     challengeResolved = true;
 
-    // Update learning profile
-    profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, true, challengeSource);
+    // Update learning profile (with spaced repetition context)
+    const struggled = failedBeforePass > 0;
+    profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, true, challengeSource, struggled, helpUsedThisChallenge);
     await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
+
+    // Log to daily challenge log
+    const solveTime = Math.round((Date.now() - challengeStartTime) / 1000);
+    browser.runtime.sendMessage({ type: 'logChallengeCompletion', challengeType: 'python', solveTime }).catch(() => {});
 
     // Also update progression
     const state = await browser.runtime.sendMessage({ type: 'getState' });
@@ -404,9 +415,10 @@ const PythonChallenge = (() => {
 
   async function onFailed() {
     if (challengeResolved) return;
+    failedBeforePass++;
 
     // Record failure in learning profile (no gate unlock)
-    profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource);
+    profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource, false, helpUsedThisChallenge);
     await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
   }
 
@@ -431,6 +443,7 @@ const PythonChallenge = (() => {
 
   async function askForHelp() {
     if (!challenge || challengeResolved) return;
+    helpUsedThisChallenge = true;
 
     helpBtn.disabled = true;
     helpBtn.textContent = 'Thinking…';

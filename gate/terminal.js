@@ -18,6 +18,8 @@ const TerminalChallenge = (() => {
   let lastExitCode = 0;
   let lastOutput = '';
   let commandsExecuted = [];
+  let challengeStartTime = 0;
+  let helpUsedThisChallenge = false;
   let aliases = {};
 
   // ── Virtual Filesystem ────────────────────────────────────────────────
@@ -1505,6 +1507,66 @@ const TerminalChallenge = (() => {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  // ── Cursor-aware rendering ────────────────────────────────────────────
+
+  function renderInputWithCursor(text, cursorPos) {
+    if (!text && cursorPos === 0) {
+      return '<span class="term-cursor"></span>';
+    }
+    const highlighted = highlightInput(text);
+    if (cursorPos >= text.length) {
+      return highlighted + '<span class="term-cursor"></span>';
+    }
+    // Count plain-text characters through the HTML, insert cursor at the right position
+    let plainIdx = 0;
+    let inTag = false;
+    let insertPos = -1;
+    for (let i = 0; i < highlighted.length; i++) {
+      if (highlighted[i] === '<') { inTag = true; continue; }
+      if (highlighted[i] === '>') { inTag = false; continue; }
+      if (!inTag) {
+        if (plainIdx === cursorPos) {
+          insertPos = i;
+          break;
+        }
+        // Handle HTML entities (&amp; &lt; &gt; &quot;)
+        if (highlighted[i] === '&') {
+          const semiPos = highlighted.indexOf(';', i);
+          if (semiPos > i && semiPos - i < 8) {
+            i = semiPos; // skip to end of entity (the for loop will advance past ;)
+          }
+        }
+        plainIdx++;
+      }
+    }
+    if (insertPos === -1) {
+      return highlighted + '<span class="term-cursor"></span>';
+    }
+    // Walk back to find the actual byte position (we were skipping tags above)
+    let bytePos = 0;
+    plainIdx = 0;
+    inTag = false;
+    for (let i = 0; i < highlighted.length; i++) {
+      if (highlighted[i] === '<') { inTag = true; continue; }
+      if (highlighted[i] === '>') { inTag = false; bytePos = i + 1; continue; }
+      if (!inTag) {
+        if (plainIdx === cursorPos) {
+          bytePos = i;
+          break;
+        }
+        if (highlighted[i] === '&') {
+          const semiPos = highlighted.indexOf(';', i);
+          if (semiPos > i && semiPos - i < 8) {
+            i = semiPos;
+          }
+        }
+        plainIdx++;
+        bytePos = i + 1;
+      }
+    }
+    return highlighted.slice(0, bytePos) + '<span class="term-cursor"></span>' + highlighted.slice(bytePos);
+  }
+
   // ── Autosuggestion ────────────────────────────────────────────────────
 
   function getSuggestion(partial) {
@@ -1612,6 +1674,9 @@ const TerminalChallenge = (() => {
     // Bind events
     els.input.addEventListener('keydown', handleKeydown);
     els.input.addEventListener('input', handleInput);
+    els.input.addEventListener('keyup', handleCursorUpdate);
+    els.input.addEventListener('click', handleCursorUpdate);
+    els.input.addEventListener('paste', handlePaste);
     els.hintBtn.addEventListener('click', showHint);
     els.helpBtn.addEventListener('click', askForHelp);
     els.skipBtn.addEventListener('click', skipChallenge);
@@ -1654,6 +1719,8 @@ const TerminalChallenge = (() => {
 
   function renderChallenge() {
     els.output.innerHTML = '';
+    challengeStartTime = Date.now();
+    helpUsedThisChallenge = false;
 
     // Update meta
     const topic = TerminalChallengeProvider.TERMINAL_CURRICULUM[profile.currentTopicIndex] || TerminalChallengeProvider.TERMINAL_CURRICULUM[0];
@@ -1766,7 +1833,7 @@ const TerminalChallenge = (() => {
       const suggestion = getSuggestion(els.input.value);
       if (suggestion) {
         els.input.value += suggestion;
-        els.inputDisplay.innerHTML = highlightInput(els.input.value);
+        els.inputDisplay.innerHTML = renderInputWithCursor(els.input.value, els.input.value.length);
         els.suggestion.textContent = '';
       } else {
         tabComplete();
@@ -1779,7 +1846,7 @@ const TerminalChallenge = (() => {
       if (historyIndex > 0) {
         historyIndex--;
         els.input.value = commandHistory[historyIndex];
-        els.inputDisplay.innerHTML = highlightInput(els.input.value);
+        els.inputDisplay.innerHTML = renderInputWithCursor(els.input.value, els.input.value.length);
         els.suggestion.textContent = '';
       }
       return;
@@ -1790,7 +1857,7 @@ const TerminalChallenge = (() => {
       if (historyIndex < commandHistory.length - 1) {
         historyIndex++;
         els.input.value = commandHistory[historyIndex];
-        els.inputDisplay.innerHTML = highlightInput(els.input.value);
+        els.inputDisplay.innerHTML = renderInputWithCursor(els.input.value, els.input.value.length);
       } else {
         historyIndex = commandHistory.length;
         els.input.value = '';
@@ -1805,7 +1872,7 @@ const TerminalChallenge = (() => {
       if (suggestion) {
         e.preventDefault();
         els.input.value += suggestion;
-        els.inputDisplay.innerHTML = highlightInput(els.input.value);
+        els.inputDisplay.innerHTML = renderInputWithCursor(els.input.value, els.input.value.length);
         els.suggestion.textContent = '';
       }
       return;
@@ -1820,8 +1887,28 @@ const TerminalChallenge = (() => {
 
   function handleInput() {
     const val = els.input.value;
-    els.inputDisplay.innerHTML = highlightInput(val);
-    els.suggestion.textContent = getSuggestion(val);
+    const cursorPos = els.input.selectionStart;
+    els.inputDisplay.innerHTML = renderInputWithCursor(val, cursorPos);
+    els.suggestion.textContent = cursorPos >= val.length ? getSuggestion(val) : '';
+  }
+
+  function handleCursorUpdate() {
+    // Re-render cursor position on arrow keys, clicks, etc.
+    const val = els.input.value;
+    const cursorPos = els.input.selectionStart;
+    els.inputDisplay.innerHTML = renderInputWithCursor(val, cursorPos);
+    els.suggestion.textContent = cursorPos >= val.length ? getSuggestion(val) : '';
+  }
+
+  function handlePaste(e) {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    if (!text) return;
+    const start = els.input.selectionStart;
+    const end = els.input.selectionEnd;
+    els.input.value = els.input.value.slice(0, start) + text + els.input.value.slice(end);
+    els.input.selectionStart = els.input.selectionEnd = start + text.length;
+    handleInput();
   }
 
   function tabComplete() {
@@ -1843,7 +1930,7 @@ const TerminalChallenge = (() => {
       const completion = matches[0].name.slice(prefix.length);
       const suffix = matches[0].type === 'dir' ? '/' : ' ';
       els.input.value = val + completion + suffix;
-      els.inputDisplay.innerHTML = highlightInput(els.input.value);
+      els.inputDisplay.innerHTML = renderInputWithCursor(els.input.value, els.input.value.length);
       els.suggestion.textContent = '';
     } else if (matches.length > 1) {
       // Show options
@@ -1858,7 +1945,7 @@ const TerminalChallenge = (() => {
       }
       if (common) {
         els.input.value = val + common;
-        els.inputDisplay.innerHTML = highlightInput(els.input.value);
+        els.inputDisplay.innerHTML = renderInputWithCursor(els.input.value, els.input.value.length);
       }
     }
   }
@@ -1873,9 +1960,14 @@ const TerminalChallenge = (() => {
       appendOutput(`<span class="term-after-solve">${escapeHtml(challenge.afterSolve)}</span>`);
     }
 
-    // Update profile
-    TerminalChallengeProvider.updateProfileAfterChallenge(profile, challenge, true, challengeSource);
+    // Update profile (with spaced repetition context)
+    const struggled = commandsExecuted.length > 10;
+    TerminalChallengeProvider.updateProfileAfterChallenge(profile, challenge, true, challengeSource, struggled, helpUsedThisChallenge);
     await browser.runtime.sendMessage({ type: 'saveTerminalLearningProfile', profile });
+
+    // Log to daily challenge log
+    const solveTime = Math.round((Date.now() - challengeStartTime) / 1000);
+    browser.runtime.sendMessage({ type: 'logChallengeCompletion', challengeType: 'terminal', solveTime }).catch(() => {});
 
     // Update progression
     try {
@@ -1901,6 +1993,7 @@ const TerminalChallenge = (() => {
   }
 
   async function askForHelp() {
+    helpUsedThisChallenge = true;
     appendOutput('<span class="term-dim">Asking for help...</span>');
     try {
       const helpPrompt = `The user is stuck on a terminal challenge. Here's the context:
@@ -1971,6 +2064,9 @@ Give a brief, helpful hint without giving away the exact answer. 2-3 sentences m
     if (els.input) {
       els.input.removeEventListener('keydown', handleKeydown);
       els.input.removeEventListener('input', handleInput);
+      els.input.removeEventListener('keyup', handleCursorUpdate);
+      els.input.removeEventListener('click', handleCursorUpdate);
+      els.input.removeEventListener('paste', handlePaste);
     }
   }
 

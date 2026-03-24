@@ -79,6 +79,11 @@ const ChallengeProvider = (() => {
 
     const difficulty = isSettingsGate ? 'harder than usual (this is a settings-gate challenge)' : 'appropriate for the current level';
 
+    // Spaced repetition context
+    const reviewContext = (typeof SpacedRepetition !== 'undefined')
+      ? SpacedRepetition.buildReviewContext(profile, CURRICULUM)
+      : '';
+
     return `You are a Python programming mentor embedded in a browser extension that blocks distracting websites. The user must solve your challenge to access a site they've blocked. Your job is to genuinely teach them Python — not just test them.
 
 ## Your Teaching Style
@@ -104,7 +109,7 @@ ${weakList || '(None identified)'}
 
 ## Recent Challenges
 ${recentSummary || '  (None yet)'}
-
+${reviewContext}
 ## Instructions
 Generate a challenge that is ${difficulty}. Focus on the current topic: "${currentTopic.name}".
 
@@ -341,11 +346,15 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
 
   async function generateFromClaude(profile, isSettingsGate) {
     const prompt = buildMentorPrompt(profile, isSettingsGate);
+    const currentTopic = CURRICULUM[profile.currentTopicIndex] || CURRICULUM[0];
+    const useOpus = currentTopic.tier >= 5;
 
     try {
       const response = await browser.runtime.sendMessage({
         type: 'claudeGenerate',
-        prompt: prompt
+        prompt: prompt,
+        model: useOpus ? 'claude-opus-4-20250514' : undefined,
+        maxTokens: useOpus ? 2048 : undefined
       });
 
       if (response.error) {
@@ -413,8 +422,11 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
 
   // ── Profile management ──────────────────────────────────────────────────
 
-  function updateProfileAfterChallenge(profile, challenge, passed, source) {
+  function updateProfileAfterChallenge(profile, challenge, passed, source, struggled, usedHelp) {
     const topicId = challenge.topic || 'unknown';
+
+    // Migrate profile if needed
+    if (typeof SpacedRepetition !== 'undefined') SpacedRepetition.migrateProfile(profile);
 
     // Update topic history
     if (!profile.topicHistory[topicId]) {
@@ -425,6 +437,11 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
     if (passed) th.passes++;
     else th.fails++;
     th.lastSeen = Date.now();
+
+    // Update spaced repetition confidence
+    if (typeof SpacedRepetition !== 'undefined') {
+      SpacedRepetition.updateConfidence(th, passed, !!struggled, !!usedHelp);
+    }
 
     // Track introduced concepts
     if (challenge.conceptIntroduced && !profile.conceptsIntroduced.includes(challenge.conceptIntroduced)) {
@@ -443,11 +460,16 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
       profile.recentChallenges = profile.recentChallenges.slice(-15);
     }
 
-    // Advance curriculum: if 3+ passes on current topic, move forward
+    // Advance curriculum: confidence-aware advancement
     const currentTopic = CURRICULUM[profile.currentTopicIndex];
     if (currentTopic && passed) {
       const topicData = profile.topicHistory[currentTopic.id];
-      if (topicData && topicData.passes >= 3 && profile.currentTopicIndex < CURRICULUM.length - 1) {
+      const hasConfidence = topicData && typeof topicData.confidenceLevel === 'number';
+      // Advance if: 3+ consecutive passes AND confidence >= 3 (confident), OR legacy: 3+ total passes
+      const shouldAdvance = hasConfidence
+        ? (topicData.consecutivePasses >= 3 || topicData.confidenceLevel >= 3)
+        : (topicData && topicData.passes >= 3);
+      if (shouldAdvance && profile.currentTopicIndex < CURRICULUM.length - 1) {
         profile.currentTopicIndex++;
       }
     }

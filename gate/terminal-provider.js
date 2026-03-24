@@ -72,6 +72,10 @@ const TerminalChallengeProvider = (() => {
     const currentTopic = TERMINAL_CURRICULUM[profile.currentTopicIndex] || TERMINAL_CURRICULUM[0];
     const tier = currentTopic.tier;
 
+    const reviewContext = (typeof SpacedRepetition !== 'undefined')
+      ? SpacedRepetition.buildReviewContext(profile, TERMINAL_CURRICULUM)
+      : '';
+
     const topicSummary = Object.entries(profile.topicHistory)
       .map(([id, data]) => {
         const topic = TERMINAL_CURRICULUM.find(c => c.id === id);
@@ -117,7 +121,7 @@ ${weakList || '(None identified)'}
 
 ## Recent Challenges
 ${recentSummary || '  (None yet)'}
-
+${reviewContext}
 ## Instructions
 Generate a challenge that is ${difficulty}. Focus on the current topic: "${currentTopic.name}".
 
@@ -229,11 +233,15 @@ IMPORTANT: The "filesystem" field must be a flat object mapping path strings to 
 
   async function generateFromClaude(profile, isSettingsGate) {
     const prompt = buildMentorPrompt(profile, isSettingsGate);
+    const currentTopic = TERMINAL_CURRICULUM[profile.currentTopicIndex] || TERMINAL_CURRICULUM[0];
+    const useOpus = currentTopic.tier >= 5;
 
     try {
       const response = await browser.runtime.sendMessage({
         type: 'claudeGenerate',
-        prompt: prompt
+        prompt: prompt,
+        model: useOpus ? 'claude-opus-4-20250514' : undefined,
+        maxTokens: useOpus ? 2048 : undefined
       });
 
       if (response.error) {
@@ -303,8 +311,10 @@ IMPORTANT: The "filesystem" field must be a flat object mapping path strings to 
       });
   }
 
-  function updateProfileAfterChallenge(profile, challenge, passed, source) {
+  function updateProfileAfterChallenge(profile, challenge, passed, source, struggled, usedHelp) {
     const topicId = challenge.topic || 'unknown';
+
+    if (typeof SpacedRepetition !== 'undefined') SpacedRepetition.migrateProfile(profile);
 
     if (!profile.topicHistory[topicId]) {
       profile.topicHistory[topicId] = { attempts: 0, passes: 0, fails: 0, lastSeen: null };
@@ -314,6 +324,10 @@ IMPORTANT: The "filesystem" field must be a flat object mapping path strings to 
     if (passed) th.passes++;
     else th.fails++;
     th.lastSeen = Date.now();
+
+    if (typeof SpacedRepetition !== 'undefined') {
+      SpacedRepetition.updateConfidence(th, passed, !!struggled, !!usedHelp);
+    }
 
     if (challenge.conceptIntroduced && !profile.conceptsIntroduced.includes(challenge.conceptIntroduced)) {
       profile.conceptsIntroduced.push(challenge.conceptIntroduced);
@@ -330,11 +344,15 @@ IMPORTANT: The "filesystem" field must be a flat object mapping path strings to 
       profile.recentChallenges = profile.recentChallenges.slice(-15);
     }
 
-    // Advance curriculum: 3+ passes on current topic → move forward
+    // Advance curriculum: confidence-aware advancement
     const currentTopic = TERMINAL_CURRICULUM[profile.currentTopicIndex];
     if (currentTopic && passed) {
       const topicData = profile.topicHistory[currentTopic.id];
-      if (topicData && topicData.passes >= 3 && profile.currentTopicIndex < TERMINAL_CURRICULUM.length - 1) {
+      const hasConfidence = topicData && typeof topicData.confidenceLevel === 'number';
+      const shouldAdvance = hasConfidence
+        ? (topicData.consecutivePasses >= 3 || topicData.confidenceLevel >= 3)
+        : (topicData && topicData.passes >= 3);
+      if (shouldAdvance && profile.currentTopicIndex < TERMINAL_CURRICULUM.length - 1) {
         profile.currentTopicIndex++;
       }
     }

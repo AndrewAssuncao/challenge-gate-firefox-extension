@@ -521,6 +521,9 @@ const TypingChallenge = (() => {
           totalChallengesCompleted: (config._totalCompleted || 0) + 1
         }
       }).catch(() => {});
+      // Log to daily challenge log
+      const solveTime = Math.round((Date.now() - startTime) / 1000);
+      browser.runtime.sendMessage({ type: 'logChallengeCompletion', challengeType: 'typing', solveTime }).catch(() => {});
       Gate.showContinuePrompt();
     } else {
       const reasons = [];

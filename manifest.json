@@ -41,6 +41,7 @@
     "gate/typing.css",
     "gate/python.js",
     "gate/python.css",
+    "gate/spaced-repetition.js",
     "gate/challenge-provider.js",
     "gate/terminal.js",
     "gate/terminal.css",
