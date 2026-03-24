@@ -7,7 +7,7 @@ const Dashboard = (() => {
   let settingsUnlocked = false;
   let editingDomain = null;
   let refreshTimer = null;
-  let activeProgressView = 'typing'; // 'typing', 'python', or 'terminal'
+  let activeProgressView = 'typing'; // 'typing', 'python', 'terminal', or 'git'
 
   // Elements
   const els = {
@@ -368,28 +368,47 @@ const Dashboard = (() => {
   function renderLearning() {
     const profile = state.learningProfile;
     const CURRICULUM = [
+      // Tier 1
       { id: 'basics',        name: 'Variables, types, basic operations',    tier: 1 },
       { id: 'strings',       name: 'Strings and string methods',           tier: 1 },
       { id: 'conditionals',  name: 'Conditionals',                         tier: 1 },
       { id: 'loops',         name: 'Loops',                                tier: 1 },
+      // Tier 2
       { id: 'lists',         name: 'Lists and list operations',            tier: 2 },
       { id: 'dicts',         name: 'Dictionaries',                         tier: 2 },
       { id: 'sets_tuples',   name: 'Sets and tuples',                      tier: 2 },
       { id: 'comprehensions',name: 'Comprehensions',                       tier: 2 },
       { id: 'functions',     name: 'Functions and scope',                  tier: 2 },
+      // Tier 3
       { id: 'string_ops',    name: 'String parsing',                       tier: 3 },
       { id: 'error_handling',name: 'Error handling',                       tier: 3 },
       { id: 'file_patterns', name: 'File I/O patterns',                    tier: 3 },
       { id: 'sorting',       name: 'Sorting and custom sorts',             tier: 3 },
       { id: 'recursion',     name: 'Recursion',                            tier: 3 },
+      // Tier 4
       { id: 'classes',       name: 'Classes and OOP',                      tier: 4 },
       { id: 'generators',    name: 'Generators and iterators',             tier: 4 },
       { id: 'decorators',    name: 'Decorators',                           tier: 4 },
       { id: 'data_structs',  name: 'Data structures',                      tier: 4 },
       { id: 'algorithms',    name: 'Algorithms',                           tier: 4 },
+      // Tier 5
       { id: 'dp',            name: 'Dynamic programming',                  tier: 5 },
       { id: 'graphs',        name: 'Graph traversal',                      tier: 5 },
-      { id: 'advanced',      name: 'Advanced patterns',                    tier: 5 }
+      { id: 'advanced',      name: 'Advanced patterns',                    tier: 5 },
+      { id: 'functional',    name: 'Functional programming',               tier: 5 },
+      { id: 'concurrency',   name: 'Concurrency basics',                   tier: 5 },
+      // Tier 6 — Multi-function
+      { id: 'composition',     name: 'Multi-function composition',         tier: 6 },
+      { id: 'testing',         name: 'Testing patterns',                   tier: 6 },
+      { id: 'api_patterns',    name: 'API design',                         tier: 6 },
+      { id: 'data_pipelines',  name: 'Data pipelines',                     tier: 6 },
+      { id: 'design_patterns', name: 'Design patterns',                    tier: 6 },
+      // Tier 7 — Code Review
+      { id: 'code_review_bugs',  name: 'Review: finding bugs',             tier: 7 },
+      { id: 'code_review_perf',  name: 'Review: performance',              tier: 7 },
+      { id: 'code_review_style', name: 'Review: style & practices',        tier: 7 },
+      { id: 'refactoring',       name: 'Refactoring',                      tier: 7 },
+      { id: 'architecture',      name: 'Architecture',                     tier: 7 }
     ];
 
     const currentIdx = profile ? profile.currentTopicIndex : 0;
@@ -828,7 +847,7 @@ const Dashboard = (() => {
       switch (n.mastery) {
         case 'mastered': fillColor = '#44aa44'; break;
         case 'learning': fillColor = '#1a4a8a'; break;
-        case 'started': fillColor = discColor; break;
+        case 'started': fillColor = '#1a4a8a'; break;
         default: fillColor = '#2a2a2a';
       }
 

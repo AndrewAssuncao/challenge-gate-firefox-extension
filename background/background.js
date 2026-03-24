@@ -111,8 +111,10 @@ browser.storage.onChanged.addListener((changes) => {
   if (changes.timeTracking) timeTracking = changes.timeTracking.newValue || {};
   if (changes.settings) settings = { ...settings, ...(changes.settings.newValue || {}) };
   if (changes.progression) progression = { ...progression, ...(changes.progression.newValue || {}) };
+  if (changes.learningProfile) learningProfile = changes.learningProfile.newValue || null;
   if (changes.terminalLearningProfile) terminalLearningProfile = changes.terminalLearningProfile.newValue || null;
   if (changes.gitLearningProfile) gitLearningProfile = changes.gitLearningProfile.newValue || null;
+  if (changes.typingHistory) typingHistory = changes.typingHistory.newValue || [];
   if (changes.dailyChallengeLog) dailyChallengeLog = changes.dailyChallengeLog.newValue || {};
 });
 
