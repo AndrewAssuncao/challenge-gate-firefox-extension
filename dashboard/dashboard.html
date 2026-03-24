@@ -72,6 +72,25 @@
       </div>
     </section>
 
+    <!-- Activity Heatmap -->
+    <section id="heatmap-section">
+      <h2>Activity</h2>
+      <div id="heatmap-wrapper">
+        <canvas id="heatmap-canvas"></canvas>
+        <div id="heatmap-tooltip" class="hidden"></div>
+      </div>
+      <div id="time-metrics">
+        <div class="time-metric-row">
+          <span class="time-label">This week</span>
+          <span id="time-week-detail" class="time-detail"></span>
+        </div>
+        <div class="time-metric-row">
+          <span class="time-label">All time</span>
+          <span id="time-total-detail" class="time-detail"></span>
+        </div>
+      </div>
+    </section>
+
     <!-- Progress Section (toggle: typing speed / python progress) -->
     <section id="progress-section">
       <div class="section-header">
@@ -159,6 +178,29 @@
             <label for="setting-settings-wpm">Settings gate WPM (harder)</label>
             <input type="number" id="setting-settings-wpm" min="10" max="200" value="100">
           </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-group-label">Difficulty Schedule</div>
+          <div class="setting-row">
+            <label for="setting-difficulty-weekday">Weekday default</label>
+            <select id="setting-difficulty-weekday">
+              <option value="easy">Easy</option>
+              <option value="normal" selected>Normal</option>
+              <option value="hard">Hard</option>
+              <option value="extreme">Extreme</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label for="setting-difficulty-weekend">Weekend default</label>
+            <select id="setting-difficulty-weekend">
+              <option value="easy">Easy</option>
+              <option value="normal">Normal</option>
+              <option value="hard" selected>Hard</option>
+              <option value="extreme">Extreme</option>
+            </select>
+          </div>
+          <div class="setting-hint">Harder difficulty generates tougher challenges. Weekends default to hard — you have more time then.</div>
         </div>
 
         <div class="settings-group">

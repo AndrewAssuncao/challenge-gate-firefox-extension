@@ -326,6 +326,58 @@ button.toggle-btn.active {
   overflow: hidden;
 }
 
+/* Heatmap */
+#heatmap-section {
+  margin-bottom: 48px;
+}
+
+#heatmap-wrapper {
+  position: relative;
+  overflow-x: auto;
+  margin-bottom: 12px;
+}
+
+#heatmap-canvas {
+  display: block;
+}
+
+#heatmap-tooltip {
+  position: absolute;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#time-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.time-metric-row {
+  display: flex;
+  gap: 12px;
+}
+
+.time-label {
+  color: var(--text-dim);
+  min-width: 80px;
+}
+
+.time-detail {
+  color: var(--text);
+}
+
+/* Typing Speed */
 #typing-chart {
   display: block;
   width: 100%;

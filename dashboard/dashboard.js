@@ -57,7 +57,13 @@ const Dashboard = (() => {
     editSaveBtn: document.getElementById('edit-save-btn'),
     editCancelBtn: document.getElementById('edit-cancel-btn'),
     editRemoveBtn: document.getElementById('edit-remove-btn'),
-    editModalTitle: document.getElementById('edit-modal-title')
+    editModalTitle: document.getElementById('edit-modal-title'),
+    heatmapCanvas: document.getElementById('heatmap-canvas'),
+    heatmapTooltip: document.getElementById('heatmap-tooltip'),
+    timeWeekDetail: document.getElementById('time-week-detail'),
+    timeTotalDetail: document.getElementById('time-total-detail'),
+    settingDifficultyWeekday: document.getElementById('setting-difficulty-weekday'),
+    settingDifficultyWeekend: document.getElementById('setting-difficulty-weekend')
   };
 
   async function init() {
@@ -88,6 +94,8 @@ const Dashboard = (() => {
     renderHeader();
     renderSites();
     renderUsage();
+    renderHeatmap();
+    renderTimeMetrics();
     renderProgress();
     renderSettings();
   }
@@ -484,6 +492,154 @@ const Dashboard = (() => {
     }
   }
 
+  // ── Heatmap ────────────────────────────────────────────────────────────
+
+  function renderHeatmap() {
+    const canvas = els.heatmapCanvas;
+    if (!canvas) return;
+    const log = state.dailyChallengeLog || {};
+
+    const cellSize = 13;
+    const gap = 3;
+    const step = cellSize + gap;
+    const weeks = 52;
+    const days = 7;
+    const padLeft = 30;
+    const padTop = 20;
+
+    const width = padLeft + weeks * step + gap;
+    const height = padTop + days * step + gap;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, width, height);
+
+    // Blue color scale
+    const colors = ['#161b22', '#0a2e5c', '#1a4a8a', '#2d6abf', '#4a9eff'];
+    function getColor(count) {
+      if (count === 0) return colors[0];
+      if (count <= 1) return colors[1];
+      if (count <= 3) return colors[2];
+      if (count <= 5) return colors[3];
+      return colors[4];
+    }
+
+    // Build date grid (52 weeks back from today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dayOfWeek = today.getDay(); // 0=Sun
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - (weeks * 7 - 1) - dayOfWeek);
+
+    // Day labels
+    ctx.font = '10px system-ui, sans-serif';
+    ctx.fillStyle = '#666';
+    const dayLabels = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
+    dayLabels.forEach((label, i) => {
+      if (label) ctx.fillText(label, 0, padTop + i * step + cellSize - 2);
+    });
+
+    // Month labels
+    let lastMonth = -1;
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    // Draw cells
+    const cellData = []; // for tooltip hover
+    const d = new Date(startDate);
+    for (let w = 0; w < weeks; w++) {
+      for (let dow = 0; dow < days; dow++) {
+        const dateKey = d.toISOString().slice(0, 10);
+        const entry = log[dateKey] || {};
+        const total = (entry.typing || 0) + (entry.python || 0) + (entry.terminal || 0) + (entry.git || 0);
+
+        const x = padLeft + w * step;
+        const y = padTop + dow * step;
+
+        ctx.fillStyle = getColor(total);
+        ctx.beginPath();
+        ctx.roundRect(x, y, cellSize, cellSize, 2);
+        ctx.fill();
+
+        // Month label on first Monday of each month
+        if (dow === 0 && d.getMonth() !== lastMonth) {
+          lastMonth = d.getMonth();
+          ctx.fillStyle = '#666';
+          ctx.font = '10px system-ui, sans-serif';
+          ctx.fillText(monthNames[d.getMonth()], x, padTop - 6);
+        }
+
+        cellData.push({ x, y, dateKey, entry, total, date: new Date(d) });
+        d.setDate(d.getDate() + 1);
+      }
+    }
+
+    // Tooltip on hover
+    canvas.onmousemove = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const cell = cellData.find(c => mx >= c.x && mx <= c.x + cellSize && my >= c.y && my <= c.y + cellSize);
+      const tooltip = els.heatmapTooltip;
+      if (cell && cell.total > 0) {
+        const parts = [];
+        if (cell.entry.typing) parts.push(`${cell.entry.typing} typing`);
+        if (cell.entry.python) parts.push(`${cell.entry.python} python`);
+        if (cell.entry.terminal) parts.push(`${cell.entry.terminal} terminal`);
+        if (cell.entry.git) parts.push(`${cell.entry.git} git`);
+        tooltip.textContent = `${cell.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${parts.join(', ')}`;
+        tooltip.style.left = (e.clientX - rect.left + 10) + 'px';
+        tooltip.style.top = (e.clientY - rect.top - 30) + 'px';
+        tooltip.classList.remove('hidden');
+      } else {
+        tooltip.classList.add('hidden');
+      }
+    };
+    canvas.onmouseleave = () => els.heatmapTooltip.classList.add('hidden');
+  }
+
+  function renderTimeMetrics() {
+    const log = state.dailyChallengeLog || {};
+    const now = new Date();
+    const dayOfWeek = now.getDay() || 7; // 1=Mon, 7=Sun
+    const weekStart = new Date(now);
+    weekStart.setDate(weekStart.getDate() - dayOfWeek + 1);
+    weekStart.setHours(0, 0, 0, 0);
+
+    let weekCounts = { typing: 0, python: 0, terminal: 0, git: 0, time: 0 };
+    let totalCounts = { typing: 0, python: 0, terminal: 0, git: 0, time: 0 };
+
+    for (const [dateKey, entry] of Object.entries(log)) {
+      const d = new Date(dateKey + 'T00:00:00');
+      for (const type of ['typing', 'python', 'terminal', 'git']) {
+        totalCounts[type] += entry[type] || 0;
+        if (d >= weekStart) weekCounts[type] += entry[type] || 0;
+      }
+      totalCounts.time += entry.totalTime || 0;
+      if (d >= weekStart) weekCounts.time += entry.totalTime || 0;
+    }
+
+    function fmt(counts) {
+      const parts = [];
+      if (counts.typing) parts.push(`${counts.typing} typing`);
+      if (counts.python) parts.push(`${counts.python} python`);
+      if (counts.terminal) parts.push(`${counts.terminal} terminal`);
+      if (counts.git) parts.push(`${counts.git} git`);
+      const time = counts.time > 0 ? ` · ${Math.floor(counts.time / 60)}m` : '';
+      return (parts.join(', ') || 'none') + time;
+    }
+
+    if (els.timeWeekDetail) els.timeWeekDetail.textContent = fmt(weekCounts);
+    if (els.timeTotalDetail) els.timeTotalDetail.textContent = fmt(totalCounts);
+  }
+
+  // ── Settings ──────────────────────────────────────────────────────────
+
   function renderSettings() {
     const s = state.settings;
     const isProtected = s.settingsProtected !== false;
@@ -507,6 +663,11 @@ const Dashboard = (() => {
     els.settingTypingAcc.value = s.typingAccuracyThreshold || 95;
     els.settingSettingsWpm.value = s.settingsTypingWpm || 100;
     els.settingApiKey.value = s.anthropicApiKey || '';
+
+    // Difficulty schedule
+    const schedule = s.difficultySchedule || {};
+    if (els.settingDifficultyWeekday) els.settingDifficultyWeekday.value = schedule.weekdayDefault || 'normal';
+    if (els.settingDifficultyWeekend) els.settingDifficultyWeekend.value = schedule.weekendDefault || 'hard';
   }
 
   function bindEvents() {
@@ -671,7 +832,12 @@ const Dashboard = (() => {
       typingWpm50: parseInt(els.settingWpm50.value) || 80,
       typingAccuracyThreshold: parseInt(els.settingTypingAcc.value) || 95,
       settingsTypingWpm: parseInt(els.settingSettingsWpm.value) || 100,
-      anthropicApiKey: els.settingApiKey.value.trim()
+      anthropicApiKey: els.settingApiKey.value.trim(),
+      difficultySchedule: {
+        weekdayDefault: els.settingDifficultyWeekday ? els.settingDifficultyWeekday.value : 'normal',
+        weekendDefault: els.settingDifficultyWeekend ? els.settingDifficultyWeekend.value : 'hard',
+        timeRanges: (state.settings.difficultySchedule || {}).timeRanges || []
+      }
     };
     await browser.runtime.sendMessage({ type: 'updateSettings', settings: s });
     await loadState();
