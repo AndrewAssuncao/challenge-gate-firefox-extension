@@ -163,13 +163,31 @@ const TerminalChallenge = (() => {
 
     function mkdir(path, recursive) {
       const abs = resolvePath(path);
-      if (recursive) { ensureDir(abs); return true; }
+      if (recursive) { return ensureDirSafe(abs); }
       const parent = getParent(abs);
-      if (!parent || parent.type !== 'dir') return false;
+      if (!parent || parent.type !== 'dir') return { ok: false, reason: 'parent' };
       const name = basename(abs);
-      if (parent.children[name]) return false;
+      const existing = parent.children[name];
+      if (existing) {
+        if (existing.type === 'dir') return { ok: false, reason: 'exists_dir' };
+        return { ok: false, reason: 'exists_file' };
+      }
       parent.children[name] = { type: 'dir', name, permissions: 'rwxr-xr-x', owner: 'user', children: {} };
-      return true;
+      return { ok: true };
+    }
+
+    function ensureDirSafe(absPath) {
+      const parts = absPath.split('/').filter(Boolean);
+      let node = root;
+      for (const part of parts) {
+        if (!node.children[part]) {
+          node.children[part] = { type: 'dir', name: part, permissions: 'rwxr-xr-x', owner: 'user', children: {} };
+        } else if (node.children[part].type !== 'dir') {
+          return { ok: false, reason: 'not_dir', path: part };
+        }
+        node = node.children[part];
+      }
+      return { ok: true };
     }
 
     function touch(path) {
@@ -577,7 +595,14 @@ const TerminalChallenge = (() => {
         else dirs.push(a);
       }
       for (const d of dirs) {
-        if (!VFS.mkdir(d, recursive)) return { stderr: `mkdir: cannot create directory '${d}'`, exitCode: 1 };
+        const result = VFS.mkdir(d, recursive);
+        if (!result.ok) {
+          if (result.reason === 'exists_file') return { stderr: `mkdir: ${d}: File exists (not a directory). Use rm ${d} first, then mkdir ${d}`, exitCode: 1 };
+          if (result.reason === 'exists_dir') return { stderr: `mkdir: ${d}: File exists`, exitCode: 1 };
+          if (result.reason === 'not_dir') return { stderr: `mkdir: ${result.path}: Not a directory`, exitCode: 1 };
+          if (result.reason === 'parent') return { stderr: `mkdir: ${d}: No such file or directory`, exitCode: 1 };
+          return { stderr: `mkdir: cannot create directory '${d}'`, exitCode: 1 };
+        }
       }
       return { stdout: '', exitCode: 0 };
     },
@@ -593,6 +618,14 @@ const TerminalChallenge = (() => {
         } else targets.push(a);
       }
       for (const t of targets) {
+        const node = VFS.stat(t);
+        if (!node) {
+          if (!force) return { stderr: `rm: ${t}: No such file or directory`, exitCode: 1 };
+          continue;
+        }
+        if (node.type === 'dir' && !recursive) {
+          return { stderr: `rm: ${t}: is a directory (use -r to remove)`, exitCode: 1 };
+        }
         if (!VFS.rm(t, recursive)) {
           if (!force) return { stderr: `rm: cannot remove '${t}'`, exitCode: 1 };
         }
