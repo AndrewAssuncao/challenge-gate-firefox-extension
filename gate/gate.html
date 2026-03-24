@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="gate.css">
   <link rel="stylesheet" href="typing.css">
   <link rel="stylesheet" href="python.css">
+  <link rel="stylesheet" href="terminal.css">
 </head>
 <body>
   <div id="gate-container">
@@ -17,6 +18,7 @@
         <div id="challenge-toggle" class="hidden">
           <button class="toggle-btn active" data-challenge="typing">typing</button>
           <button class="toggle-btn" data-challenge="python">python</button>
+          <button class="toggle-btn" data-challenge="terminal">terminal</button>
         </div>
       </div>
       <div class="gate-subtitle" id="gate-subtitle">Complete the challenge to continue.</div>
@@ -75,11 +77,38 @@
         <div class="loading-text">Loading Python runtime<span class="loading-dots"></span></div>
       </div>
     </div>
+
+    <!-- Terminal challenge -->
+    <div id="terminal-challenge" class="challenge-panel hidden">
+      <div id="terminal-meta">
+        <span id="terminal-tier">Tier 1</span>
+        <span id="terminal-progress"></span>
+      </div>
+      <div id="terminal-prompt-area"></div>
+      <div id="terminal-objectives"></div>
+      <div id="terminal-container">
+        <div id="terminal-output"></div>
+        <div id="terminal-input-line">
+          <span id="terminal-ps1"></span>
+          <span id="terminal-input-display"></span>
+          <span id="terminal-suggestion"></span>
+          <input id="terminal-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        </div>
+      </div>
+      <div id="terminal-actions">
+        <button id="terminal-hint" class="gate-btn gate-btn-ghost">Hint</button>
+        <button id="terminal-help" class="gate-btn gate-btn-ghost">Help</button>
+        <button id="terminal-skip" class="gate-btn gate-btn-ghost">Skip</button>
+      </div>
+      <div id="terminal-result" class="hidden"></div>
+    </div>
   </div>
 
   <script src="typing.js"></script>
   <script src="challenge-provider.js"></script>
   <script src="python.js"></script>
+  <script src="terminal-provider.js"></script>
+  <script src="terminal.js"></script>
   <script src="gate.js"></script>
 </body>
 </html>

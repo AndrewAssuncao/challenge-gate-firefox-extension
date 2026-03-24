@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Challenge Gate",
   "version": "1.0.0",
-  "description": "Block distracting websites with typing and coding challenges.",
+  "description": "Block distracting websites with typing, coding, and terminal challenges.",
 
   "browser_specific_settings": {
     "gecko": {
@@ -42,6 +42,9 @@
     "gate/python.js",
     "gate/python.css",
     "gate/challenge-provider.js",
+    "gate/terminal.js",
+    "gate/terminal.css",
+    "gate/terminal-provider.js",
     "gate/pyodide-worker.js",
     "gate/challenges/*"
   ],

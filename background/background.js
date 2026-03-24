@@ -22,10 +22,13 @@ let settings = {
 let progression = {
   pythonTier: 1,
   pythonCompleted: [],
+  terminalTier: 1,
+  terminalCompleted: [],
   typingAvgWpm: 0,
   totalChallengesCompleted: 0
 };
 let learningProfile = null; // loaded from storage
+let terminalLearningProfile = null; // loaded from storage
 let typingHistory = []; // array of { wpm, accuracy, wordCount, passed, timestamp }
 
 // ── Default blocked sites for first run ─────────────────────────────────────
@@ -44,7 +47,7 @@ const DEFAULT_SITES = [
 async function loadState() {
   try {
     const data = await browser.storage.local.get([
-      'blockedSites', 'unlocks', 'timeTracking', 'settings', 'progression', 'learningProfile', 'typingHistory'
+      'blockedSites', 'unlocks', 'timeTracking', 'settings', 'progression', 'learningProfile', 'terminalLearningProfile', 'typingHistory'
     ]);
 
     if (!data.blockedSites) {
@@ -60,6 +63,7 @@ async function loadState() {
     settings = { ...settings, ...(data.settings || {}) };
     progression = { ...progression, ...(data.progression || {}) };
     learningProfile = data.learningProfile || null;
+    terminalLearningProfile = data.terminalLearningProfile || null;
     typingHistory = data.typingHistory || [];
   } catch (err) {
     console.error('[Challenge Gate] Failed to load state:', err);
@@ -97,6 +101,7 @@ browser.storage.onChanged.addListener((changes) => {
   if (changes.timeTracking) timeTracking = changes.timeTracking.newValue || {};
   if (changes.settings) settings = { ...settings, ...(changes.settings.newValue || {}) };
   if (changes.progression) progression = { ...progression, ...(changes.progression.newValue || {}) };
+  if (changes.terminalLearningProfile) terminalLearningProfile = changes.terminalLearningProfile.newValue || null;
 });
 
 // ── Domain matching ─────────────────────────────────────────────────────────
@@ -281,6 +286,7 @@ const messageHandlers = {
       settings,
       progression,
       learningProfile,
+      terminalLearningProfile,
       typingHistory
     };
   },
@@ -396,6 +402,17 @@ const messageHandlers = {
   async saveLearningProfile(msg) {
     learningProfile = msg.profile;
     await browser.storage.local.set({ learningProfile }).catch(logStorageError);
+    return { success: true };
+  },
+
+  // Terminal learning profile
+  async getTerminalLearningProfile() {
+    return terminalLearningProfile;
+  },
+
+  async saveTerminalLearningProfile(msg) {
+    terminalLearningProfile = msg.profile;
+    await browser.storage.local.set({ terminalLearningProfile }).catch(logStorageError);
     return { success: true };
   },
 

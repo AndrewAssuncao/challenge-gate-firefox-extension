@@ -1,0 +1,261 @@
+/* Terminal Challenge — Oh My Zsh / iTerm2 Dark Theme */
+
+/* ── Terminal-specific colors ──────────────────────────────────────────── */
+
+:root {
+  --term-bg: #1a1b26;
+  --term-bg-input: #1a1b26;
+  --term-prompt-user: #7dcfff;
+  --term-prompt-dir: #7aa2f7;
+  --term-arrow-ok: #9ece6a;
+  --term-arrow-err: #f7768e;
+  --term-cmd: #9ece6a;
+  --term-cmd-invalid: #f7768e;
+  --term-flag: #7dcfff;
+  --term-string: #e0af68;
+  --term-pipe: #bb9af7;
+  --term-var: #bb9af7;
+  --term-arg: #c0caf5;
+  --term-output: #a9b1d6;
+  --term-error: #f7768e;
+  --term-success: #9ece6a;
+  --term-suggestion: #3b3d57;
+  --term-hint: #e0af68;
+  --term-help: #7dcfff;
+  --term-dim: #565f89;
+  --term-border: #24283b;
+  --term-selection: #283457;
+}
+
+/* ── Meta bar ────────────────────────────────────────────────────────── */
+
+#terminal-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+#terminal-tier {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+#terminal-progress {
+  color: var(--text-dim);
+}
+
+/* ── Scenario / teaching note ────────────────────────────────────────── */
+
+#terminal-prompt-area {
+  margin-bottom: 16px;
+}
+
+.terminal-teaching-note {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  background: rgba(74, 126, 255, 0.06);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+}
+
+.terminal-scenario {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+/* ── Objectives panel ────────────────────────────────────────────────── */
+
+#terminal-objectives {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.terminal-objective {
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s;
+}
+
+.terminal-objective.met {
+  color: var(--term-success);
+}
+
+.objective-check {
+  font-size: 11px;
+  width: 14px;
+  text-align: center;
+}
+
+/* ── Terminal container ──────────────────────────────────────────────── */
+
+#terminal-container {
+  background: var(--term-bg);
+  border: 1px solid var(--term-border);
+  border-radius: 8px;
+  padding: 16px;
+  min-height: 300px;
+  max-height: 450px;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.65;
+  cursor: text;
+  position: relative;
+}
+
+#terminal-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+#terminal-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#terminal-container::-webkit-scrollbar-thumb {
+  background: var(--term-border);
+  border-radius: 3px;
+}
+
+/* ── Output lines ────────────────────────────────────────────────────── */
+
+#terminal-output {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.terminal-line {
+  min-height: 1.65em;
+}
+
+/* ── Input line ──────────────────────────────────────────────────────── */
+
+#terminal-input-line {
+  display: flex;
+  align-items: center;
+  position: relative;
+  white-space: nowrap;
+}
+
+#terminal-ps1 {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+#terminal-input-display {
+  white-space: pre;
+}
+
+#terminal-input {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  caret-color: transparent;
+}
+
+/* Blinking cursor after input display */
+#terminal-input-display::after {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background: var(--term-arg);
+  vertical-align: text-bottom;
+  animation: term-blink 1s step-end infinite;
+  margin-left: 1px;
+}
+
+@keyframes term-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+#terminal-suggestion {
+  color: var(--term-suggestion);
+  white-space: pre;
+  pointer-events: none;
+}
+
+/* ── Syntax highlight classes ────────────────────────────────────────── */
+
+.term-cmd { color: var(--term-cmd); }
+.term-cmd-invalid { color: var(--term-cmd-invalid); }
+.term-flag { color: var(--term-flag); }
+.term-string { color: var(--term-string); }
+.term-pipe { color: var(--term-pipe); font-weight: 600; }
+.term-var { color: var(--term-var); }
+.term-arg { color: var(--term-arg); }
+
+/* ── Prompt parts ────────────────────────────────────────────────────── */
+
+.term-user { color: var(--term-prompt-user); font-weight: 600; }
+.term-dir { color: var(--term-prompt-dir); }
+.term-arrow-ok { color: var(--term-arrow-ok); font-weight: 700; }
+.term-arrow-err { color: var(--term-arrow-err); font-weight: 700; }
+
+/* ── Output styling ──────────────────────────────────────────────────── */
+
+.term-output { color: var(--term-output); }
+.term-error { color: var(--term-error); }
+.term-success { color: var(--term-success); font-weight: 600; }
+.term-dim { color: var(--term-dim); }
+.term-hint { color: var(--term-hint); font-style: italic; }
+.term-help { color: var(--term-help); }
+.term-after-solve {
+  color: var(--text-dim);
+  font-style: italic;
+  display: block;
+  margin-top: 4px;
+  padding: 8px 12px;
+  background: rgba(74, 126, 255, 0.06);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 4px 4px 0;
+}
+
+/* ── Actions bar ─────────────────────────────────────────────────────── */
+
+#terminal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* ── Result panel ────────────────────────────────────────────────────── */
+
+#terminal-result {
+  margin-top: 14px;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+/* ── Focus state ─────────────────────────────────────────────────────── */
+
+#terminal-container:focus-within {
+  border-color: var(--border-focus);
+}
+
+#terminal-container:not(:focus-within) #terminal-input-display::after {
+  animation: none;
+  opacity: 0.3;
+}

@@ -1,0 +1,713 @@
+[
+  {
+    "id": "t1-01",
+    "topic": "navigation",
+    "tier": 1,
+    "scenario": "You just opened your terminal. Figure out where you are, then look around to see what's in your home directory.",
+    "filesystem": {},
+    "startDir": "~",
+    "objectives": [
+      {
+        "description": "Print your current working directory",
+        "validation": { "type": "commandUsed", "expected": "^pwd$" }
+      },
+      {
+        "description": "List the contents of the current directory",
+        "validation": { "type": "commandUsed", "expected": "^ls" }
+      }
+    ],
+    "hints": ["pwd stands for 'print working directory'", "ls lists the contents of a directory"],
+    "afterSolve": "pwd and ls are probably the two commands you'll use most. Try ls -la next time to see hidden files and details."
+  },
+  {
+    "id": "t1-02",
+    "topic": "navigation",
+    "tier": 1,
+    "scenario": "Navigate into the projects directory, then into the webapp subdirectory.",
+    "filesystem": {
+      "~/projects/webapp/index.js": { "type": "file", "content": "console.log('hello');" }
+    },
+    "startDir": "~",
+    "objectives": [
+      {
+        "description": "Navigate to ~/projects/webapp",
+        "validation": { "type": "cwd", "expected": "~/projects/webapp" }
+      }
+    ],
+    "hints": ["Use cd to change directory", "You can chain paths: cd projects/webapp"],
+    "afterSolve": "You can navigate multiple levels at once: cd projects/webapp. Or one at a time: cd projects, then cd webapp."
+  },
+  {
+    "id": "t1-03",
+    "topic": "file_creation",
+    "tier": 1,
+    "scenario": "Your project needs a new configuration file. Create a directory called 'config' inside ~/projects/webapp, then create an empty file called 'settings.json' inside it.",
+    "filesystem": {},
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Create the config directory",
+        "validation": { "type": "fileExists", "expected": "~/projects/webapp/config" }
+      },
+      {
+        "description": "Create settings.json inside it",
+        "validation": { "type": "fileExists", "expected": "~/projects/webapp/config/settings.json" }
+      }
+    ],
+    "hints": ["mkdir creates directories", "touch creates empty files"],
+    "afterSolve": "mkdir -p can create nested directories in one command: mkdir -p config/sub/deep"
+  },
+  {
+    "id": "t1-04",
+    "topic": "file_creation",
+    "tier": 1,
+    "scenario": "Create a new project structure: a directory called 'api' with two empty files inside it: 'server.py' and 'routes.py'.",
+    "filesystem": {},
+    "startDir": "~/projects",
+    "objectives": [
+      {
+        "description": "Create the api directory",
+        "validation": { "type": "fileExists", "expected": "~/projects/api" }
+      },
+      {
+        "description": "Create server.py inside api",
+        "validation": { "type": "fileExists", "expected": "~/projects/api/server.py" }
+      },
+      {
+        "description": "Create routes.py inside api",
+        "validation": { "type": "fileExists", "expected": "~/projects/api/routes.py" }
+      }
+    ],
+    "hints": ["First create the directory with mkdir", "You can create multiple files at once: touch file1 file2"],
+    "afterSolve": "touch can create multiple files at once. And you can combine: mkdir api && touch api/server.py api/routes.py"
+  },
+  {
+    "id": "t1-05",
+    "topic": "file_reading",
+    "tier": 1,
+    "scenario": "A teammate left notes in a file. Read the contents of ~/projects/webapp/README.md to see what they wrote.",
+    "filesystem": {
+      "~/projects/webapp/README.md": { "type": "file", "content": "# Webapp\n\nRun `npm install` then `npm start` to get going.\nThe API runs on port 3000.\n\nTODO: Add authentication middleware." }
+    },
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Display the contents of README.md",
+        "validation": { "type": "outputContains", "expected": "TODO: Add authentication" }
+      }
+    ],
+    "hints": ["cat displays the entire contents of a file", "The file is in the current directory"],
+    "afterSolve": "For long files, use head -n 10 to see just the first 10 lines, or tail -n 5 for the last 5."
+  },
+  {
+    "id": "t1-06",
+    "topic": "file_reading",
+    "tier": 1,
+    "scenario": "There's a long log file. You only need to see the last 3 lines to check the most recent entries.",
+    "filesystem": {
+      "~/projects/webapp/app.log": { "type": "file", "content": "2024-01-15 08:00:01 INFO Server started on port 3000\n2024-01-15 08:05:12 INFO GET /api/users 200\n2024-01-15 08:05:13 INFO GET /api/posts 200\n2024-01-15 08:10:44 WARN Slow query detected (2.3s)\n2024-01-15 08:12:01 ERROR Connection to database lost\n2024-01-15 08:12:05 INFO Reconnecting to database...\n2024-01-15 08:12:06 INFO Database connection restored" }
+    },
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Show the last 3 lines of app.log",
+        "validation": { "type": "commandUsed", "expected": "tail.*-n\\s*3.*app\\.log|tail.*app\\.log.*-n\\s*3" }
+      }
+    ],
+    "hints": ["tail shows the end of a file", "Use -n to specify how many lines"],
+    "afterSolve": "tail -f follows a file in real-time — super useful for watching logs as they update."
+  },
+  {
+    "id": "t1-07",
+    "topic": "paths",
+    "tier": 1,
+    "scenario": "You're in ~/projects/webapp. Without changing directory, display the contents of the README.md file that's in the parent directory (~/projects).",
+    "filesystem": {
+      "~/projects/README.md": { "type": "file", "content": "# Projects\nThis directory contains all active projects." }
+    },
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Read the README.md from the parent directory without leaving webapp",
+        "validation": { "type": "outputContains", "expected": "This directory contains all active projects" }
+      }
+    ],
+    "hints": [".. refers to the parent directory", "cat ../README.md would read a file one level up"],
+    "afterSolve": "Relative paths save time. ../file.txt goes up one level. ../../file.txt goes up two."
+  },
+  {
+    "id": "t1-08",
+    "topic": "help_man",
+    "tier": 1,
+    "scenario": "You want to learn what options the ls command supports. Use the manual to find out.",
+    "filesystem": {},
+    "startDir": "~",
+    "objectives": [
+      {
+        "description": "Look up the manual for ls",
+        "validation": { "type": "commandUsed", "expected": "^man\\s+ls$|^ls\\s+--help$" }
+      }
+    ],
+    "hints": ["man followed by a command name shows its manual", "Alternatively, many commands support --help"],
+    "afterSolve": "man pages are your reference guide. Use which to find where a command lives: which python3"
+  },
+  {
+    "id": "t2-01",
+    "topic": "copy_move",
+    "tier": 2,
+    "scenario": "Make a backup of the config file before editing it. Copy ~/projects/webapp/config.json to ~/projects/webapp/config.json.bak.",
+    "filesystem": {
+      "~/projects/webapp/config.json": { "type": "file", "content": "{\n  \"port\": 3000,\n  \"debug\": true,\n  \"database\": \"postgres://localhost/myapp\"\n}" }
+    },
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Create a backup copy of config.json",
+        "validation": { "type": "fileExists", "expected": "~/projects/webapp/config.json.bak" }
+      },
+      {
+        "description": "Original file must still exist",
+        "validation": { "type": "fileExists", "expected": "~/projects/webapp/config.json" }
+      }
+    ],
+    "hints": ["cp copies files: cp source destination", "The .bak extension is a convention for backup files"],
+    "afterSolve": "Always back up config files before editing. cp -r copies entire directories recursively."
+  },
+  {
+    "id": "t2-02",
+    "topic": "copy_move",
+    "tier": 2,
+    "scenario": "Reorganize: move the utils.py file from the root of the project into the lib directory.",
+    "filesystem": {
+      "~/projects/webapp/utils.py": { "type": "file", "content": "def format_date(d):\n    return d.strftime('%Y-%m-%d')" },
+      "~/projects/webapp/lib": { "type": "dir" }
+    },
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Move utils.py into the lib directory",
+        "validation": { "type": "fileExists", "expected": "~/projects/webapp/lib/utils.py" }
+      }
+    ],
+    "hints": ["mv moves (or renames) files: mv source destination", "mv utils.py lib/ moves it into the lib directory"],
+    "afterSolve": "mv also renames files: mv old_name.py new_name.py. It's the same command for both operations."
+  },
+  {
+    "id": "t2-03",
+    "topic": "remove_find",
+    "tier": 2,
+    "scenario": "Clean up: remove the temp directory and everything inside it. Then verify it's gone by listing the current directory.",
+    "filesystem": {
+      "~/projects/webapp/temp": { "type": "dir" },
+      "~/projects/webapp/temp/cache.tmp": { "type": "file", "content": "cached data" },
+      "~/projects/webapp/temp/session.tmp": { "type": "file", "content": "session data" }
+    },
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Remove the temp directory and its contents",
+        "validation": { "type": "commandUsed", "expected": "rm\\s+-r|-rf|--recursive" }
+      }
+    ],
+    "hints": ["rm removes files, but for directories you need the -r flag", "rm -r temp removes the directory and everything inside it"],
+    "afterSolve": "rm -r is irreversible — there's no trash can. Use rm -ri for interactive confirmation on each file."
+  },
+  {
+    "id": "t2-04",
+    "topic": "remove_find",
+    "tier": 2,
+    "scenario": "Find all Python files (.py) in the projects directory. You need to know what scripts exist across all subdirectories.",
+    "filesystem": {
+      "~/projects/webapp/app.py": { "type": "file", "content": "from flask import Flask" },
+      "~/projects/webapp/tests/test_app.py": { "type": "file", "content": "import pytest" },
+      "~/projects/api/server.py": { "type": "file", "content": "import fastapi" },
+      "~/projects/scripts/deploy.py": { "type": "file", "content": "import subprocess" }
+    },
+    "startDir": "~/projects",
+    "objectives": [
+      {
+        "description": "Find all .py files recursively",
+        "validation": { "type": "commandUsed", "expected": "find.*\\.py" }
+      }
+    ],
+    "hints": ["find searches for files: find <path> -name <pattern>", "Use quotes around the pattern: find . -name '*.py'"],
+    "afterSolve": "find is extremely powerful. Add -type f for files only, -type d for directories only."
+  },
+  {
+    "id": "t2-05",
+    "topic": "grep_search",
+    "tier": 2,
+    "scenario": "Your app is throwing an error but you're not sure which file contains the problematic import. Search for the word 'database' across all files in the project.",
+    "filesystem": {
+      "~/projects/webapp/app.py": { "type": "file", "content": "from flask import Flask\nfrom database import connect_db\n\napp = Flask(__name__)" },
+      "~/projects/webapp/config.py": { "type": "file", "content": "DATABASE_URL = 'postgres://localhost/myapp'\nDEBUG = True" },
+      "~/projects/webapp/utils.py": { "type": "file", "content": "def format_date(d):\n    return d.strftime('%Y-%m-%d')" }
+    },
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Search all files for 'database' (case-insensitive)",
+        "validation": { "type": "commandUsed", "expected": "grep.*-[rinl]*i[rinl]*.*database|grep.*database" }
+      }
+    ],
+    "hints": ["grep searches for text patterns in files", "Use -r to search recursively and -i for case-insensitive"],
+    "afterSolve": "grep -rn adds line numbers to results. grep -ri 'pattern' . searches everything in the current directory."
+  },
+  {
+    "id": "t2-06",
+    "topic": "permissions",
+    "tier": 2,
+    "scenario": "You've written a deploy script but can't run it because it doesn't have execute permission. Make deploy.sh executable.",
+    "filesystem": {
+      "~/projects/webapp/deploy.sh": { "type": "file", "content": "#!/bin/bash\necho 'Deploying...'\nnpm run build\necho 'Done!'", "permissions": "rw-r--r--" }
+    },
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Make deploy.sh executable",
+        "validation": { "type": "commandUsed", "expected": "chmod.*\\+x.*deploy\\.sh|chmod.*7[0-7][0-7].*deploy\\.sh" }
+      }
+    ],
+    "hints": ["chmod changes file permissions", "chmod +x adds execute permission"],
+    "afterSolve": "chmod +x is the most common permission change. Octal notation (chmod 755) gives finer control: owner=rwx, group=rx, others=rx."
+  },
+  {
+    "id": "t2-07",
+    "topic": "redirection",
+    "tier": 2,
+    "scenario": "Save a list of all files in the current project to a file called 'filelist.txt'. Use output redirection.",
+    "filesystem": {
+      "~/projects/webapp/src/index.js": { "type": "file", "content": "import React from 'react';" },
+      "~/projects/webapp/src/App.js": { "type": "file", "content": "function App() { return <div/>; }" },
+      "~/projects/webapp/package.json": { "type": "file", "content": "{}" }
+    },
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Redirect a file listing into filelist.txt",
+        "validation": { "type": "fileExists", "expected": "~/projects/webapp/filelist.txt" }
+      }
+    ],
+    "hints": ["> redirects output to a file: command > file.txt", "ls > filelist.txt would save the listing"],
+    "afterSolve": "> overwrites the file. >> appends to it. Useful for building up log files: echo 'entry' >> log.txt"
+  },
+  {
+    "id": "t2-08",
+    "topic": "redirection",
+    "tier": 2,
+    "scenario": "Count how many JavaScript files exist in the src directory. Use a pipe to combine find and wc.",
+    "filesystem": {
+      "~/projects/webapp/src/index.js": { "type": "file", "content": "import React from 'react';" },
+      "~/projects/webapp/src/App.js": { "type": "file", "content": "function App() {}" },
+      "~/projects/webapp/src/utils.js": { "type": "file", "content": "export const sum = (a,b) => a+b;" },
+      "~/projects/webapp/src/styles.css": { "type": "file", "content": "body { margin: 0; }" },
+      "~/projects/webapp/src/components/Header.js": { "type": "file", "content": "export default function Header() {}" },
+      "~/projects/webapp/src/components/Footer.js": { "type": "file", "content": "export default function Footer() {}" }
+    },
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Count .js files using a pipe",
+        "validation": { "type": "commandUsed", "expected": "\\|.*wc|find.*\\.js.*\\|" }
+      }
+    ],
+    "hints": ["Pipes connect the output of one command to the input of another: cmd1 | cmd2", "find . -name '*.js' | wc -l counts the results"],
+    "afterSolve": "Pipes are the backbone of shell power. Chain as many as you need: find | grep | sort | uniq | wc"
+  },
+  {
+    "id": "t3-01",
+    "topic": "text_processing",
+    "tier": 3,
+    "scenario": "You have a log file with duplicate entries. Sort the entries and remove duplicates to get a clean list.",
+    "filesystem": {
+      "~/projects/errors.log": { "type": "file", "content": "ConnectionError: timeout\nValueError: invalid input\nConnectionError: timeout\nKeyError: missing_key\nValueError: invalid input\nTypeError: expected string\nConnectionError: timeout\nKeyError: missing_key" }
+    },
+    "startDir": "~/projects",
+    "objectives": [
+      {
+        "description": "Sort the log and remove duplicate lines",
+        "validation": { "type": "commandUsed", "expected": "sort.*\\|.*uniq|sort\\s+-u" }
+      }
+    ],
+    "hints": ["sort orders lines alphabetically", "uniq removes consecutive duplicate lines (so sort first, then uniq)", "Or use sort -u to do both at once"],
+    "afterSolve": "uniq -c prepends a count to each line — great for finding the most common errors."
+  },
+  {
+    "id": "t3-02",
+    "topic": "text_processing",
+    "tier": 3,
+    "scenario": "Count the number of lines, words, and characters in the README file.",
+    "filesystem": {
+      "~/projects/webapp/README.md": { "type": "file", "content": "# My Webapp\n\nA full-stack web application built with React and Flask.\n\n## Getting Started\n\n1. Install dependencies: npm install\n2. Start the server: npm start\n3. Open http://localhost:3000" }
+    },
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Get line, word, and character counts for README.md",
+        "validation": { "type": "commandUsed", "expected": "wc\\s+README|wc.*README" }
+      }
+    ],
+    "hints": ["wc (word count) gives you lines, words, and characters", "Just run wc on the file — no flags needed for all three counts"],
+    "afterSolve": "wc -l for lines only, wc -w for words only. Combine with pipes: cat file | wc -l"
+  },
+  {
+    "id": "t3-03",
+    "topic": "processes",
+    "tier": 3,
+    "scenario": "Something is using port 3000 and your dev server can't start. List running processes to find what's running, then kill the process with PID 1234.",
+    "filesystem": {},
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "List running processes",
+        "validation": { "type": "commandUsed", "expected": "^ps" }
+      },
+      {
+        "description": "Kill process 1234",
+        "validation": { "type": "commandUsed", "expected": "kill.*1234" }
+      }
+    ],
+    "hints": ["ps shows running processes. ps aux shows all processes", "kill PID sends a termination signal to a process"],
+    "afterSolve": "kill -9 PID force-kills a stubborn process. lsof -i :3000 finds what's using a specific port."
+  },
+  {
+    "id": "t3-04",
+    "topic": "environment",
+    "tier": 3,
+    "scenario": "Set an environment variable called DATABASE_URL to 'postgres://localhost/myapp', then verify it's set by printing it.",
+    "filesystem": {},
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Set the DATABASE_URL environment variable",
+        "validation": { "type": "commandUsed", "expected": "export\\s+DATABASE_URL=" }
+      },
+      {
+        "description": "Print the variable's value",
+        "validation": { "type": "outputContains", "expected": "postgres://localhost/myapp" }
+      }
+    ],
+    "hints": ["export sets environment variables: export VAR=value", "echo $VAR prints a variable's value"],
+    "afterSolve": "Environment variables set with export only last for the current session. Add them to ~/.zshrc to make them permanent."
+  },
+  {
+    "id": "t3-05",
+    "topic": "aliases_history",
+    "tier": 3,
+    "scenario": "Create an alias called 'gs' that runs 'git status'. Then use your new alias.",
+    "filesystem": {},
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Create the gs alias",
+        "validation": { "type": "commandUsed", "expected": "alias\\s+gs=" }
+      },
+      {
+        "description": "Use the alias",
+        "validation": { "type": "commandUsed", "expected": "^gs$" }
+      }
+    ],
+    "hints": ["alias name='command' creates a shortcut", "alias gs='git status' — then just type gs"],
+    "afterSolve": "Add aliases to ~/.zshrc to keep them permanent. Oh My Zsh's git plugin comes with tons of built-in aliases."
+  },
+  {
+    "id": "t3-06",
+    "topic": "package_managers",
+    "tier": 3,
+    "scenario": "Initialize a new Node.js project and install Express as a dependency.",
+    "filesystem": {
+      "~/projects/newapp": { "type": "dir" }
+    },
+    "startDir": "~/projects/newapp",
+    "objectives": [
+      {
+        "description": "Initialize the npm project",
+        "validation": { "type": "commandUsed", "expected": "npm\\s+init" }
+      },
+      {
+        "description": "Install express",
+        "validation": { "type": "commandUsed", "expected": "npm\\s+install\\s+express|npm\\s+i\\s+express" }
+      }
+    ],
+    "hints": ["npm init creates a package.json. Use -y to skip questions", "npm install express adds express as a dependency"],
+    "afterSolve": "npm i is shorthand for npm install. Use --save-dev (or -D) for dev-only dependencies like linters and test frameworks."
+  },
+  {
+    "id": "t3-07",
+    "topic": "package_managers",
+    "tier": 3,
+    "scenario": "Create a Python virtual environment called 'venv' and activate it.",
+    "filesystem": {},
+    "startDir": "~/projects/api",
+    "objectives": [
+      {
+        "description": "Create the virtual environment",
+        "validation": { "type": "commandUsed", "expected": "python3?.*-m\\s+venv|virtualenv" }
+      },
+      {
+        "description": "Activate the virtual environment",
+        "validation": { "type": "commandUsed", "expected": "source.*venv.*/activate|\\.\\.*/activate" }
+      }
+    ],
+    "hints": ["python3 -m venv venv creates a virtual environment", "source venv/bin/activate activates it"],
+    "afterSolve": "Always use virtual environments for Python projects to isolate dependencies. deactivate exits the venv."
+  },
+  {
+    "id": "t4-01",
+    "topic": "git_basics",
+    "tier": 4,
+    "scenario": "Initialize a new git repository, stage all files, and make your first commit with the message 'initial commit'.",
+    "filesystem": {
+      "~/projects/newrepo/main.py": { "type": "file", "content": "print('hello world')" },
+      "~/projects/newrepo/README.md": { "type": "file", "content": "# New Project" }
+    },
+    "startDir": "~/projects/newrepo",
+    "objectives": [
+      {
+        "description": "Initialize the git repository",
+        "validation": { "type": "commandUsed", "expected": "git\\s+init" }
+      },
+      {
+        "description": "Stage all files",
+        "validation": { "type": "commandUsed", "expected": "git\\s+add" }
+      },
+      {
+        "description": "Create the initial commit",
+        "validation": { "type": "commandUsed", "expected": "git\\s+commit" }
+      }
+    ],
+    "hints": ["git init creates a new repository", "git add . stages all files", "git commit -m 'message' makes a commit"],
+    "afterSolve": "git status is your best friend — run it between operations to understand what's staged and what's not."
+  },
+  {
+    "id": "t4-02",
+    "topic": "git_basics",
+    "tier": 4,
+    "scenario": "Check the status of your repository, then view the commit history to see recent changes.",
+    "filesystem": {},
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Check the repository status",
+        "validation": { "type": "commandUsed", "expected": "git\\s+status" }
+      },
+      {
+        "description": "View the commit log",
+        "validation": { "type": "commandUsed", "expected": "git\\s+log" }
+      }
+    ],
+    "hints": ["git status shows what's changed", "git log shows commit history"],
+    "afterSolve": "git log --oneline gives a compact view. git log --graph shows branch topology."
+  },
+  {
+    "id": "t4-03",
+    "topic": "git_branching",
+    "tier": 4,
+    "scenario": "Create a new branch called 'feature/auth' and switch to it.",
+    "filesystem": {},
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Create and switch to the feature/auth branch",
+        "validation": { "type": "commandUsed", "expected": "git\\s+(checkout\\s+-b|switch\\s+-c|branch.*feature).*auth" }
+      }
+    ],
+    "hints": ["git checkout -b creates and switches to a new branch in one step", "Or use git branch name + git checkout name as two steps"],
+    "afterSolve": "git switch is the modern alternative to checkout for switching branches. git switch -c creates and switches."
+  },
+  {
+    "id": "t4-04",
+    "topic": "ssh",
+    "tier": 4,
+    "scenario": "Generate a new SSH key pair for GitHub. Use the ed25519 algorithm and your email 'dev@startup.com'.",
+    "filesystem": {},
+    "startDir": "~",
+    "objectives": [
+      {
+        "description": "Generate an SSH key with ed25519",
+        "validation": { "type": "commandUsed", "expected": "ssh-keygen.*ed25519" }
+      }
+    ],
+    "hints": ["ssh-keygen generates SSH key pairs", "Use -t ed25519 for the algorithm and -C for a comment/email"],
+    "afterSolve": "After generating, add the key to the ssh-agent: eval $(ssh-agent) && ssh-add ~/.ssh/id_ed25519"
+  },
+  {
+    "id": "t4-05",
+    "topic": "docker_basics",
+    "tier": 4,
+    "scenario": "List all running Docker containers, then check which Docker images are available locally.",
+    "filesystem": {},
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "List running containers",
+        "validation": { "type": "commandUsed", "expected": "docker\\s+(ps|container\\s+ls)" }
+      },
+      {
+        "description": "List available images",
+        "validation": { "type": "commandUsed", "expected": "docker\\s+image(s|\\s+ls)" }
+      }
+    ],
+    "hints": ["docker ps lists running containers", "docker images lists downloaded images"],
+    "afterSolve": "docker ps -a shows ALL containers (including stopped ones). docker system prune cleans up unused resources."
+  },
+  {
+    "id": "t4-06",
+    "topic": "curl_networking",
+    "tier": 4,
+    "scenario": "Test your local API by sending a GET request to http://localhost:3000/api/health.",
+    "filesystem": {},
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Send a GET request to the health endpoint",
+        "validation": { "type": "commandUsed", "expected": "curl.*localhost:3000/api/health" }
+      }
+    ],
+    "hints": ["curl sends HTTP requests from the terminal", "curl http://localhost:3000/api/health"],
+    "afterSolve": "curl -v shows verbose headers. curl -X POST -d '{\"key\":\"val\"}' -H 'Content-Type: application/json' sends POST data."
+  },
+  {
+    "id": "t4-07",
+    "topic": "curl_networking",
+    "tier": 4,
+    "scenario": "Send a POST request to http://localhost:3000/api/users with JSON body '{\"name\": \"Alice\"}'. Include the Content-Type header.",
+    "filesystem": {},
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Send a POST request with JSON body",
+        "validation": { "type": "commandUsed", "expected": "curl.*-X\\s*POST.*localhost|curl.*--data.*localhost|curl.*-d.*localhost" }
+      }
+    ],
+    "hints": ["Use -X POST to specify the HTTP method", "Use -H 'Content-Type: application/json' for the header and -d for the body"],
+    "afterSolve": "httpie (http command) is a friendlier alternative: http POST localhost:3000/api/users name=Alice"
+  },
+  {
+    "id": "t5-01",
+    "topic": "shell_scripting",
+    "tier": 5,
+    "scenario": "Write a command that loops through all .py files in the current directory and prints their names.",
+    "filesystem": {
+      "~/projects/api/app.py": { "type": "file", "content": "from flask import Flask" },
+      "~/projects/api/models.py": { "type": "file", "content": "class User: pass" },
+      "~/projects/api/tests.py": { "type": "file", "content": "import pytest" },
+      "~/projects/api/README.md": { "type": "file", "content": "# API" }
+    },
+    "startDir": "~/projects/api",
+    "objectives": [
+      {
+        "description": "Use a for loop to iterate over .py files",
+        "validation": { "type": "commandUsed", "expected": "for\\s+\\w+\\s+in.*\\.py" }
+      }
+    ],
+    "hints": ["Shell for loops: for f in *.py; do echo $f; done", "The glob *.py matches all Python files in the current directory"],
+    "afterSolve": "Shell loops are one-liners with semicolons. Or write multi-line scripts in .sh files for complex logic."
+  },
+  {
+    "id": "t5-02",
+    "topic": "git_advanced",
+    "tier": 5,
+    "scenario": "You need to apply a specific commit from another branch. Cherry-pick commit abc1234 into your current branch.",
+    "filesystem": {},
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Cherry-pick the specific commit",
+        "validation": { "type": "commandUsed", "expected": "git\\s+cherry-pick.*abc1234" }
+      }
+    ],
+    "hints": ["git cherry-pick <commit-hash> applies a specific commit to your current branch", "Just provide the commit hash"],
+    "afterSolve": "Cherry-pick is great for hotfixes. If there's a conflict, resolve it and run git cherry-pick --continue."
+  },
+  {
+    "id": "t5-03",
+    "topic": "docker_compose",
+    "tier": 5,
+    "scenario": "Start all services defined in docker-compose.yml in detached mode, then check their status.",
+    "filesystem": {
+      "~/projects/webapp/docker-compose.yml": { "type": "file", "content": "version: '3'\nservices:\n  web:\n    build: .\n    ports:\n      - '3000:3000'\n  db:\n    image: postgres:14\n    environment:\n      POSTGRES_PASSWORD: secret" }
+    },
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Start services in detached mode",
+        "validation": { "type": "commandUsed", "expected": "docker.compose.*up.*-d|docker-compose.*up.*-d" }
+      },
+      {
+        "description": "Check the status of running services",
+        "validation": { "type": "commandUsed", "expected": "docker.compose.*ps|docker-compose.*ps" }
+      }
+    ],
+    "hints": ["docker compose up -d starts services in the background", "docker compose ps shows their status"],
+    "afterSolve": "docker compose logs -f follows the logs. docker compose down stops and removes everything."
+  },
+  {
+    "id": "t5-04",
+    "topic": "sed_awk",
+    "tier": 5,
+    "scenario": "Replace all occurrences of 'localhost' with '0.0.0.0' in config.json using sed.",
+    "filesystem": {
+      "~/projects/webapp/config.json": { "type": "file", "content": "{\n  \"host\": \"localhost\",\n  \"db\": \"postgres://localhost/myapp\",\n  \"redis\": \"redis://localhost:6379\"\n}" }
+    },
+    "startDir": "~/projects/webapp",
+    "objectives": [
+      {
+        "description": "Use sed to replace localhost with 0.0.0.0",
+        "validation": { "type": "commandUsed", "expected": "sed.*s/localhost/0\\.0\\.0\\.0/|sed.*s.localhost.0\\.0\\.0\\.0" }
+      }
+    ],
+    "hints": ["sed 's/old/new/g' replaces text. g means global (all occurrences)", "sed 's/localhost/0.0.0.0/g' config.json"],
+    "afterSolve": "On macOS, use sed -i '' for in-place editing. On Linux it's sed -i. The empty quotes are a macOS quirk."
+  },
+  {
+    "id": "t5-05",
+    "topic": "system_debug",
+    "tier": 5,
+    "scenario": "Find out what process is using port 8080. Use lsof to investigate.",
+    "filesystem": {},
+    "startDir": "~",
+    "objectives": [
+      {
+        "description": "Find the process using port 8080",
+        "validation": { "type": "commandUsed", "expected": "lsof.*-i.*:?8080|netstat.*8080" }
+      }
+    ],
+    "hints": ["lsof -i :PORT shows what's using a specific port", "lsof stands for 'list open files' — in Unix, everything is a file, including network connections"],
+    "afterSolve": "Combine with kill: lsof -ti :8080 | xargs kill. The -t flag outputs just the PID."
+  },
+  {
+    "id": "t5-06",
+    "topic": "system_debug",
+    "tier": 5,
+    "scenario": "Look up the IP address of github.com using a DNS query tool.",
+    "filesystem": {},
+    "startDir": "~",
+    "objectives": [
+      {
+        "description": "Query DNS for github.com",
+        "validation": { "type": "commandUsed", "expected": "dig\\s+github\\.com|nslookup\\s+github\\.com|host\\s+github\\.com" }
+      }
+    ],
+    "hints": ["dig performs DNS lookups", "dig github.com shows the DNS records for a domain"],
+    "afterSolve": "dig +short gives just the IP. nslookup is the simpler alternative. These are essential for debugging network issues."
+  },
+  {
+    "id": "t5-07",
+    "topic": "shell_scripting",
+    "tier": 5,
+    "scenario": "Write a one-liner that checks if a file called 'app.py' exists in the current directory and prints a message accordingly.",
+    "filesystem": {
+      "~/projects/api/app.py": { "type": "file", "content": "from flask import Flask" }
+    },
+    "startDir": "~/projects/api",
+    "objectives": [
+      {
+        "description": "Use an if statement to check if app.py exists",
+        "validation": { "type": "commandUsed", "expected": "if.*-[fe].*app\\.py|\\[\\s*-[fe].*app\\.py|test\\s+-[fe].*app\\.py" }
+      }
+    ],
+    "hints": ["if [ -f file ]; then ... fi checks if a file exists", "-f tests for a regular file, -e tests for existence of any type"],
+    "afterSolve": "Other useful tests: -d (directory exists), -r (readable), -w (writable), -x (executable), -s (file is non-empty)."
+  }
+]

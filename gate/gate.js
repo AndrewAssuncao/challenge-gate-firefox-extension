@@ -37,7 +37,7 @@ const Gate = (() => {
     });
 
     // Set initial active based on site's challenge type
-    const initial = challengeType === 'python' ? 'python' : 'typing';
+    const initial = ['python', 'terminal'].includes(challengeType) ? challengeType : 'typing';
     btns.forEach(b => b.classList.toggle('active', b.dataset.challenge === initial));
     showChallenge(initial);
   }
@@ -60,6 +60,7 @@ const Gate = (() => {
   function showChallenge(type) {
     document.getElementById('typing-challenge').classList.add('hidden');
     document.getElementById('python-challenge').classList.add('hidden');
+    document.getElementById('terminal-challenge').classList.add('hidden');
     activeChallenge = type;
 
     if (type === 'typing') {
@@ -68,6 +69,9 @@ const Gate = (() => {
     } else if (type === 'python') {
       document.getElementById('python-challenge').classList.remove('hidden');
       if (typeof PythonChallenge !== 'undefined') PythonChallenge.init(getConfig());
+    } else if (type === 'terminal') {
+      document.getElementById('terminal-challenge').classList.remove('hidden');
+      if (typeof TerminalChallenge !== 'undefined') TerminalChallenge.init(getConfig());
     }
   }
 

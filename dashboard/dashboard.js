@@ -139,7 +139,7 @@ const Dashboard = (() => {
       const remainText = remainMin !== null ? `${remainMin}m` : '—';
       const remainClass = remainMin !== null && remainMin <= 5 ? 'cell-warn' : 'cell-dim';
 
-      const challengeLabel = { typing: 'Typing', python: 'Python', both: 'Both' }[site.challengeType] || 'Typing';
+      const challengeLabel = { typing: 'Typing', python: 'Python', terminal: 'Terminal', both: 'Both' }[site.challengeType] || 'Typing';
 
       return `<tr data-domain="${esc(site.domain)}">
         <td>${esc(site.domain)}</td>
