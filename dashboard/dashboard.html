@@ -33,6 +33,7 @@
             <option value="typing">Typing</option>
             <option value="python">Python</option>
             <option value="terminal">Terminal</option>
+            <option value="git">Git</option>
             <option value="both">Both</option>
           </select>
           <input type="number" id="new-daily-limit" placeholder="Daily limit (min)" min="1" max="1440">
@@ -98,6 +99,7 @@
           <button class="toggle-btn active" data-view="typing">typing</button>
           <button class="toggle-btn" data-view="python">python</button>
           <button class="toggle-btn" data-view="terminal">terminal</button>
+          <button class="toggle-btn" data-view="git">git</button>
         </div>
       </div>
 
@@ -117,6 +119,12 @@
       <div id="terminal-progress-view" class="hidden">
         <div id="terminal-curriculum"></div>
         <div id="terminal-stats"></div>
+      </div>
+
+      <!-- Git curriculum (hidden by default) -->
+      <div id="git-progress-view" class="hidden">
+        <div id="git-curriculum"></div>
+        <div id="git-stats"></div>
       </div>
     </section>
 

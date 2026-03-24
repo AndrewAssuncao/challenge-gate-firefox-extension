@@ -48,6 +48,9 @@ const Dashboard = (() => {
     terminalProgressView: document.getElementById('terminal-progress-view'),
     terminalCurriculum: document.getElementById('terminal-curriculum'),
     terminalStats: document.getElementById('terminal-stats'),
+    gitProgressView: document.getElementById('git-progress-view'),
+    gitCurriculum: document.getElementById('git-curriculum'),
+    gitStats: document.getElementById('git-stats'),
     saveSettingsBtn: document.getElementById('save-settings-btn'),
     editModal: document.getElementById('edit-modal'),
     editChallengeType: document.getElementById('edit-challenge-type'),
@@ -150,7 +153,7 @@ const Dashboard = (() => {
       const remainText = remainMin !== null ? `${remainMin}m` : '—';
       const remainClass = remainMin !== null && remainMin <= 5 ? 'cell-warn' : 'cell-dim';
 
-      const challengeLabel = { typing: 'Typing', python: 'Python', terminal: 'Terminal', both: 'Both' }[site.challengeType] || 'Typing';
+      const challengeLabel = { typing: 'Typing', python: 'Python', terminal: 'Terminal', git: 'Git', both: 'Both' }[site.challengeType] || 'Typing';
 
       return `<tr data-domain="${esc(site.domain)}">
         <td>${esc(site.domain)}</td>
@@ -223,6 +226,7 @@ const Dashboard = (() => {
     els.typingSpeedView.classList.add('hidden');
     els.pythonProgressView.classList.add('hidden');
     els.terminalProgressView.classList.add('hidden');
+    if (els.gitProgressView) els.gitProgressView.classList.add('hidden');
 
     if (activeProgressView === 'typing') {
       els.typingSpeedView.classList.remove('hidden');
@@ -233,6 +237,9 @@ const Dashboard = (() => {
     } else if (activeProgressView === 'terminal') {
       els.terminalProgressView.classList.remove('hidden');
       renderTerminalLearning();
+    } else if (activeProgressView === 'git') {
+      if (els.gitProgressView) els.gitProgressView.classList.remove('hidden');
+      renderGitLearning();
     }
   }
 
@@ -489,6 +496,62 @@ const Dashboard = (() => {
       els.terminalStats.textContent = parts.join(' · ');
     } else {
       els.terminalStats.textContent = 'No sessions yet.';
+    }
+  }
+
+  function renderGitLearning() {
+    if (!els.gitCurriculum || !els.gitStats) return;
+    const profile = state.gitLearningProfile;
+    const GIT_CURRICULUM = [
+      { id: 'git_init', name: 'Repository setup (init, status)', tier: 1 },
+      { id: 'git_staging', name: 'Staging changes (add, restore)', tier: 1 },
+      { id: 'git_commit', name: 'Making commits', tier: 1 },
+      { id: 'git_log', name: 'Viewing history (log, show)', tier: 1 },
+      { id: 'git_branch_create', name: 'Creating branches', tier: 2 },
+      { id: 'git_checkout', name: 'Switching branches', tier: 2 },
+      { id: 'git_merge_ff', name: 'Fast-forward merges', tier: 2 },
+      { id: 'git_merge_3way', name: 'Three-way merges', tier: 2 },
+      { id: 'git_rebase', name: 'Rebasing branches', tier: 3 },
+      { id: 'git_cherry_pick', name: 'Cherry-picking commits', tier: 3 },
+      { id: 'git_stash', name: 'Stashing changes', tier: 3 },
+      { id: 'git_reset', name: 'Reset (soft, mixed, hard)', tier: 3 },
+      { id: 'git_rebase_interactive', name: 'Interactive rebase concepts', tier: 4 },
+      { id: 'git_bisect', name: 'Finding bugs with bisect', tier: 4 },
+      { id: 'git_reflog', name: 'Recovery with reflog', tier: 4 },
+      { id: 'git_tags', name: 'Tagging releases', tier: 4 },
+      { id: 'git_merge_conflicts', name: 'Resolving merge conflicts', tier: 5 },
+      { id: 'git_workflows', name: 'Git workflows', tier: 5 },
+      { id: 'git_advanced_rebase', name: 'Advanced rebase', tier: 5 },
+      { id: 'git_submodules', name: 'Submodules and subtrees', tier: 5 }
+    ];
+
+    const currentIdx = profile ? profile.currentTopicIndex : 0;
+    const history = profile ? profile.topicHistory || {} : {};
+
+    els.gitCurriculum.innerHTML = GIT_CURRICULUM.map((topic, i) => {
+      let rowClass, markerClass, markerText;
+      if (i < currentIdx) { rowClass = 'completed'; markerClass = 'done'; markerText = '✓'; }
+      else if (i === currentIdx) { rowClass = 'current'; markerClass = 'active'; markerText = '→'; }
+      else { rowClass = 'future'; markerClass = 'pending'; markerText = '·'; }
+
+      const th = history[topic.id];
+      const statsText = th ? `${th.passes}/${th.attempts}` : '';
+
+      return `<div class="curriculum-row ${rowClass}">
+        <span class="curriculum-marker ${markerClass}">${markerText}</span>
+        <span class="curriculum-name">${esc(topic.name)}</span>
+        <span class="curriculum-stats">${statsText}</span>
+      </div>`;
+    }).join('');
+
+    if (profile) {
+      const parts = [];
+      parts.push(`${profile.totalSessions || 0} sessions`);
+      if (profile.streakDays > 1) parts.push(`${profile.streakDays} day streak`);
+      if (profile.conceptsIntroduced?.length) parts.push(`${profile.conceptsIntroduced.length} concepts`);
+      els.gitStats.textContent = parts.join(' · ');
+    } else {
+      els.gitStats.textContent = 'No sessions yet.';
     }
   }
 

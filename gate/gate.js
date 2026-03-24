@@ -39,7 +39,7 @@ const Gate = (() => {
     });
 
     // Set initial active based on site's challenge type
-    const initial = ['python', 'terminal'].includes(challengeType) ? challengeType : 'typing';
+    const initial = ['python', 'terminal', 'git'].includes(challengeType) ? challengeType : 'typing';
     btns.forEach(b => b.classList.toggle('active', b.dataset.challenge === initial));
     showChallenge(initial);
   }
@@ -63,6 +63,8 @@ const Gate = (() => {
     document.getElementById('typing-challenge').classList.add('hidden');
     document.getElementById('python-challenge').classList.add('hidden');
     document.getElementById('terminal-challenge').classList.add('hidden');
+    const gitPanel = document.getElementById('git-challenge');
+    if (gitPanel) gitPanel.classList.add('hidden');
     activeChallenge = type;
 
     if (type === 'typing') {
@@ -74,6 +76,10 @@ const Gate = (() => {
     } else if (type === 'terminal') {
       document.getElementById('terminal-challenge').classList.remove('hidden');
       if (typeof TerminalChallenge !== 'undefined') TerminalChallenge.init(getConfig());
+    } else if (type === 'git') {
+      const gp = document.getElementById('git-challenge');
+      if (gp) gp.classList.remove('hidden');
+      if (typeof GitChallenge !== 'undefined') GitChallenge.init(getConfig());
     }
   }
 

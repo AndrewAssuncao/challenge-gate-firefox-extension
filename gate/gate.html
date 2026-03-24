@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="typing.css">
   <link rel="stylesheet" href="python.css">
   <link rel="stylesheet" href="terminal.css">
+  <link rel="stylesheet" href="git.css">
 </head>
 <body>
   <div id="gate-container">
@@ -19,6 +20,7 @@
           <button class="toggle-btn active" data-challenge="typing">typing</button>
           <button class="toggle-btn" data-challenge="python">python</button>
           <button class="toggle-btn" data-challenge="terminal">terminal</button>
+          <button class="toggle-btn" data-challenge="git">git</button>
         </div>
       </div>
       <div class="gate-subtitle" id="gate-subtitle">Complete the challenge to continue.</div>
@@ -104,6 +106,41 @@
       <div id="terminal-result" class="hidden"></div>
     </div>
 
+    <!-- Git challenge -->
+    <div id="git-challenge" class="challenge-panel hidden">
+      <div id="git-meta">
+        <span id="git-tier">Tier 1</span>
+        <span id="git-progress"></span>
+      </div>
+      <div id="git-prompt-area"></div>
+      <div id="git-objectives"></div>
+      <div id="git-graphs">
+        <div class="git-graph-col">
+          <div class="git-graph-label">Target</div>
+          <svg id="git-target-svg"></svg>
+        </div>
+        <div class="git-graph-col">
+          <div class="git-graph-label">Current</div>
+          <svg id="git-current-svg"></svg>
+        </div>
+      </div>
+      <div id="git-container">
+        <div id="git-output"></div>
+        <div id="git-input-line">
+          <span id="git-ps1"></span>
+          <span id="git-input-display"></span>
+          <span id="git-suggestion"></span>
+          <input id="git-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        </div>
+      </div>
+      <div id="git-actions">
+        <button id="git-hint" class="gate-btn gate-btn-ghost">Hint</button>
+        <button id="git-help" class="gate-btn gate-btn-ghost">Help</button>
+        <button id="git-skip" class="gate-btn gate-btn-ghost">Skip</button>
+      </div>
+      <div id="git-result" class="hidden"></div>
+    </div>
+
     <!-- Continue prompt (shared across all challenge types) -->
     <div id="gate-continue" class="hidden"></div>
   </div>
@@ -114,6 +151,8 @@
   <script src="python.js"></script>
   <script src="terminal-provider.js"></script>
   <script src="terminal.js"></script>
+  <script src="git-provider.js"></script>
+  <script src="git.js"></script>
   <script src="gate.js"></script>
 </body>
 </html>

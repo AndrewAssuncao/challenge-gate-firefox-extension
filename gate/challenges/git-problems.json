@@ -1,0 +1,695 @@
+[
+  {
+    "id": "g-init-01",
+    "topic": "git_init",
+    "tier": 1,
+    "scenario": "You need to start a new project. Initialize a Git repository, then make your first commit.",
+    "teachingNote": "Every Git project starts with 'git init', which creates a hidden .git directory to track your changes. After init, you stage files with 'git add' and save snapshots with 'git commit'.",
+    "initialState": {
+      "commits": [],
+      "branches": {},
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [{ "sha": "a1b2c3d", "message": "Initial commit", "parents": [] }],
+      "branches": { "main": "a1b2c3d" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "objectives": [
+      {
+        "description": "Initialize a git repository",
+        "validation": { "type": "commandUsed", "expected": "git init" }
+      },
+      {
+        "description": "Check the repository status",
+        "validation": { "type": "commandUsed", "expected": "git status" }
+      }
+    ],
+    "hints": ["Start with 'git init' to create a repository", "Use 'git status' to see the current state"],
+    "afterSolve": "git init creates the .git directory that tracks all your version history. git status is your go-to command for understanding what's happening."
+  },
+  {
+    "id": "g-staging-01",
+    "topic": "git_staging",
+    "tier": 1,
+    "scenario": "You've made some changes to your project. Stage and commit them to save your work.",
+    "initialState": {
+      "commits": [{ "sha": "a1b2c3d", "message": "Initial commit", "parents": [] }],
+      "branches": { "main": "a1b2c3d" },
+      "HEAD": { "type": "branch", "ref": "main" },
+      "workingTree": { "app.js": "modified", "style.css": "new" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add styles", "parents": ["a1b2c3d"] }
+      ],
+      "branches": { "main": "b2c3d4e" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "objectives": [
+      {
+        "description": "Stage all your changes",
+        "validation": { "type": "commandUsed", "expected": "git add" }
+      },
+      {
+        "description": "Create a commit with your staged changes",
+        "validation": { "type": "commitCountMin", "expected": 2 }
+      }
+    ],
+    "hints": ["Use 'git add .' to stage all changes", "Then 'git commit -m \"your message\"' to save them"],
+    "afterSolve": "The staging area (index) lets you choose exactly which changes go into each commit. Use 'git add -p' for even more control."
+  },
+  {
+    "id": "g-commit-01",
+    "topic": "git_commit",
+    "tier": 1,
+    "scenario": "Make three sequential commits to build up a project history. Add files and commit after each change.",
+    "initialState": {
+      "commits": [{ "sha": "a1b2c3d", "message": "Initial commit", "parents": [] }],
+      "branches": { "main": "a1b2c3d" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add feature", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Add tests", "parents": ["b2c3d4e"] },
+        { "sha": "d4e5f6a", "message": "Update docs", "parents": ["c3d4e5f"] }
+      ],
+      "branches": { "main": "d4e5f6a" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "objectives": [
+      {
+        "description": "Create at least 3 new commits (4 total)",
+        "validation": { "type": "commitCountMin", "expected": 4 }
+      },
+      {
+        "description": "Make sure HEAD is on main",
+        "validation": { "type": "headOnBranch", "expected": "main" }
+      }
+    ],
+    "hints": ["Add a file then commit: git add file.txt && git commit -m \"message\"", "Repeat for each commit — you need 3 new ones"],
+    "afterSolve": "Each commit is a snapshot of your project at a point in time. Good commit messages explain WHY a change was made, not just what changed."
+  },
+  {
+    "id": "g-log-01",
+    "topic": "git_log",
+    "tier": 1,
+    "scenario": "Your project has some history. Use git log to explore the commit history and find out what happened.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add user auth", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Fix login bug", "parents": ["b2c3d4e"] }
+      ],
+      "branches": { "main": "c3d4e5f" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add user auth", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Fix login bug", "parents": ["b2c3d4e"] }
+      ],
+      "branches": { "main": "c3d4e5f" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "objectives": [
+      {
+        "description": "View the commit log",
+        "validation": { "type": "commandUsed", "expected": "git log" }
+      },
+      {
+        "description": "View the log in compact format",
+        "validation": { "type": "commandUsed", "expected": "git log --oneline" }
+      }
+    ],
+    "hints": ["Try 'git log' to see the full history", "'git log --oneline' shows a condensed view"],
+    "afterSolve": "git log --oneline --graph --all gives you a visual overview of your entire branch structure. It's one of the most useful git commands."
+  },
+  {
+    "id": "g-branch-01",
+    "topic": "git_branch_create",
+    "tier": 2,
+    "scenario": "Your team wants to work on a new feature without disrupting the main branch. Create a feature branch.",
+    "teachingNote": "Branches let you work on different things in parallel. Creating a branch is instant in Git — it just creates a pointer to a commit.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add base app", "parents": ["a1b2c3d"] }
+      ],
+      "branches": { "main": "b2c3d4e" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add base app", "parents": ["a1b2c3d"] }
+      ],
+      "branches": { "main": "b2c3d4e", "feature": "b2c3d4e" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "objectives": [
+      {
+        "description": "Create a branch called 'feature'",
+        "validation": { "type": "branchExists", "expected": "feature" }
+      },
+      {
+        "description": "List all branches to verify",
+        "validation": { "type": "commandUsed", "expected": "git branch$" }
+      }
+    ],
+    "hints": ["Use 'git branch <name>' to create a new branch", "'git branch' (no args) lists all branches"],
+    "afterSolve": "Creating a branch doesn't switch to it. Use 'git checkout -b <name>' to create and switch in one step."
+  },
+  {
+    "id": "g-checkout-01",
+    "topic": "git_checkout",
+    "tier": 2,
+    "scenario": "Switch to the feature branch, make a commit there, then switch back to main.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add base app", "parents": ["a1b2c3d"] }
+      ],
+      "branches": { "main": "b2c3d4e", "feature": "b2c3d4e" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add base app", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Add feature", "parents": ["b2c3d4e"] }
+      ],
+      "branches": { "main": "b2c3d4e", "feature": "c3d4e5f" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "objectives": [
+      {
+        "description": "Switch to the feature branch",
+        "validation": { "type": "commandUsed", "expected": "git (checkout|switch) feature" }
+      },
+      {
+        "description": "Make a commit on the feature branch",
+        "validation": { "type": "commitCountMin", "expected": 3 }
+      },
+      {
+        "description": "Switch back to main",
+        "validation": { "type": "headOnBranch", "expected": "main" }
+      }
+    ],
+    "hints": ["'git checkout feature' switches to the feature branch", "Add and commit on feature, then 'git checkout main'"],
+    "afterSolve": "'git switch' is the modern alternative to 'git checkout' for switching branches. It's less ambiguous since checkout does multiple things."
+  },
+  {
+    "id": "g-merge-ff-01",
+    "topic": "git_merge_ff",
+    "tier": 2,
+    "scenario": "The feature branch has new commits and main hasn't changed. Merge feature into main (this will be a fast-forward).",
+    "teachingNote": "A fast-forward merge happens when there's a direct path from the current branch to the target. Git just moves the pointer forward — no merge commit needed.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add base app", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Add login page", "parents": ["b2c3d4e"] },
+        { "sha": "d4e5f6a", "message": "Add login tests", "parents": ["c3d4e5f"] }
+      ],
+      "branches": { "main": "b2c3d4e", "feature/login": "d4e5f6a" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add base app", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Add login page", "parents": ["b2c3d4e"] },
+        { "sha": "d4e5f6a", "message": "Add login tests", "parents": ["c3d4e5f"] }
+      ],
+      "branches": { "main": "d4e5f6a", "feature/login": "d4e5f6a" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "objectives": [
+      {
+        "description": "Make sure you're on main",
+        "validation": { "type": "headOnBranch", "expected": "main" }
+      },
+      {
+        "description": "Merge feature/login into main",
+        "validation": { "type": "commandUsed", "expected": "git merge feature/login" }
+      },
+      {
+        "description": "Verify the output shows fast-forward",
+        "validation": { "type": "outputContains", "expected": "Fast-forward" }
+      }
+    ],
+    "hints": ["Make sure you're on main first: 'git checkout main'", "Then merge: 'git merge feature/login'"],
+    "afterSolve": "Fast-forward merges keep your history linear. Some teams prefer 'git merge --no-ff' to always create merge commits for better traceability."
+  },
+  {
+    "id": "g-merge-3way-01",
+    "topic": "git_merge_3way",
+    "tier": 2,
+    "scenario": "Both main and feature have diverged with different commits. Merge feature into main to combine the work.",
+    "teachingNote": "When both branches have unique commits, Git performs a three-way merge: it finds the common ancestor and combines changes from both sides into a new merge commit.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add base app", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Update README on main", "parents": ["b2c3d4e"] },
+        { "sha": "d4e5f6a", "message": "Add feature code", "parents": ["b2c3d4e"] }
+      ],
+      "branches": { "main": "c3d4e5f", "feature": "d4e5f6a" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add base app", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Update README on main", "parents": ["b2c3d4e"] },
+        { "sha": "d4e5f6a", "message": "Add feature code", "parents": ["b2c3d4e"] },
+        { "sha": "e5f6a7b", "message": "Merge branch 'feature'", "parents": ["c3d4e5f", "d4e5f6a"] }
+      ],
+      "branches": { "main": "e5f6a7b", "feature": "d4e5f6a" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "objectives": [
+      {
+        "description": "Merge the feature branch into main",
+        "validation": { "type": "commandUsed", "expected": "git merge feature" }
+      },
+      {
+        "description": "A merge commit should be created",
+        "validation": { "type": "mergeCommitExists", "expected": "true" }
+      }
+    ],
+    "hints": ["Make sure you're on main, then 'git merge feature'", "Since both branches diverged, this creates a merge commit automatically"],
+    "afterSolve": "Merge commits have two parents — they represent the point where two lines of development came together. Use 'git log --graph' to visualize this."
+  },
+  {
+    "id": "g-rebase-01",
+    "topic": "git_rebase",
+    "tier": 3,
+    "scenario": "Your feature branch has fallen behind main. Rebase your feature branch onto main to get a clean, linear history.",
+    "teachingNote": "Rebase replays your commits on top of another branch. Unlike merge, it rewrites history to create a linear sequence — as if you started your work from the latest main.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add base app", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Hotfix on main", "parents": ["b2c3d4e"] },
+        { "sha": "d4e5f6a", "message": "Feature work", "parents": ["b2c3d4e"] }
+      ],
+      "branches": { "main": "c3d4e5f", "feature": "d4e5f6a" },
+      "HEAD": { "type": "branch", "ref": "feature" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add base app", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Hotfix on main", "parents": ["b2c3d4e"] },
+        { "sha": "e5f6a7b", "message": "Feature work", "parents": ["c3d4e5f"] }
+      ],
+      "branches": { "main": "c3d4e5f", "feature": "e5f6a7b" },
+      "HEAD": { "type": "branch", "ref": "feature" }
+    },
+    "objectives": [
+      {
+        "description": "Make sure you're on the feature branch",
+        "validation": { "type": "headOnBranch", "expected": "feature" }
+      },
+      {
+        "description": "Rebase feature onto main",
+        "validation": { "type": "commandUsed", "expected": "git rebase main" }
+      }
+    ],
+    "hints": ["Switch to feature first: 'git checkout feature'", "Then rebase: 'git rebase main'"],
+    "afterSolve": "Golden rule of rebase: never rebase commits that have been pushed to a shared repository. Rebase is for cleaning up local work before sharing."
+  },
+  {
+    "id": "g-cherry-01",
+    "topic": "git_cherry_pick",
+    "tier": 3,
+    "scenario": "A critical bugfix was committed on the develop branch. Cherry-pick just that one commit onto main without merging everything.",
+    "teachingNote": "Cherry-pick copies a specific commit from one branch to another. It's useful when you need just one change without bringing in everything.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add app", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "WIP feature", "parents": ["b2c3d4e"] },
+        { "sha": "d4e5f6a", "message": "Critical bugfix", "parents": ["c3d4e5f"] },
+        { "sha": "e5f6a7b", "message": "More WIP", "parents": ["d4e5f6a"] }
+      ],
+      "branches": { "main": "b2c3d4e", "develop": "e5f6a7b" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add app", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "WIP feature", "parents": ["b2c3d4e"] },
+        { "sha": "d4e5f6a", "message": "Critical bugfix", "parents": ["c3d4e5f"] },
+        { "sha": "e5f6a7b", "message": "More WIP", "parents": ["d4e5f6a"] },
+        { "sha": "f6a7b8c", "message": "Critical bugfix", "parents": ["b2c3d4e"] }
+      ],
+      "branches": { "main": "f6a7b8c", "develop": "e5f6a7b" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "objectives": [
+      {
+        "description": "Make sure you're on main",
+        "validation": { "type": "headOnBranch", "expected": "main" }
+      },
+      {
+        "description": "Cherry-pick the bugfix commit",
+        "validation": { "type": "commandUsed", "expected": "git cherry-pick d4e5f6a" }
+      },
+      {
+        "description": "Main should now have the bugfix",
+        "validation": { "type": "commitMessageExists", "expected": "Critical bugfix" }
+      }
+    ],
+    "hints": ["You need to apply commit d4e5f6a to main", "Use 'git cherry-pick d4e5f6a'"],
+    "afterSolve": "Cherry-pick creates a new commit with the same changes but a different SHA. The original commit on develop is untouched."
+  },
+  {
+    "id": "g-stash-01",
+    "topic": "git_stash",
+    "tier": 3,
+    "scenario": "You're in the middle of work on feature but need to switch to main for an urgent fix. Stash your changes, switch to main, then come back and restore them.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add base", "parents": ["a1b2c3d"] }
+      ],
+      "branches": { "main": "b2c3d4e", "feature": "b2c3d4e" },
+      "HEAD": { "type": "branch", "ref": "feature" },
+      "workingTree": { "feature.js": "modified" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add base", "parents": ["a1b2c3d"] }
+      ],
+      "branches": { "main": "b2c3d4e", "feature": "b2c3d4e" },
+      "HEAD": { "type": "branch", "ref": "feature" }
+    },
+    "objectives": [
+      {
+        "description": "Stash your current changes",
+        "validation": { "type": "commandUsed", "expected": "git stash" }
+      },
+      {
+        "description": "Switch to main",
+        "validation": { "type": "commandUsed", "expected": "git (checkout|switch) main" }
+      },
+      {
+        "description": "Switch back to feature",
+        "validation": { "type": "headOnBranch", "expected": "feature" }
+      },
+      {
+        "description": "Restore your stashed changes",
+        "validation": { "type": "commandUsed", "expected": "git stash pop" }
+      }
+    ],
+    "hints": ["'git stash' saves your work temporarily", "Switch branches, do your work, switch back, then 'git stash pop'"],
+    "afterSolve": "git stash is like a clipboard for uncommitted work. 'git stash pop' applies and removes the stash; 'git stash apply' keeps it in the stash list."
+  },
+  {
+    "id": "g-reset-01",
+    "topic": "git_reset",
+    "tier": 3,
+    "scenario": "You made a commit by mistake. Use git reset to undo it while keeping your changes in the working directory.",
+    "teachingNote": "git reset moves HEAD (and optionally the staging area and working tree) to a different commit. --soft keeps everything staged, --mixed unstages, --hard discards all changes.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Good work", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Oops wrong commit", "parents": ["b2c3d4e"] }
+      ],
+      "branches": { "main": "c3d4e5f" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Good work", "parents": ["a1b2c3d"] }
+      ],
+      "branches": { "main": "b2c3d4e" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "objectives": [
+      {
+        "description": "Reset HEAD back one commit with --soft",
+        "validation": { "type": "commandUsed", "expected": "git reset --soft HEAD~1" }
+      }
+    ],
+    "hints": ["'git reset --soft HEAD~1' moves back one commit but keeps changes staged", "HEAD~1 means 'one commit before HEAD'"],
+    "afterSolve": "--soft keeps your changes staged (ready to commit again). --mixed (default) unstages them. --hard discards everything. Be careful with --hard!"
+  },
+  {
+    "id": "g-tag-01",
+    "topic": "git_tags",
+    "tier": 4,
+    "scenario": "Your project is ready for release. Tag the current commit as v1.0.0 to mark the release point.",
+    "teachingNote": "Tags mark specific points in history, typically for releases. Unlike branches, tags don't move when new commits are made.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add features", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Ready for release", "parents": ["b2c3d4e"] }
+      ],
+      "branches": { "main": "c3d4e5f" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add features", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Ready for release", "parents": ["b2c3d4e"] }
+      ],
+      "branches": { "main": "c3d4e5f" },
+      "HEAD": { "type": "branch", "ref": "main" },
+      "tags": { "v1.0.0": "c3d4e5f" }
+    },
+    "objectives": [
+      {
+        "description": "Create a tag named v1.0.0",
+        "validation": { "type": "tagExists", "expected": "v1.0.0" }
+      },
+      {
+        "description": "List tags to verify",
+        "validation": { "type": "commandUsed", "expected": "git tag$" }
+      }
+    ],
+    "hints": ["'git tag v1.0.0' tags the current HEAD", "'git tag' lists all tags"],
+    "afterSolve": "Lightweight tags are just pointers. Annotated tags (git tag -a v1.0.0 -m 'message') store extra metadata and are preferred for releases."
+  },
+  {
+    "id": "g-reflog-01",
+    "topic": "git_reflog",
+    "tier": 4,
+    "scenario": "You accidentally ran 'git reset --hard' and lost commits. Use reflog to find the lost commit SHA, then recover your work.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Important work", "parents": ["a1b2c3d"] }
+      ],
+      "branches": { "main": "a1b2c3d" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Important work", "parents": ["a1b2c3d"] }
+      ],
+      "branches": { "main": "b2c3d4e" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "objectives": [
+      {
+        "description": "Use reflog to find the lost commit",
+        "validation": { "type": "commandUsed", "expected": "git reflog" }
+      },
+      {
+        "description": "Reset back to the lost commit to recover it",
+        "validation": { "type": "commandUsed", "expected": "git reset.*(b2c3d4e|HEAD@)" }
+      }
+    ],
+    "hints": ["'git reflog' shows all recent HEAD movements", "Find the SHA of the lost commit, then 'git reset --hard <sha>'"],
+    "afterSolve": "Reflog is your safety net. Git rarely truly deletes data — reflog keeps a record of where HEAD has been for about 90 days."
+  },
+  {
+    "id": "g-branch-del-01",
+    "topic": "git_branch_create",
+    "tier": 2,
+    "scenario": "Create two feature branches from main: 'feature/auth' and 'feature/api'. Then delete feature/api since that work was cancelled.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Setup project", "parents": ["a1b2c3d"] }
+      ],
+      "branches": { "main": "b2c3d4e" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Setup project", "parents": ["a1b2c3d"] }
+      ],
+      "branches": { "main": "b2c3d4e", "feature/auth": "b2c3d4e" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "objectives": [
+      {
+        "description": "Create feature/auth branch",
+        "validation": { "type": "branchExists", "expected": "feature/auth" }
+      },
+      {
+        "description": "Create feature/api branch",
+        "validation": { "type": "commandUsed", "expected": "git branch feature/api" }
+      },
+      {
+        "description": "Delete the feature/api branch",
+        "validation": { "type": "commandUsed", "expected": "git branch -[dD] feature/api" }
+      }
+    ],
+    "hints": ["'git branch <name>' creates a branch", "'git branch -d <name>' deletes a branch"],
+    "afterSolve": "Use -d for safe delete (warns if unmerged) and -D to force delete. Branch names with slashes (feature/x) are a common convention for organization."
+  },
+  {
+    "id": "g-checkout-b-01",
+    "topic": "git_checkout",
+    "tier": 2,
+    "scenario": "Create a new branch called 'hotfix' and switch to it in one command, then make a commit on it.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "v1.0 release", "parents": ["a1b2c3d"] }
+      ],
+      "branches": { "main": "b2c3d4e" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "v1.0 release", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Emergency fix", "parents": ["b2c3d4e"] }
+      ],
+      "branches": { "main": "b2c3d4e", "hotfix": "c3d4e5f" },
+      "HEAD": { "type": "branch", "ref": "hotfix" }
+    },
+    "objectives": [
+      {
+        "description": "Create and switch to a 'hotfix' branch in one step",
+        "validation": { "type": "commandUsed", "expected": "git checkout -b hotfix" }
+      },
+      {
+        "description": "Make a commit on the hotfix branch",
+        "validation": { "type": "headOnBranch", "expected": "hotfix" }
+      },
+      {
+        "description": "Hotfix branch should have a new commit",
+        "validation": { "type": "commitCountMin", "expected": 3 }
+      }
+    ],
+    "hints": ["'git checkout -b hotfix' creates and switches in one command", "Then add and commit your fix"],
+    "afterSolve": "The modern equivalent is 'git switch -c hotfix'. Both create a branch from current HEAD and switch to it."
+  },
+  {
+    "id": "g-bisect-01",
+    "topic": "git_bisect",
+    "tier": 4,
+    "scenario": "There's a bug somewhere in the last 5 commits. Use git bisect to start tracking it down.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add feature A", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Add feature B", "parents": ["b2c3d4e"] },
+        { "sha": "d4e5f6a", "message": "Refactor utils", "parents": ["c3d4e5f"] },
+        { "sha": "e5f6a7b", "message": "Update configs", "parents": ["d4e5f6a"] },
+        { "sha": "f6a7b8c", "message": "Bug is here somewhere", "parents": ["e5f6a7b"] }
+      ],
+      "branches": { "main": "f6a7b8c" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "Add feature A", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Add feature B", "parents": ["b2c3d4e"] },
+        { "sha": "d4e5f6a", "message": "Refactor utils", "parents": ["c3d4e5f"] },
+        { "sha": "e5f6a7b", "message": "Update configs", "parents": ["d4e5f6a"] },
+        { "sha": "f6a7b8c", "message": "Bug is here somewhere", "parents": ["e5f6a7b"] }
+      ],
+      "branches": { "main": "f6a7b8c" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "objectives": [
+      {
+        "description": "Start a bisect session",
+        "validation": { "type": "commandUsed", "expected": "git bisect start" }
+      },
+      {
+        "description": "Mark the current commit as bad",
+        "validation": { "type": "commandUsed", "expected": "git bisect bad" }
+      },
+      {
+        "description": "Mark a known good commit",
+        "validation": { "type": "commandUsed", "expected": "git bisect good" }
+      },
+      {
+        "description": "Reset bisect when done",
+        "validation": { "type": "commandUsed", "expected": "git bisect reset" }
+      }
+    ],
+    "hints": ["Start with 'git bisect start'", "Mark bad: 'git bisect bad', mark a good older commit: 'git bisect good <sha>'", "End with 'git bisect reset'"],
+    "afterSolve": "Bisect uses binary search to find the commit that introduced a bug. With 1000 commits, it finds the culprit in ~10 steps instead of checking each one."
+  },
+  {
+    "id": "g-workflow-01",
+    "topic": "git_workflows",
+    "tier": 5,
+    "scenario": "Set up a GitFlow-style branch structure: create 'develop' from main, then create a 'feature/search' branch from develop, make a commit, and merge it back into develop.",
+    "initialState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "v1.0 release", "parents": ["a1b2c3d"] }
+      ],
+      "branches": { "main": "b2c3d4e" },
+      "HEAD": { "type": "branch", "ref": "main" }
+    },
+    "targetState": {
+      "commits": [
+        { "sha": "a1b2c3d", "message": "Initial commit", "parents": [] },
+        { "sha": "b2c3d4e", "message": "v1.0 release", "parents": ["a1b2c3d"] },
+        { "sha": "c3d4e5f", "message": "Implement search", "parents": ["b2c3d4e"] }
+      ],
+      "branches": { "main": "b2c3d4e", "develop": "c3d4e5f" },
+      "HEAD": { "type": "branch", "ref": "develop" }
+    },
+    "objectives": [
+      {
+        "description": "Create a 'develop' branch from main",
+        "validation": { "type": "branchExists", "expected": "develop" }
+      },
+      {
+        "description": "Create a 'feature/search' branch from develop",
+        "validation": { "type": "commandUsed", "expected": "git (checkout -b|branch|switch -c) feature/search" }
+      },
+      {
+        "description": "Make a commit on the feature branch",
+        "validation": { "type": "commitCountMin", "expected": 3 }
+      },
+      {
+        "description": "Merge feature/search into develop",
+        "validation": { "type": "commandUsed", "expected": "git merge feature/search" }
+      },
+      {
+        "description": "End up on develop branch",
+        "validation": { "type": "headOnBranch", "expected": "develop" }
+      }
+    ],
+    "hints": ["Create develop: 'git branch develop'", "Switch and create feature: 'git checkout -b feature/search develop'", "Commit, then checkout develop and merge"],
+    "afterSolve": "GitFlow uses main for releases, develop for integration, and feature branches for work. Trunk-based development is simpler: everyone commits to main with short-lived branches."
+  }
+]

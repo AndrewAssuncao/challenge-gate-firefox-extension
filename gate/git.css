@@ -1,0 +1,266 @@
+/* Git Challenge — Branch Graph Visualization Theme */
+
+/* ── Git-specific colors (extends terminal palette) ─────────────────── */
+
+:root {
+  --git-graph-bg: #13141d;
+  --git-graph-border: #24283b;
+  --git-branch-main: #7aa2f7;
+  --git-branch-alt1: #9ece6a;
+  --git-branch-alt2: #bb9af7;
+  --git-branch-alt3: #e0af68;
+  --git-branch-prompt: #f7768e;
+}
+
+/* ── Meta bar ───────────────────────────────────────────────────────── */
+
+#git-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+#git-tier {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+#git-progress {
+  color: var(--text-dim);
+}
+
+/* ── Scenario / teaching note ───────────────────────────────────────── */
+
+#git-prompt-area {
+  margin-bottom: 16px;
+}
+
+.git-teaching-note {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  background: rgba(74, 126, 255, 0.06);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+}
+
+.git-scenario {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+/* ── Objectives panel ───────────────────────────────────────────────── */
+
+#git-objectives {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.git-objective {
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s;
+}
+
+.git-objective.met {
+  color: var(--term-success);
+}
+
+/* ── Graph containers ───────────────────────────────────────────────── */
+
+#git-graphs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.git-graph-panel {
+  background: var(--git-graph-bg);
+  border: 1px solid var(--git-graph-border);
+  border-radius: 8px;
+  padding: 10px;
+  min-height: 80px;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 280px;
+}
+
+.git-graph-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.git-graph-label-target {
+  color: var(--git-branch-alt3);
+}
+
+.git-graph-label-current {
+  color: var(--git-branch-main);
+}
+
+.git-graph-label .label-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.git-graph-label-target .label-dot {
+  background: var(--git-branch-alt3);
+}
+
+.git-graph-label-current .label-dot {
+  background: var(--git-branch-main);
+}
+
+.git-graph-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ── Terminal container ─────────────────────────────────────────────── */
+
+#git-terminal {
+  background: var(--term-bg);
+  border: 1px solid var(--term-border);
+  border-radius: 8px;
+  padding: 16px;
+  min-height: 160px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.65;
+  cursor: text;
+  position: relative;
+}
+
+#git-terminal::-webkit-scrollbar {
+  width: 6px;
+}
+
+#git-terminal::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#git-terminal::-webkit-scrollbar-thumb {
+  background: var(--term-border);
+  border-radius: 3px;
+}
+
+/* ── Output lines ───────────────────────────────────────────────────── */
+
+#git-output {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.git-line {
+  min-height: 1.65em;
+}
+
+/* ── Input line ─────────────────────────────────────────────────────── */
+
+#git-input-line {
+  display: flex;
+  align-items: center;
+  position: relative;
+  white-space: nowrap;
+}
+
+#git-ps1 {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+#git-input-display {
+  white-space: pre;
+}
+
+#git-input {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  caret-color: transparent;
+}
+
+#git-suggestion {
+  color: var(--term-suggestion);
+  white-space: pre;
+  pointer-events: none;
+}
+
+/* ── Branch prompt in PS1 ───────────────────────────────────────────── */
+
+.git-branch-prompt {
+  color: var(--git-branch-prompt);
+  font-weight: 600;
+}
+
+.git-branch-prompt::before {
+  content: '\e0a0 ';
+  font-weight: 400;
+}
+
+/* ── Actions bar ────────────────────────────────────────────────────── */
+
+#git-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* ── Result panel ───────────────────────────────────────────────────── */
+
+#git-result {
+  margin-top: 14px;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+/* ── Focus state ────────────────────────────────────────────────────── */
+
+#git-terminal:focus-within {
+  border-color: var(--border-focus);
+}
+
+#git-terminal:not(:focus-within) .term-cursor {
+  animation: none;
+  opacity: 0.3;
+}
+
+/* ── Reuse terminal classes for output styling ──────────────────────── */
+/* These are already defined in terminal.css:
+   .term-cmd, .term-flag, .term-string, .term-arg, .term-output,
+   .term-error, .term-success, .term-dim, .term-hint, .term-help,
+   .term-after-solve, .term-cursor, .term-arrow-ok, .term-arrow-err,
+   .term-user, .objective-check */

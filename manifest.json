@@ -46,6 +46,9 @@
     "gate/terminal.js",
     "gate/terminal.css",
     "gate/terminal-provider.js",
+    "gate/git.js",
+    "gate/git.css",
+    "gate/git-provider.js",
     "gate/pyodide-worker.js",
     "gate/challenges/*"
   ],

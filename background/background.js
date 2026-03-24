@@ -29,11 +29,14 @@ let progression = {
   pythonCompleted: [],
   terminalTier: 1,
   terminalCompleted: [],
+  gitTier: 1,
+  gitCompleted: [],
   typingAvgWpm: 0,
   totalChallengesCompleted: 0
 };
 let learningProfile = null;
 let terminalLearningProfile = null;
+let gitLearningProfile = null;
 let typingHistory = [];
 let dailyChallengeLog = {};
 
@@ -53,7 +56,7 @@ const DEFAULT_SITES = [
 async function loadState() {
   try {
     const data = await browser.storage.local.get([
-      'blockedSites', 'unlocks', 'timeTracking', 'settings', 'progression', 'learningProfile', 'terminalLearningProfile', 'typingHistory', 'dailyChallengeLog'
+      'blockedSites', 'unlocks', 'timeTracking', 'settings', 'progression', 'learningProfile', 'terminalLearningProfile', 'gitLearningProfile', 'typingHistory', 'dailyChallengeLog'
     ]);
 
     if (!data.blockedSites) {
@@ -69,6 +72,7 @@ async function loadState() {
     progression = { ...progression, ...(data.progression || {}) };
     learningProfile = data.learningProfile || null;
     terminalLearningProfile = data.terminalLearningProfile || null;
+    gitLearningProfile = data.gitLearningProfile || null;
     typingHistory = data.typingHistory || [];
     dailyChallengeLog = data.dailyChallengeLog || {};
   } catch (err) {
@@ -108,6 +112,7 @@ browser.storage.onChanged.addListener((changes) => {
   if (changes.settings) settings = { ...settings, ...(changes.settings.newValue || {}) };
   if (changes.progression) progression = { ...progression, ...(changes.progression.newValue || {}) };
   if (changes.terminalLearningProfile) terminalLearningProfile = changes.terminalLearningProfile.newValue || null;
+  if (changes.gitLearningProfile) gitLearningProfile = changes.gitLearningProfile.newValue || null;
   if (changes.dailyChallengeLog) dailyChallengeLog = changes.dailyChallengeLog.newValue || {};
 });
 
@@ -306,6 +311,7 @@ const messageHandlers = {
       progression,
       learningProfile,
       terminalLearningProfile,
+      gitLearningProfile,
       typingHistory,
       dailyChallengeLog
     };
@@ -432,6 +438,17 @@ const messageHandlers = {
   async saveTerminalLearningProfile(msg) {
     terminalLearningProfile = msg.profile;
     await browser.storage.local.set({ terminalLearningProfile }).catch(logStorageError);
+    return { success: true };
+  },
+
+  // Git learning profile
+  async getGitLearningProfile() {
+    return gitLearningProfile;
+  },
+
+  async saveGitLearningProfile(msg) {
+    gitLearningProfile = msg.profile;
+    await browser.storage.local.set({ gitLearningProfile }).catch(logStorageError);
     return { success: true };
   },
 
