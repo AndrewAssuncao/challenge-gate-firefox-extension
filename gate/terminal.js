@@ -1883,12 +1883,46 @@ Give a brief, helpful hint without giving away the exact answer. 2-3 sentences m
       if (response.content) {
         appendOutput(`<span class="term-help">${escapeHtml(response.content)}</span>`);
       } else {
-        appendOutput('<span class="term-dim">Help unavailable (no API key configured)</span>');
+        // No API key — provide local help based on remaining objectives
+        showLocalHelp();
       }
     } catch {
-      appendOutput('<span class="term-dim">Help unavailable</span>');
+      showLocalHelp();
     }
     els.input.focus();
+  }
+
+  function showLocalHelp() {
+    const remaining = challenge.objectives.filter(o => !o._met);
+    if (remaining.length === 0) return;
+
+    const next = remaining[0];
+    const v = next.validation;
+    const tips = [];
+
+    // Generate contextual hints based on validation type
+    if (v.type === 'cwd') {
+      tips.push(`You need to change your working directory. Try: cd <path>`);
+    } else if (v.type === 'outputContains' || v.type === 'outputEquals') {
+      tips.push(`The next step requires producing specific output. Try reading a file or running a command.`);
+    } else if (v.type === 'fileExists') {
+      const path = v.expected || '';
+      if (path.includes('/')) {
+        tips.push(`You need to create something at a specific path. Check if parent directories exist first.`);
+      } else {
+        tips.push(`You need to create a file or directory. Use touch for files, mkdir for directories.`);
+      }
+    } else if (v.type === 'fileContains') {
+      tips.push(`A file needs to contain specific content. Try using echo with redirection (> or >>).`);
+    } else if (v.type === 'commandUsed') {
+      tips.push(`Try using a specific command. Type man <command> if you need help with syntax.`);
+    }
+
+    if (tips.length > 0) {
+      appendOutput(`<span class="term-help">${escapeHtml(tips[0])}</span>`);
+    } else {
+      appendOutput(`<span class="term-help">Next objective: ${escapeHtml(next.description)}</span>`);
+    }
   }
 
   async function skipChallenge() {

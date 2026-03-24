@@ -7,7 +7,7 @@ const Dashboard = (() => {
   let settingsUnlocked = false;
   let editingDomain = null;
   let refreshTimer = null;
-  let activeProgressView = 'typing'; // 'typing' or 'python'
+  let activeProgressView = 'typing'; // 'typing', 'python', or 'terminal'
 
   // Elements
   const els = {
@@ -45,6 +45,9 @@ const Dashboard = (() => {
     typingChartStats: document.getElementById('typing-chart-stats'),
     learningCurriculum: document.getElementById('learning-curriculum'),
     learningStats: document.getElementById('learning-stats'),
+    terminalProgressView: document.getElementById('terminal-progress-view'),
+    terminalCurriculum: document.getElementById('terminal-curriculum'),
+    terminalStats: document.getElementById('terminal-stats'),
     saveSettingsBtn: document.getElementById('save-settings-btn'),
     editModal: document.getElementById('edit-modal'),
     editChallengeType: document.getElementById('edit-challenge-type'),
@@ -209,14 +212,19 @@ const Dashboard = (() => {
   // ── Progress section (toggle between typing chart and python curriculum) ──
 
   function renderProgress() {
+    els.typingSpeedView.classList.add('hidden');
+    els.pythonProgressView.classList.add('hidden');
+    els.terminalProgressView.classList.add('hidden');
+
     if (activeProgressView === 'typing') {
       els.typingSpeedView.classList.remove('hidden');
-      els.pythonProgressView.classList.add('hidden');
       renderTypingChart();
-    } else {
-      els.typingSpeedView.classList.add('hidden');
+    } else if (activeProgressView === 'python') {
       els.pythonProgressView.classList.remove('hidden');
       renderLearning();
+    } else if (activeProgressView === 'terminal') {
+      els.terminalProgressView.classList.remove('hidden');
+      renderTerminalLearning();
     }
   }
 
@@ -403,6 +411,76 @@ const Dashboard = (() => {
       els.learningStats.textContent = parts.join(' · ');
     } else {
       els.learningStats.textContent = 'No sessions yet.';
+    }
+  }
+
+  function renderTerminalLearning() {
+    const profile = state.terminalLearningProfile;
+    const TERMINAL_CURRICULUM = [
+      { id: 'navigation',       name: 'Navigation (pwd, ls, cd)',             tier: 1 },
+      { id: 'file_creation',    name: 'Creating files and directories',       tier: 1 },
+      { id: 'file_reading',     name: 'Reading files (cat, head, tail)',      tier: 1 },
+      { id: 'paths',            name: 'Relative and absolute paths',          tier: 1 },
+      { id: 'help_man',         name: 'Getting help (man, which)',            tier: 1 },
+      { id: 'copy_move',        name: 'Copying and moving (cp, mv)',          tier: 2 },
+      { id: 'remove_find',      name: 'Removing and finding (rm, find)',      tier: 2 },
+      { id: 'grep_search',      name: 'Searching text (grep)',               tier: 2 },
+      { id: 'permissions',      name: 'Permissions (chmod, chown)',           tier: 2 },
+      { id: 'redirection',      name: 'Redirection and pipes',               tier: 2 },
+      { id: 'text_processing',  name: 'Text processing (sort, uniq, wc)',    tier: 3 },
+      { id: 'processes',        name: 'Process management (ps, kill)',        tier: 3 },
+      { id: 'environment',      name: 'Environment variables',               tier: 3 },
+      { id: 'aliases_history',  name: 'Aliases and shell config',            tier: 3 },
+      { id: 'package_managers', name: 'Package managers (brew, pip, npm)',    tier: 3 },
+      { id: 'git_basics',       name: 'Git basics',                          tier: 4 },
+      { id: 'git_branching',    name: 'Git branching and merging',           tier: 4 },
+      { id: 'ssh',              name: 'SSH',                                 tier: 4 },
+      { id: 'docker_basics',    name: 'Docker basics',                       tier: 4 },
+      { id: 'curl_networking',  name: 'curl and networking',                 tier: 4 },
+      { id: 'shell_scripting',  name: 'Shell scripting',                     tier: 5 },
+      { id: 'git_advanced',     name: 'Advanced git',                        tier: 5 },
+      { id: 'docker_compose',   name: 'Docker compose',                      tier: 5 },
+      { id: 'sed_awk',          name: 'sed and awk',                         tier: 5 },
+      { id: 'system_debug',     name: 'System debugging',                    tier: 5 }
+    ];
+
+    const currentIdx = profile ? profile.currentTopicIndex : 0;
+    const history = profile ? profile.topicHistory || {} : {};
+
+    els.terminalCurriculum.innerHTML = TERMINAL_CURRICULUM.map((topic, i) => {
+      let rowClass, markerClass, markerText;
+      if (i < currentIdx) {
+        rowClass = 'completed';
+        markerClass = 'done';
+        markerText = '✓';
+      } else if (i === currentIdx) {
+        rowClass = 'current';
+        markerClass = 'active';
+        markerText = '→';
+      } else {
+        rowClass = 'future';
+        markerClass = 'pending';
+        markerText = '·';
+      }
+
+      const th = history[topic.id];
+      const statsText = th ? `${th.passes}/${th.attempts}` : '';
+
+      return `<div class="curriculum-row ${rowClass}">
+        <span class="curriculum-marker ${markerClass}">${markerText}</span>
+        <span class="curriculum-name">${esc(topic.name)}</span>
+        <span class="curriculum-stats">${statsText}</span>
+      </div>`;
+    }).join('');
+
+    if (profile) {
+      const parts = [];
+      parts.push(`${profile.totalSessions || 0} sessions`);
+      if (profile.streakDays > 1) parts.push(`${profile.streakDays} day streak`);
+      if (profile.conceptsIntroduced?.length) parts.push(`${profile.conceptsIntroduced.length} concepts`);
+      els.terminalStats.textContent = parts.join(' · ');
+    } else {
+      els.terminalStats.textContent = 'No sessions yet.';
     }
   }
 
