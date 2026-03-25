@@ -689,9 +689,14 @@ const Dashboard = (() => {
         if (cell.entry.terminal) parts.push(`${cell.entry.terminal} terminal`);
         if (cell.entry.git) parts.push(`${cell.entry.git} git`);
         tooltip.textContent = `${cell.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${parts.join(', ')}`;
-        tooltip.style.left = (e.clientX - rect.left + 10) + 'px';
-        tooltip.style.top = (e.clientY - rect.top - 30) + 'px';
         tooltip.classList.remove('hidden');
+        const tw = tooltip.offsetWidth;
+        const wrapperW = canvas.parentElement?.clientWidth || width;
+        let tx = mx + 10;
+        if (tx + tw > wrapperW - 8) tx = mx - tw - 8;
+        if (tx < 4) tx = 4;
+        tooltip.style.left = tx + 'px';
+        tooltip.style.top = (my - 30) + 'px';
       } else {
         tooltip.classList.add('hidden');
       }

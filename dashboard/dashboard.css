@@ -381,6 +381,9 @@ button.toggle-btn.active {
   font-size: 11px;
   color: var(--text);
   white-space: nowrap;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   pointer-events: none;
   z-index: 10;
 }
