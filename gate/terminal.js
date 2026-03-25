@@ -586,13 +586,13 @@ const TerminalChallenge = (() => {
       if (args.length === 0) {
         return { stdout: ctx.stdin || '', exitCode: 0 };
       }
-      const lines = [];
+      const parts = [];
       for (const arg of args) {
         const content = VFS.readFile(arg);
         if (content === null) return { stderr: `cat: ${arg}: No such file or directory`, exitCode: 1 };
-        lines.push(content);
+        parts.push(content);
       }
-      return { stdout: lines.join('\n'), exitCode: 0 };
+      return { stdout: parts.join(''), exitCode: 0 };
     },
 
     echo(args) {
@@ -668,9 +668,10 @@ const TerminalChallenge = (() => {
     },
 
     mv(args) {
-      if (args.length < 2) return { stderr: 'mv: missing operand', exitCode: 1 };
-      const dst = args[args.length - 1];
-      const sources = args.slice(0, -1);
+      const paths = args.filter(a => !a.startsWith('-'));
+      if (paths.length < 2) return { stderr: 'mv: missing operand', exitCode: 1 };
+      const dst = paths[paths.length - 1];
+      const sources = paths.slice(0, -1);
       for (const src of sources) {
         if (!VFS.mv(src, dst)) return { stderr: `mv: cannot move '${src}'`, exitCode: 1 };
       }
@@ -709,6 +710,7 @@ const TerminalChallenge = (() => {
       let showLineNumbers = false;
       let recursive = false;
       let countOnly = false;
+      let invertMatch = false;
       let pattern = null;
       const files = [];
 
@@ -718,6 +720,7 @@ const TerminalChallenge = (() => {
           if (a.includes('n')) showLineNumbers = true;
           if (a.includes('r')) recursive = true;
           if (a.includes('c')) countOnly = true;
+          if (a.includes('v')) invertMatch = true;
         } else if (!pattern) {
           pattern = a;
         } else {
@@ -727,13 +730,20 @@ const TerminalChallenge = (() => {
 
       if (!pattern) return { stderr: 'grep: missing pattern', exitCode: 2 };
 
-      const regex = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), ignoreCase ? 'i' : '');
+      let regex;
+      try {
+        regex = new RegExp(pattern, ignoreCase ? 'i' : '');
+      } catch {
+        // If the pattern is invalid regex, treat as literal
+        regex = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), ignoreCase ? 'i' : '');
+      }
 
       function grepContent(content, prefix) {
         const lines = content.split('\n');
         const matches = [];
         lines.forEach((line, i) => {
-          if (regex.test(line)) {
+          const hit = regex.test(line);
+          if (invertMatch ? !hit : hit) {
             let out = '';
             if (prefix) out += prefix + ':';
             if (showLineNumbers) out += (i + 1) + ':';
@@ -807,7 +817,7 @@ const TerminalChallenge = (() => {
       const content = files.length > 0 ? VFS.readFile(files[0]) : (ctx.stdin || '');
       if (content === null) return { stderr: `wc: ${files[0]}: No such file or directory`, exitCode: 1 };
 
-      const lines = content.split('\n').length;
+      const lines = (content.match(/\n/g) || []).length;
       const words = content.split(/\s+/).filter(Boolean).length;
       const chars = content.length;
 
@@ -823,9 +833,10 @@ const TerminalChallenge = (() => {
       const files = [];
 
       for (const a of args) {
-        if (a === '-u') unique = true;
-        else if (a === '-r') reverse = true;
-        else if (!a.startsWith('-')) files.push(a);
+        if (a.startsWith('-')) {
+          if (a.includes('u')) unique = true;
+          if (a.includes('r')) reverse = true;
+        } else files.push(a);
       }
 
       const content = files.length > 0 ? VFS.readFile(files[0]) : (ctx.stdin || '');
@@ -980,7 +991,8 @@ const TerminalChallenge = (() => {
         const [search, replace] = parts;
         const flags = parts[2] || '';
         const regex = new RegExp(search, flags.includes('g') ? 'g' : '');
-        const result = content.replace(regex, replace);
+        // Apply substitution line by line (real sed behavior)
+        const result = lines.map(line => line.replace(regex, replace)).join('\n');
         if (inPlace) VFS.writeFile(files[0], result);
         return { stdout: inPlace ? '' : result, exitCode: 0 };
       }

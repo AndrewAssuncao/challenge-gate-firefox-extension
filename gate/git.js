@@ -240,9 +240,11 @@ const GitChallenge = (() => {
       if (GitSim.staging.size > 0) {
         lines.push('');
         lines.push('Changes to be committed:');
+        lines.push('  (use "git restore --staged <file>..." to unstage)');
         for (const f of GitSim.staging) {
-          const status = GitSim.workingTree.get(f) || 'new file';
-          lines.push(`  ${status}:   ${f}`);
+          let status = GitSim.workingTree.get(f) || 'new file';
+          if (status === 'new') status = 'new file';
+          lines.push(`\t${status}:   ${f}`);
         }
       }
 
@@ -285,19 +287,13 @@ const GitChallenge = (() => {
         for (const [f] of GitSim.workingTree) {
           GitSim.staging.add(f);
         }
-        // If working tree is empty, simulate adding a new file
-        if (GitSim.workingTree.size === 0) {
-          GitSim.workingTree.set('changes.txt', 'new');
-          GitSim.staging.add('changes.txt');
-        }
         return { stdout: '', exitCode: 0 };
       }
 
       for (const file of args) {
         if (file.startsWith('-')) continue;
         if (!GitSim.workingTree.has(file)) {
-          // Simulate adding a new file
-          GitSim.workingTree.set(file, 'new');
+          return { stderr: `fatal: pathspec '${file}' did not match any files`, exitCode: 1 };
         }
         GitSim.staging.add(file);
       }
@@ -809,17 +805,35 @@ const GitChallenge = (() => {
       return { stdout: '', exitCode: 0 };
     },
 
-    diff() {
-      if (GitSim.workingTree.size === 0 && GitSim.staging.size === 0) {
-        return { stdout: '(no changes)', exitCode: 0 };
+    diff(args) {
+      const showStaged = args && (args.includes('--staged') || args.includes('--cached'));
+
+      if (showStaged) {
+        // Show staged changes only
+        if (GitSim.staging.size === 0) return { stdout: '', exitCode: 0 };
+        const lines = [];
+        for (const f of GitSim.staging) {
+          let status = GitSim.workingTree.get(f) || 'new file';
+          if (status === 'new') status = 'new file';
+          lines.push(`diff --git a/${f} b/${f}`);
+          lines.push(`--- ${status === 'new file' ? '/dev/null' : `a/${f}`}`);
+          lines.push(`+++ b/${f}`);
+          lines.push(`@@ -0,0 +1 @@`);
+          lines.push(`+[${status}]`);
+        }
+        return { stdout: lines.join('\n'), exitCode: 0 };
       }
+
+      // Show unstaged changes only (default: git diff without --staged)
+      const unstaged = [...GitSim.workingTree.entries()].filter(([f]) => !GitSim.staging.has(f));
+      if (unstaged.length === 0) return { stdout: '', exitCode: 0 };
       const lines = [];
-      for (const [f, status] of GitSim.workingTree) {
-        const staged = GitSim.staging.has(f) ? ' (staged)' : '';
+      for (const [f, status] of unstaged) {
         lines.push(`diff --git a/${f} b/${f}`);
-        lines.push(`--- a/${f}`);
+        lines.push(`--- ${status === 'new' ? '/dev/null' : `a/${f}`}`);
         lines.push(`+++ b/${f}`);
-        lines.push(`@@ file ${status}${staged} @@`);
+        lines.push(`@@ -0,0 +1 @@`);
+        lines.push(`+[${status}]`);
       }
       return { stdout: lines.join('\n'), exitCode: 0 };
     },
