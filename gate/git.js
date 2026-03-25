@@ -211,15 +211,19 @@ const GitChallenge = (() => {
   // ── Git Commands ────────────────────────────────────────────────────
 
   const GIT_COMMANDS = {
-    init() {
+    init(args) {
       if (GitSim.commits.size > 0) {
-        return { stderr: 'Reinitialized existing Git repository', exitCode: 0 };
+        return { stdout: 'Reinitialized existing Git repository', exitCode: 0 };
       }
-      const sha = GitSim.generateSHA();
-      GitSim.commits.set(sha, { message: 'Initial commit', parents: [], timestamp: Date.now() });
-      GitSim.branches.set('main', sha);
-      GitSim.HEAD = { type: 'branch', ref: 'main' };
-      return { stdout: 'Initialized empty Git repository', exitCode: 0 };
+      // Real git init creates an empty repo — no commits, no branches yet.
+      // HEAD points to main but the branch doesn't exist until first commit.
+      GitSim.HEAD = { type: 'branch', ref: args[0] || 'main' };
+      // Auto-populate working tree with some files if it's empty,
+      // so git status has something to show
+      if (GitSim.workingTree.size === 0) {
+        GitSim.workingTree.set('README.md', 'new');
+      }
+      return { stdout: `Initialized empty Git repository in .git/`, exitCode: 0 };
     },
 
     status() {
@@ -349,14 +353,11 @@ const GitChallenge = (() => {
       }
 
       const fileCount = GitSim.staging.size;
-      GitSim.staging.clear();
-      // Clear committed files from working tree
-      for (const f of [...GitSim.workingTree.keys()]) {
-        if (GitSim.staging.has(f) || !GitSim.staging.size) {
-          GitSim.workingTree.delete(f);
-        }
+      // Clear committed files from working tree, keep unstaged ones
+      for (const f of GitSim.staging) {
+        GitSim.workingTree.delete(f);
       }
-      GitSim.workingTree.clear();
+      GitSim.staging.clear();
 
       const branch = GitSim.HEAD.type === 'branch' ? GitSim.HEAD.ref : 'HEAD';
       return { stdout: `[${branch} ${newSha}] ${message}\n ${fileCount} file(s) changed`, exitCode: 0 };
@@ -1026,7 +1027,7 @@ const GitChallenge = (() => {
     const hasDirtyState = (state.workingTree && Object.keys(state.workingTree).length > 0) || (state.staging && state.staging.length > 0);
     const topPad = hasDirtyState ? 60 : 25; // extra space for working tree indicator
     const labelPad = totalCols * colWidth + leftPad + 10;
-    const svgWidth = Math.max(labelPad + 200, 300);
+    const svgWidth = Math.max(labelPad + 280, 360);
     const svgHeight = sorted.length * rowHeight + topPad + 15;
 
     // Build commit positions
@@ -1101,16 +1102,16 @@ const GitChallenge = (() => {
 
       // Draw branch labels inline
       for (const label of labels) {
-        const textLen = label.text.length * 6.5 + 12;
+        const textLen = label.text.length * 7.2 + 16;
         svg += `<rect x="${cursorX - 2}" y="${pos.y - 10}" width="${textLen}" height="18" rx="4" fill="${label.color}" fill-opacity="${label.bold ? 0.25 : 0.12}"/>`;
-        svg += `<text x="${cursorX + 4}" y="${pos.y + 3}" fill="${label.color}" font-size="10" font-family="var(--mono)" font-weight="${label.bold ? '700' : '500'}">${escapeHtml(label.text)}</text>`;
-        cursorX += textLen + 6;
+        svg += `<text x="${cursorX + 5}" y="${pos.y + 3}" fill="${label.color}" font-size="10" font-family="var(--mono)" font-weight="${label.bold ? '700' : '500'}">${escapeHtml(label.text)}</text>`;
+        cursorX += textLen + 8;
       }
 
       // Commit SHA + message after labels
       const shortSha = sha.slice(0, 7);
-      const msg = commit ? commit.message.slice(0, 28) : '';
-      svg += `<text x="${cursorX}" y="${pos.y + 4}" fill="#565f89" font-size="10" font-family="var(--mono)">${escapeHtml(shortSha)}</text>`;
+      const msg = commit ? commit.message.slice(0, 24) : '';
+      svg += `<text x="${cursorX + 4}" y="${pos.y + 4}" fill="#565f89" font-size="10" font-family="var(--mono)">${escapeHtml(shortSha)}</text>`;
       svg += `<text x="${cursorX + 56}" y="${pos.y + 4}" fill="#a9b1d6" font-size="11" font-family="var(--mono)">${escapeHtml(msg)}</text>`;
     }
 
