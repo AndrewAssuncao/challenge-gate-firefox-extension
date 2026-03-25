@@ -244,11 +244,24 @@ const GitChallenge = (() => {
 
       if (GitSim.workingTree.size > 0) {
         const unstaged = [...GitSim.workingTree.entries()].filter(([f]) => !GitSim.staging.has(f));
-        if (unstaged.length > 0) {
+        // Separate modified (tracked) from new (untracked)
+        const modified = unstaged.filter(([, s]) => s === 'modified' || s === 'deleted');
+        const untracked = unstaged.filter(([, s]) => s === 'new');
+
+        if (modified.length > 0) {
           lines.push('');
           lines.push('Changes not staged for commit:');
-          for (const [f, status] of unstaged) {
-            lines.push(`  ${status}:   ${f}`);
+          lines.push('  (use "git add <file>..." to update what will be committed)');
+          for (const [f, status] of modified) {
+            lines.push(`\t${status}:   ${f}`);
+          }
+        }
+        if (untracked.length > 0) {
+          lines.push('');
+          lines.push('Untracked files:');
+          lines.push('  (use "git add <file>..." to include in what will be committed)');
+          for (const [f] of untracked) {
+            lines.push(`\t${f}`);
           }
         }
       }
