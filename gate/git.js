@@ -1064,26 +1064,33 @@ const GitChallenge = (() => {
       }
       svg += `<circle cx="${pos.x}" cy="${pos.y}" r="${nodeRadius}" fill="${isHead ? color : '#1a1b26'}" stroke="${color}" stroke-width="2.5"/>`;
 
-      // Commit message (to the right)
-      const msgX = labelPad;
-      svg += `<text x="${msgX}" y="${pos.y + 4}" fill="#a9b1d6" font-size="11" font-family="var(--mono)">${escapeHtml(sha)} ${escapeHtml((commit ? commit.message : '').slice(0, 30))}</text>`;
-    }
+      // Collect branch/tag labels for this commit
+      const labels = [];
+      for (const [bName, bSha] of Object.entries(branchMap)) {
+        if (bSha === sha) {
+          const bCol = branchColumns.get(bName) || 0;
+          const bColor = BRANCH_COLORS[bCol % BRANCH_COLORS.length];
+          const isCurrent = head.type === 'branch' && head.ref === bName;
+          labels.push({ text: (isCurrent ? 'HEAD \u2192 ' : '') + bName, color: bColor, bold: isCurrent });
+        }
+      }
 
-    // Draw branch labels
-    for (const [name, sha] of Object.entries(branchMap)) {
-      const pos = positions.get(sha);
-      if (!pos) continue;
-      const col = branchColumns.get(name) || 0;
-      const color = BRANCH_COLORS[col % BRANCH_COLORS.length];
-      const isCurrentBranch = head.type === 'branch' && head.ref === name;
+      // Layout: [node] [branch labels...] [sha message]
+      let cursorX = pos.x + nodeRadius + 8;
 
-      const labelX = pos.x + nodeRadius + 6;
-      const labelY = pos.y;
+      // Draw branch labels inline
+      for (const label of labels) {
+        const textLen = label.text.length * 6.5 + 12;
+        svg += `<rect x="${cursorX - 2}" y="${pos.y - 10}" width="${textLen}" height="18" rx="4" fill="${label.color}" fill-opacity="${label.bold ? 0.25 : 0.12}"/>`;
+        svg += `<text x="${cursorX + 4}" y="${pos.y + 3}" fill="${label.color}" font-size="10" font-family="var(--mono)" font-weight="${label.bold ? '700' : '500'}">${escapeHtml(label.text)}</text>`;
+        cursorX += textLen + 6;
+      }
 
-      // Branch label background
-      const textLen = name.length * 7 + 12;
-      svg += `<rect x="${labelX - 2}" y="${labelY - 10}" width="${textLen}" height="18" rx="4" fill="${color}" fill-opacity="${isCurrentBranch ? 0.25 : 0.12}"/>`;
-      svg += `<text x="${labelX + 4}" y="${labelY + 3}" fill="${color}" font-size="10" font-family="var(--mono)" font-weight="${isCurrentBranch ? '700' : '500'}">${isCurrentBranch ? 'HEAD \u2192 ' : ''}${escapeHtml(name)}</text>`;
+      // Commit SHA + message after labels
+      const shortSha = sha.slice(0, 7);
+      const msg = commit ? commit.message.slice(0, 28) : '';
+      svg += `<text x="${cursorX}" y="${pos.y + 4}" fill="#565f89" font-size="10" font-family="var(--mono)">${escapeHtml(shortSha)}</text>`;
+      svg += `<text x="${cursorX + 56}" y="${pos.y + 4}" fill="#a9b1d6" font-size="11" font-family="var(--mono)">${escapeHtml(msg)}</text>`;
     }
 
     // Draw tag labels
@@ -1631,6 +1638,10 @@ Give a brief, helpful hint without giving away the exact answer. 2-3 sentences m
     // Render graphs
     if (challenge.targetState) {
       renderGraph(challenge.targetState, 'git-target-svg');
+    } else {
+      // No target state — show hint text
+      const tgt = document.getElementById('git-target-svg');
+      if (tgt) tgt.innerHTML = '<svg viewBox="0 0 300 60" class="git-graph-svg"><text x="150" y="35" text-anchor="middle" fill="#565f89" font-size="12" font-family="var(--mono)">Complete objectives to see result</text></svg>';
     }
     renderGraph(GitSim.serialize(), 'git-current-svg');
 

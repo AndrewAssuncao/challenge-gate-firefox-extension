@@ -227,8 +227,9 @@
 }
 
 .git-branch-prompt::before {
-  content: '\e0a0 ';
+  content: '\2387 ';
   font-weight: 400;
+  margin-right: 2px;
 }
 
 /* ── Actions bar ────────────────────────────────────────────────────── */
