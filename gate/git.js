@@ -109,11 +109,15 @@ const GitChallenge = (() => {
       for (const [name, sha] of branches) branchObj[name] = sha;
       const tagObj = {};
       for (const [name, sha] of tags) tagObj[name] = sha;
+      const wt = {};
+      for (const [f, s] of workingTree) wt[f] = s;
       return {
         commits: commitArr,
         branches: branchObj,
         HEAD: { ...HEAD },
-        tags: tagObj
+        tags: tagObj,
+        workingTree: Object.keys(wt).length > 0 ? wt : undefined,
+        staging: staging.size > 0 ? [...staging] : undefined
       };
     }
 
@@ -1004,16 +1008,18 @@ const GitChallenge = (() => {
     const rowHeight = 48;
     const colWidth = 50;
     const leftPad = 20;
+    const hasDirtyState = (state.workingTree && Object.keys(state.workingTree).length > 0) || (state.staging && state.staging.length > 0);
+    const topPad = hasDirtyState ? 60 : 25; // extra space for working tree indicator
     const labelPad = totalCols * colWidth + leftPad + 10;
-    const svgWidth = Math.max(labelPad + 160, 300);
-    const svgHeight = sorted.length * rowHeight + 30;
+    const svgWidth = Math.max(labelPad + 200, 300);
+    const svgHeight = sorted.length * rowHeight + topPad + 15;
 
     // Build commit positions
     const positions = new Map();
     sorted.forEach((sha, i) => {
       const col = commitColumn.get(sha) || 0;
       const x = leftPad + col * colWidth + colWidth / 2;
-      const y = i * rowHeight + 25;
+      const y = i * rowHeight + topPad;
       positions.set(sha, { x, y });
     });
 
@@ -1100,6 +1106,25 @@ const GitChallenge = (() => {
 
       const labelX = pos.x - nodeRadius - 6;
       svg += `<text x="${labelX}" y="${pos.y + 3}" fill="#e0af68" font-size="9" font-family="var(--mono)" text-anchor="end">\uD83C\uDFF7 ${escapeHtml(name)}</text>`;
+    }
+
+    // Show working tree indicator if there are uncommitted changes
+    const wt = state.workingTree || {};
+    const stg = state.staging || [];
+    const dirtyFiles = Object.keys(wt);
+    if (dirtyFiles.length > 0 || stg.length > 0) {
+      const topPos = sorted.length > 0 ? positions.get(sorted[0]) : null;
+      if (topPos) {
+        const wy = topPos.y - 32;
+        const wx = topPos.x;
+        // Dashed line from dirty indicator to HEAD
+        svg += `<line x1="${wx}" y1="${wy + 6}" x2="${topPos.x}" y2="${topPos.y - nodeRadius}" stroke="#e0af68" stroke-width="1.5" stroke-dasharray="3,3" stroke-opacity="0.5"/>`;
+        // Dirty state circle (unfilled, orange)
+        svg += `<circle cx="${wx}" cy="${wy}" r="5" fill="none" stroke="#e0af68" stroke-width="1.5" stroke-dasharray="2,2"/>`;
+        // Label
+        const label = stg.length > 0 ? `${stg.length} staged, ${dirtyFiles.length - stg.length} unstaged` : `${dirtyFiles.length} modified`;
+        svg += `<text x="${wx + 12}" y="${wy + 3}" fill="#e0af68" font-size="9" font-family="var(--mono)" fill-opacity="0.7">${escapeHtml(label)}</text>`;
+      }
     }
 
     svg += '</svg>';

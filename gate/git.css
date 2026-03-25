@@ -227,9 +227,10 @@
 }
 
 .git-branch-prompt::before {
-  content: '\2387 ';
+  content: 'on ';
   font-weight: 400;
-  margin-right: 2px;
+  margin-right: 1px;
+  color: var(--term-dim);
 }
 
 /* ── Actions bar ────────────────────────────────────────────────────── */

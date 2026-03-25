@@ -144,8 +144,12 @@ For initialState and targetState, use this format:
 {
   "commits": [{"sha": "a1b2c3d", "message": "Initial commit", "parents": []}, ...],
   "branches": {"main": "sha1", "feature": "sha2"},
-  "HEAD": {"type": "branch", "ref": "main"}
+  "HEAD": {"type": "branch", "ref": "main"},
+  "workingTree": {"filename.js": "modified", "newfile.py": "new"},
+  "staging": ["filename.js"]
 }
+
+CRITICAL: If the scenario involves uncommitted changes, modified files, or files the user needs to stage/commit, you MUST include "workingTree" in the initialState. Without it, "git status" will show "nothing to commit" and the challenge will be impossible. Use "modified" for changed existing files and "new" for untracked files. "staging" is an array of filenames already staged.
 
 IMPORTANT: Use short 7-character hex strings for SHAs. Keep commit graphs small (2-8 commits). Make sure parent references are consistent.
 
@@ -203,6 +207,13 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
         HEAD: challenge.initialState.HEAD || { type: 'branch', ref: 'main' },
         tags: challenge.initialState.tags || {}
       };
+      // Pass through workingTree and staging if present
+      if (challenge.initialState.workingTree && typeof challenge.initialState.workingTree === 'object') {
+        sanitized.initialState.workingTree = challenge.initialState.workingTree;
+      }
+      if (Array.isArray(challenge.initialState.staging)) {
+        sanitized.initialState.staging = challenge.initialState.staging;
+      }
     } else {
       sanitized.initialState = { commits: [], branches: {}, HEAD: { type: 'branch', ref: 'main' } };
     }
