@@ -622,12 +622,16 @@ const Dashboard = (() => {
       return colors[4];
     }
 
-    // Build date grid (52 weeks back from today)
+    // Build date grid (52 weeks ending on this week's Saturday)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dayOfWeek = today.getDay(); // 0=Sun
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - (weeks * 7 - 1) - dayOfWeek);
+    // End date = this Saturday (end of current week)
+    const endSaturday = new Date(today);
+    endSaturday.setDate(endSaturday.getDate() + (6 - dayOfWeek));
+    // Start date = 52 weeks before, on Sunday
+    const startDate = new Date(endSaturday);
+    startDate.setDate(startDate.getDate() - (weeks * 7 - 1));
 
     // Day labels
     ctx.font = '10px system-ui, sans-serif';
@@ -646,7 +650,7 @@ const Dashboard = (() => {
     const d = new Date(startDate);
     for (let w = 0; w < weeks; w++) {
       for (let dow = 0; dow < days; dow++) {
-        const dateKey = d.toISOString().slice(0, 10);
+        const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const entry = log[dateKey] || {};
         const total = (entry.typing || 0) + (entry.python || 0) + (entry.terminal || 0) + (entry.git || 0);
 
