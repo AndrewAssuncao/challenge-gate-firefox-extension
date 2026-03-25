@@ -612,8 +612,8 @@ const Dashboard = (() => {
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
-    // Blue color scale
-    const colors = ['#161b22', '#0a2e5c', '#1a4a8a', '#2d6abf', '#4a9eff'];
+    // Blue color scale — higher contrast so 1 challenge is clearly visible
+    const colors = ['#161b22', '#1a4a8a', '#2d6abf', '#4a9eff', '#6cb6ff'];
     function getColor(count) {
       if (count === 0) return colors[0];
       if (count <= 1) return colors[1];
