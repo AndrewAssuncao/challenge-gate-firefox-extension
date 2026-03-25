@@ -527,6 +527,10 @@ Respond with ONLY valid JSON:
     // Record failure in learning profile (no gate unlock)
     profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource, false, helpUsedThisChallenge);
     await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
+
+    // Log failed attempt so heatmap shows engagement
+    const solveTime = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+    browser.runtime.sendMessage({ type: 'logChallengeCompletion', challengeType: 'python', solveTime }).catch(() => {});
   }
 
   function showHint() {

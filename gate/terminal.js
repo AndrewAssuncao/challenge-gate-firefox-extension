@@ -2138,6 +2138,9 @@ Give a brief, helpful hint without giving away the exact answer. 2-3 sentences m
     TerminalChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource);
     await browser.runtime.sendMessage({ type: 'saveTerminalLearningProfile', profile });
 
+    // Log skipped attempt so heatmap shows engagement
+    browser.runtime.sendMessage({ type: 'logChallengeCompletion', challengeType: 'terminal', solveTime: 0 }).catch(() => {});
+
     await getChallenge();
   }
 

@@ -1563,6 +1563,9 @@ Give a brief, helpful hint without giving away the exact answer. 2-3 sentences m
     GitChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource);
     await browser.runtime.sendMessage({ type: 'saveGitLearningProfile', profile });
 
+    // Log skipped attempt so heatmap shows engagement
+    browser.runtime.sendMessage({ type: 'logChallengeCompletion', challengeType: 'git', solveTime: 0 }).catch(() => {});
+
     await getChallenge();
   }
 

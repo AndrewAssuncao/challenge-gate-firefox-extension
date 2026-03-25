@@ -530,6 +530,9 @@ const TypingChallenge = (() => {
       if (wpm < wpmThreshold) reasons.push(`${wpm} wpm (need ${wpmThreshold})`);
       if (accuracy < accuracyThreshold) reasons.push(`${accuracy}% (need ${accuracyThreshold}%)`);
       resultTextEl.textContent = reasons.join(' · ');
+      // Log failed attempt so heatmap shows engagement
+      const solveTime = Math.round((Date.now() - startTime) / 1000);
+      browser.runtime.sendMessage({ type: 'logChallengeCompletion', challengeType: 'typing', solveTime }).catch(() => {});
     }
   }
 

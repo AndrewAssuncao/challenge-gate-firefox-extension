@@ -956,9 +956,15 @@ const Dashboard = (() => {
         let text = `${n.label} (${n.discipline}) · ${n.passes}/${n.attempts} · ${confLabel}`;
         if (edgeCount > 0) text += ` · ${edgeCount} cross-links`;
         tooltip.textContent = text;
-        tooltip.style.left = (mx + 12) + 'px';
-        tooltip.style.top = (my - 28) + 'px';
         tooltip.classList.remove('hidden');
+        // Clamp tooltip to avoid clipping right/bottom edge
+        const tw = tooltip.offsetWidth;
+        const wrapperW = canvas.parentElement?.clientWidth || width;
+        let tx = mx + 12;
+        if (tx + tw > wrapperW - 8) tx = mx - tw - 8;
+        if (tx < 4) tx = 4;
+        tooltip.style.left = tx + 'px';
+        tooltip.style.top = (my - 28) + 'px';
       } else {
         tooltip.classList.add('hidden');
       }

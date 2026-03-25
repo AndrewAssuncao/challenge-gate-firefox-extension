@@ -163,10 +163,22 @@ function buildKnowledgeNodes(pythonProfile, terminalProfile, gitProfile) {
     topics.forEach((t, i) => {
       const stats = history[t.id] || {};
       const confidence = stats.confidenceLevel || 0;
+      const hasSpacedRep = typeof stats.confidenceLevel === 'number';
+
       let mastery = 'not_started';
-      if (i < currentIdx || confidence >= 4) mastery = 'mastered';
-      else if (confidence >= 2) mastery = 'learning';
-      else if (stats.attempts > 0) mastery = 'started';
+      if (hasSpacedRep) {
+        // Spaced repetition: 0=new, 1=learning, 2=familiar, 3=confident, 4=mastered, 5=expert
+        if (confidence >= 3) mastery = 'mastered';
+        else if (confidence >= 1) mastery = 'learning';
+        else if (stats.attempts > 0) mastery = 'started';
+      } else {
+        // Legacy profile without spaced rep — use pass count
+        if (stats.passes >= 3) mastery = 'mastered';
+        else if (stats.passes >= 1) mastery = 'learning';
+        else if (stats.attempts > 0) mastery = 'started';
+      }
+      // Prior curriculum topics default to mastered if nothing else
+      if (i < currentIdx && mastery === 'not_started') mastery = 'mastered';
       nodes.push({
         id: `${prefix}:${t.id}`,
         label: t.name,

@@ -543,6 +543,9 @@ button.toggle-btn.active {
   color: var(--text);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   white-space: nowrap;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   pointer-events: none;
   z-index: 10;
 }
