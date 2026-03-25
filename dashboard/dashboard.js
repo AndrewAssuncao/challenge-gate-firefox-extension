@@ -827,7 +827,7 @@ const Dashboard = (() => {
       ctx.moveTo(colX, 26);
       ctx.lineTo(colX, height - 10);
       ctx.strokeStyle = disciplines[disc]?.color || '#666';
-      ctx.globalAlpha = 0.06;
+      ctx.globalAlpha = 0.1;
       ctx.lineWidth = 1;
       ctx.stroke();
       ctx.globalAlpha = 1;
@@ -842,7 +842,7 @@ const Dashboard = (() => {
 
         // Cluster label
         ctx.font = 'italic 9px system-ui, sans-serif';
-        ctx.fillStyle = '#555';
+        ctx.fillStyle = '#777';
         ctx.textAlign = 'center';
         ctx.fillText(clusterName, colX, y + 10);
         y += clusterLabelH;
@@ -867,16 +867,30 @@ const Dashboard = (() => {
       const bothActive = from.node.mastery !== 'not_started' && to.node.mastery !== 'not_started';
 
       ctx.beginPath();
-      ctx.strokeStyle = bothActive ? '#4a7eff' : '#2a2a2a';
-      ctx.globalAlpha = bothActive ? 0.18 : 0.04;
-      ctx.lineWidth = bothActive ? 1 : 0.5;
-      ctx.setLineDash([2, 4]);
+      ctx.strokeStyle = bothActive ? '#4a7eff' : '#444';
+      ctx.globalAlpha = bothActive ? 0.35 : 0.12;
+      ctx.lineWidth = bothActive ? 1.2 : 0.7;
+      ctx.setLineDash([3, 4]);
 
-      // Wide S-curve that routes away from nodes
-      const midY = (from.y + to.y) / 2;
-      const bulge = (to.x > from.x ? 1 : -1) * 30;
-      ctx.moveTo(from.x, from.y);
-      ctx.bezierCurveTo(from.x + bulge, midY - 30, to.x - bulge, midY + 30, to.x, to.y);
+      // Determine if this edge crosses all 3 columns (Python↔Git)
+      const fromDisc = from.node.discipline;
+      const toDisc = to.node.discipline;
+      const crossesFull = (fromDisc === 'python' && toDisc === 'git') || (fromDisc === 'git' && toDisc === 'python');
+
+      if (crossesFull) {
+        // Route Python↔Git edges in a wide arc BELOW both nodes
+        // to avoid crossing through the Terminal column
+        const lower = Math.max(from.y, to.y);
+        const arcY = lower + 40 + Math.abs(from.y - to.y) * 0.3;
+        ctx.moveTo(from.x, from.y);
+        ctx.bezierCurveTo(from.x, arcY, to.x, arcY, to.x, to.y);
+      } else {
+        // Adjacent columns: gentle S-curve
+        const midY = (from.y + to.y) / 2;
+        const bulge = (to.x > from.x ? 1 : -1) * 25;
+        ctx.moveTo(from.x, from.y);
+        ctx.bezierCurveTo(from.x + bulge, midY - 20, to.x - bulge, midY + 20, to.x, to.y);
+      }
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
@@ -893,7 +907,7 @@ const Dashboard = (() => {
         ctx.moveTo(from.x, from.y + nodeR);
         ctx.lineTo(to.x, to.y - nodeR);
         ctx.strokeStyle = disciplines[disc]?.color || '#666';
-        ctx.globalAlpha = 0.06;
+        ctx.globalAlpha = 0.18;
         ctx.lineWidth = 1;
         ctx.stroke();
         ctx.globalAlpha = 1;
@@ -926,15 +940,15 @@ const Dashboard = (() => {
       ctx.arc(pos.x, pos.y, nodeR, 0, Math.PI * 2);
       ctx.fillStyle = fillColor;
       ctx.fill();
-      ctx.strokeStyle = n.mastery === 'not_started' ? '#2a2a2a' : discColor;
-      ctx.lineWidth = n.mastery === 'not_started' ? 0.8 : 1.5;
+      ctx.strokeStyle = n.mastery === 'not_started' ? '#3a3a3a' : discColor;
+      ctx.lineWidth = n.mastery === 'not_started' ? 1 : 1.5;
       ctx.stroke();
 
       // Label — Python: right of node, Terminal: right, Git: left
       // This prevents labels from overlapping the center area
       const labelLeft = n.discipline === 'git';
       ctx.font = '10px system-ui, sans-serif';
-      ctx.fillStyle = n.mastery === 'not_started' ? '#3a3a3a' : n.mastery === 'mastered' ? '#e0e0e0' : '#666';
+      ctx.fillStyle = n.mastery === 'not_started' ? '#555' : n.mastery === 'mastered' ? '#e8e8e8' : '#999';
       ctx.textAlign = labelLeft ? 'right' : 'left';
       const lx = labelLeft ? pos.x - nodeR - 5 : pos.x + nodeR + 5;
       ctx.fillText(n.label, lx, pos.y + 3);
