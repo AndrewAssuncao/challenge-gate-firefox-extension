@@ -420,10 +420,17 @@ const GitChallenge = (() => {
         const allLabels = headLabel ? [headLabel, ...refLabels.filter(l => l !== GitSim.HEAD.ref)] : refLabels;
         const labelStr = allLabels.length > 0 ? ` (${allLabels.join(', ')})` : '';
 
+        const graphPrefix = graphMode ? '* ' : '';
         if (oneline) {
-          lines.push(`${sha}${labelStr} ${commit.message}`);
+          lines.push(`${graphPrefix}${sha}${labelStr} ${commit.message}`);
         } else {
-          lines.push(`commit ${sha}${labelStr}`);
+          lines.push(`${graphPrefix}commit ${sha}${labelStr}`);
+          if (commit.parents.length > 1) {
+            lines.push(`${graphMode ? '|\\' : ''}Merge: ${commit.parents.map(p => p.slice(0, 7)).join(' ')}`);
+          }
+          lines.push(`Author: dev <dev@startup.com>`);
+          lines.push(`Date:   ${new Date(commit.timestamp).toUTCString()}`);
+          lines.push('');
           lines.push(`    ${commit.message}`);
           lines.push('');
         }
@@ -438,9 +445,11 @@ const GitChallenge = (() => {
       let deleteName = null;
       const positional = [];
 
+      let forceDelete = false;
       for (let i = 0; i < args.length; i++) {
         if (args[i] === '-d' || args[i] === '-D' || args[i] === '--delete') {
           deleteFlag = true;
+          if (args[i] === '-D') forceDelete = true;
           if (args[i + 1] && !args[i + 1].startsWith('-')) {
             deleteName = args[++i];
           }
@@ -456,6 +465,14 @@ const GitChallenge = (() => {
         if (!GitSim.branches.has(name)) return { stderr: `error: branch '${name}' not found.`, exitCode: 1 };
         if (GitSim.HEAD.type === 'branch' && GitSim.HEAD.ref === name) {
           return { stderr: `error: Cannot delete branch '${name}' checked out at current HEAD`, exitCode: 1 };
+        }
+        // -d: check if branch is fully merged into HEAD
+        if (!forceDelete) {
+          const branchSha = GitSim.branches.get(name);
+          const headSha = GitSim.getHEADsha();
+          if (headSha && branchSha && !GitSim.isAncestor(branchSha, headSha)) {
+            return { stderr: `error: The branch '${name}' is not fully merged.\nIf you are sure you want to delete it, run 'git branch -D ${name}'.`, exitCode: 1 };
+          }
         }
         GitSim.branches.delete(name);
         return { stdout: `Deleted branch ${name}`, exitCode: 0 };
@@ -495,6 +512,14 @@ const GitChallenge = (() => {
       if (positional.length === 0) return { stderr: 'fatal: you must specify a branch or commit', exitCode: 1 };
 
       const target = positional[0];
+
+      // Warn about uncommitted changes (unless creating new branch)
+      if (!createBranch && (GitSim.workingTree.size > 0 || GitSim.staging.size > 0)) {
+        const currentBranch = GitSim.HEAD.type === 'branch' ? GitSim.HEAD.ref : null;
+        if (currentBranch && target !== currentBranch) {
+          return { stderr: `error: Your local changes to the following files would be overwritten by checkout:\n${[...GitSim.workingTree.keys()].join('\n')}\nPlease commit your changes or stash them before you switch branches.\nAborting`, exitCode: 1 };
+        }
+      }
 
       if (createBranch) {
         const startPoint = positional[1] ? GitSim.resolveRef(positional[1]) : GitSim.getHEADsha();
@@ -574,8 +599,10 @@ const GitChallenge = (() => {
         return { stdout: 'Already up to date.', exitCode: 0 };
       }
 
+      const noFF = args.includes('--no-ff');
+
       // Fast-forward: HEAD is ancestor of target
-      if (GitSim.isAncestor(headSha, targetSha)) {
+      if (GitSim.isAncestor(headSha, targetSha) && !noFF) {
         GitSim.branches.set(GitSim.HEAD.ref, targetSha);
         return { stdout: `Updating ${headSha}..${targetSha}\nFast-forward`, exitCode: 0 };
       }
@@ -585,8 +612,7 @@ const GitChallenge = (() => {
         return { stdout: 'Already up to date.', exitCode: 0 };
       }
 
-      // Three-way merge: create merge commit
-      const noFF = args.includes('--no-ff');
+      // Three-way merge (or --no-ff forced merge commit): create merge commit
       const mergeMsg = `Merge branch '${targetBranch}'`;
       const mergeSha = GitSim.generateSHA();
 
@@ -611,8 +637,8 @@ const GitChallenge = (() => {
       const headSha = GitSim.getHEADsha();
       if (!headSha) return { stderr: 'fatal: no commits on current branch', exitCode: 1 };
 
-      // Already up to date
-      if (GitSim.isAncestor(targetSha, headSha) && GitSim.isAncestor(headSha, targetSha)) {
+      // Already up to date: HEAD already includes all of target's commits
+      if (GitSim.isAncestor(targetSha, headSha)) {
         return { stdout: 'Current branch is up to date.', exitCode: 0 };
       }
 
@@ -692,7 +718,11 @@ const GitChallenge = (() => {
     stash(args) {
       const sub = args[0] || 'push';
 
-      if (sub === 'push' || sub === 'save' || (!['pop', 'list', 'drop', 'apply', 'show'].includes(sub))) {
+      const validSubs = ['push', 'save', 'pop', 'list', 'drop', 'apply', 'show'];
+      if (sub && !validSubs.includes(sub) && !sub.startsWith('-')) {
+        return { stderr: `error: unknown subcommand: ${sub}`, exitCode: 1 };
+      }
+      if (sub === 'push' || sub === 'save' || !sub || sub.startsWith('-')) {
         // Stash working tree
         if (GitSim.workingTree.size === 0 && GitSim.staging.size === 0) {
           return { stderr: 'No local changes to save', exitCode: 1 };
@@ -881,6 +911,32 @@ const GitChallenge = (() => {
       if (sub === 'bad') return { stdout: 'Bisecting: marking current commit as bad', exitCode: 0 };
       if (sub === 'reset') return { stdout: 'Bisect session reset', exitCode: 0 };
       return { stderr: `error: unknown bisect subcommand '${sub}'`, exitCode: 1 };
+    },
+
+    // Remote operations — simulated stubs (local-only simulator)
+    remote(args) {
+      if (args.includes('-v') || args.includes('--verbose')) {
+        return { stdout: 'origin\thttps://github.com/user/project.git (fetch)\norigin\thttps://github.com/user/project.git (push)', exitCode: 0 };
+      }
+      if (args[0] === 'add') return { stdout: '', exitCode: 0 };
+      if (args[0] === 'remove' || args[0] === 'rm') return { stdout: '', exitCode: 0 };
+      return { stdout: 'origin', exitCode: 0 };
+    },
+
+    push(args) {
+      return { stdout: 'Everything up-to-date', exitCode: 0 };
+    },
+
+    pull(args) {
+      return { stdout: 'Already up to date.', exitCode: 0 };
+    },
+
+    fetch(args) {
+      return { stdout: '', exitCode: 0 };
+    },
+
+    clone(args) {
+      return { stdout: `Cloning into '${args[0] || 'repo'}'...\ndone.`, exitCode: 0 };
     }
   };
 

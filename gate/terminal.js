@@ -338,10 +338,34 @@ const TerminalChallenge = (() => {
         const digits = mode.length === 4 ? mode.slice(1) : mode;
         const map = { '0': '---', '1': '--x', '2': '-w-', '3': '-wx', '4': 'r--', '5': 'r-x', '6': 'rw-', '7': 'rwx' };
         node.permissions = (map[digits[0]] || '---') + (map[digits[1]] || '---') + (map[digits[2]] || '---');
-      } else if (mode.includes('+x')) {
-        const perms = node.permissions.split('');
-        perms[2] = 'x'; perms[5] = 'x'; perms[8] = 'x';
-        node.permissions = perms.join('');
+      } else {
+        // Parse symbolic: [ugoa]*[+-=][rwx]+
+        const match = mode.match(/^([ugoa]*)([+\-=])([rwx]+)$/);
+        if (match) {
+          const [, scope, op, bits] = match;
+          const perms = node.permissions.split('');
+          const targets = [];
+          if (!scope || scope.includes('a')) targets.push(0, 1, 2); // owner, group, other
+          else {
+            if (scope.includes('u')) targets.push(0);
+            if (scope.includes('g')) targets.push(1);
+            if (scope.includes('o')) targets.push(2);
+          }
+          for (const t of targets) {
+            const base = t * 3;
+            for (const b of bits) {
+              const idx = base + { r: 0, w: 1, x: 2 }[b];
+              if (op === '+') perms[idx] = b;
+              else if (op === '-') perms[idx] = '-';
+              else if (op === '=') {
+                perms[base] = bits.includes('r') ? 'r' : '-';
+                perms[base + 1] = bits.includes('w') ? 'w' : '-';
+                perms[base + 2] = bits.includes('x') ? 'x' : '-';
+              }
+            }
+          }
+          node.permissions = perms.join('');
+        }
       }
       return true;
     }
@@ -477,13 +501,11 @@ const TerminalChallenge = (() => {
       const ch = cmdStr[i];
       if (ch === "'" && !inDouble) {
         inSingle = !inSingle;
-        if (!inSingle) { tokens.push(current); current = ''; }
-        continue;
+        continue; // don't push — continue accumulating into current
       }
       if (ch === '"' && !inSingle) {
         inDouble = !inDouble;
-        if (!inDouble) { tokens.push(current); current = ''; }
-        continue;
+        continue; // don't push — continue accumulating into current
       }
       if (inSingle || inDouble) { current += ch; continue; }
 
@@ -596,7 +618,14 @@ const TerminalChallenge = (() => {
     },
 
     echo(args) {
-      return { stdout: args.join(' '), exitCode: 0 };
+      let noNewline = false;
+      const filtered = [];
+      for (const a of args) {
+        if (a === '-n' && filtered.length === 0) { noNewline = true; continue; }
+        if (a === '-e' && filtered.length === 0) continue; // accept but ignore
+        filtered.push(a);
+      }
+      return { stdout: filtered.join(' '), exitCode: 0, noNewline };
     },
 
     touch(args) {
@@ -684,11 +713,19 @@ const TerminalChallenge = (() => {
       for (let i = 0; i < args.length; i++) {
         if (args[i] === '-n' && args[i + 1]) { n = parseInt(args[i + 1], 10) || 10; i++; }
         else if (args[i].startsWith('-') && /^\d+$/.test(args[i].slice(1))) { n = parseInt(args[i].slice(1), 10); }
-        else files.push(args[i]);
+        else if (!args[i].startsWith('-')) files.push(args[i]);
       }
-      const content = files.length > 0 ? VFS.readFile(files[0]) : (ctx.stdin || '');
-      if (content === null) return { stderr: `head: ${files[0]}: No such file or directory`, exitCode: 1 };
-      return { stdout: content.split('\n').slice(0, n).join('\n'), exitCode: 0 };
+      if (files.length === 0) {
+        return { stdout: (ctx.stdin || '').split('\n').slice(0, n).join('\n'), exitCode: 0 };
+      }
+      const results = [];
+      for (const f of files) {
+        const content = VFS.readFile(f);
+        if (content === null) { results.push(`head: ${f}: No such file or directory`); continue; }
+        if (files.length > 1) results.push(`==> ${f} <==`);
+        results.push(content.split('\n').slice(0, n).join('\n'));
+      }
+      return { stdout: results.join('\n'), exitCode: 0 };
     },
 
     tail(args, ctx) {
@@ -697,12 +734,20 @@ const TerminalChallenge = (() => {
       for (let i = 0; i < args.length; i++) {
         if (args[i] === '-n' && args[i + 1]) { n = parseInt(args[i + 1], 10) || 10; i++; }
         else if (args[i].startsWith('-') && /^\d+$/.test(args[i].slice(1))) { n = parseInt(args[i].slice(1), 10); }
-        else files.push(args[i]);
+        else if (!args[i].startsWith('-')) files.push(args[i]);
       }
-      const content = files.length > 0 ? VFS.readFile(files[0]) : (ctx.stdin || '');
-      if (content === null) return { stderr: `tail: ${files[0]}: No such file or directory`, exitCode: 1 };
-      const lines = content.split('\n');
-      return { stdout: lines.slice(-n).join('\n'), exitCode: 0 };
+      if (files.length === 0) {
+        const lines = (ctx.stdin || '').split('\n');
+        return { stdout: lines.slice(-n).join('\n'), exitCode: 0 };
+      }
+      const results = [];
+      for (const f of files) {
+        const content = VFS.readFile(f);
+        if (content === null) { results.push(`tail: ${f}: No such file or directory`); continue; }
+        if (files.length > 1) results.push(`==> ${f} <==`);
+        results.push(content.split('\n').slice(-n).join('\n'));
+      }
+      return { stdout: results.join('\n'), exitCode: 0 };
     },
 
     grep(args, ctx) {
@@ -711,6 +756,7 @@ const TerminalChallenge = (() => {
       let recursive = false;
       let countOnly = false;
       let invertMatch = false;
+      let filesOnly = false;
       let pattern = null;
       const files = [];
 
@@ -721,6 +767,7 @@ const TerminalChallenge = (() => {
           if (a.includes('r')) recursive = true;
           if (a.includes('c')) countOnly = true;
           if (a.includes('v')) invertMatch = true;
+          if (a.includes('l')) filesOnly = true;
         } else if (!pattern) {
           pattern = a;
         } else {
@@ -775,6 +822,26 @@ const TerminalChallenge = (() => {
         }
       }
 
+      if (filesOnly) {
+        // -l: show only filenames that have matches
+        const matchedFiles = new Set();
+        if (recursive) {
+          const allFiles = VFS.findFiles(files[0] || '.', null, 'f');
+          for (const f of allFiles) {
+            const content = VFS.readFile(f);
+            if (content && grepContent(content, '').length > 0) {
+              const display = f.startsWith(VFS.getCwd()) ? '.' + f.slice(VFS.getCwd().length) : f;
+              matchedFiles.add(display);
+            }
+          }
+        } else {
+          for (const f of files) {
+            const content = VFS.readFile(f);
+            if (content && grepContent(content, '').length > 0) matchedFiles.add(f);
+          }
+        }
+        return { stdout: [...matchedFiles].join('\n'), exitCode: matchedFiles.size > 0 ? 0 : 1 };
+      }
       if (countOnly) return { stdout: String(results.length), exitCode: results.length > 0 ? 0 : 1 };
       return { stdout: results.join('\n'), exitCode: results.length > 0 ? 0 : 1 };
     },
@@ -893,7 +960,16 @@ const TerminalChallenge = (() => {
 
       if (!fields) return { stdout: content, exitCode: 0 };
 
-      const fieldNums = fields.split(',').map(f => parseInt(f, 10) - 1);
+      // Parse field specs: 1,3 or 1-3 or 1,3-5
+      const fieldNums = [];
+      for (const spec of fields.split(',')) {
+        const range = spec.match(/^(\d+)-(\d+)$/);
+        if (range) {
+          for (let f = parseInt(range[1], 10); f <= parseInt(range[2], 10); f++) fieldNums.push(f - 1);
+        } else {
+          fieldNums.push(parseInt(spec, 10) - 1);
+        }
+      }
       const lines = content.split('\n').map(line => {
         const parts = line.split(delimiter);
         return fieldNums.map(f => parts[f] || '').join(delimiter);
@@ -903,12 +979,36 @@ const TerminalChallenge = (() => {
 
     tr(args, ctx) {
       if (args.length < 2) return { stderr: 'tr: missing operand', exitCode: 1 };
-      const from = args[0];
-      const to = args[1];
+      let deleteMode = false;
+      let fromArg = args[0];
+      let toArg = args[1];
+      if (fromArg === '-d') { deleteMode = true; fromArg = args[1]; toArg = ''; }
+
       const content = ctx.stdin || '';
+
+      // Expand POSIX character classes
+      function expandClass(s) {
+        return s
+          .replace(/\[:lower:]/g, 'abcdefghijklmnopqrstuvwxyz')
+          .replace(/\[:upper:]/g, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+          .replace(/\[:digit:]/g, '0123456789')
+          .replace(/\[:alpha:]/g, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+          .replace(/\[:alnum:]/g, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+          .replace(/\[:space:]/g, ' \t\n\r')
+          .replace(/\[:punct:]/g, '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~');
+      }
+      const from = expandClass(fromArg);
+      const to = expandClass(toArg || '');
+
+      if (deleteMode) {
+        const delSet = new Set(from);
+        return { stdout: [...content].filter(c => !delSet.has(c)).join(''), exitCode: 0 };
+      }
+
       let result = content;
-      for (let i = 0; i < from.length && i < to.length; i++) {
-        result = result.split(from[i]).join(to[i]);
+      for (let i = 0; i < from.length; i++) {
+        const replacement = i < to.length ? to[i] : to[to.length - 1] || '';
+        result = result.split(from[i]).join(replacement);
       }
       return { stdout: result, exitCode: 0 };
     },
