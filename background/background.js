@@ -75,6 +75,31 @@ async function loadState() {
     gitLearningProfile = data.gitLearningProfile || null;
     typingHistory = data.typingHistory || [];
     dailyChallengeLog = data.dailyChallengeLog || {};
+
+    // One-time migration: fix entries stored under UTC dates (future-dated keys)
+    // These were created before the todayKey() fix to use local dates
+    const localToday = todayKey();
+    let logMigrated = false;
+    for (const key of Object.keys(dailyChallengeLog)) {
+      if (key > localToday) {
+        // This key is in the future — shift it back to local today
+        const futureEntry = dailyChallengeLog[key];
+        if (!dailyChallengeLog[localToday]) {
+          dailyChallengeLog[localToday] = { typing: 0, python: 0, terminal: 0, git: 0, totalTime: 0 };
+        }
+        const target = dailyChallengeLog[localToday];
+        target.typing = (target.typing || 0) + (futureEntry.typing || 0);
+        target.python = (target.python || 0) + (futureEntry.python || 0);
+        target.terminal = (target.terminal || 0) + (futureEntry.terminal || 0);
+        target.git = (target.git || 0) + (futureEntry.git || 0);
+        target.totalTime = (target.totalTime || 0) + (futureEntry.totalTime || 0);
+        delete dailyChallengeLog[key];
+        logMigrated = true;
+      }
+    }
+    if (logMigrated) {
+      await browser.storage.local.set({ dailyChallengeLog }).catch(logStorageError);
+    }
   } catch (err) {
     console.error('[Challenge Gate] Failed to load state:', err);
   }
