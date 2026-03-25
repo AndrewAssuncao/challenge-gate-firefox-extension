@@ -20,6 +20,8 @@ const TerminalChallenge = (() => {
   let commandsExecuted = [];
   let challengeStartTime = 0;
   let helpUsedThisChallenge = false;
+  let helpRequestCount = 0;
+  let helpMetAtFirstRequest = 0;
   let currentChain = null;
   let chainStep = 0;
   let chainVFSSnapshot = null;
@@ -904,31 +906,86 @@ const TerminalChallenge = (() => {
       const files = [];
       let expression = null;
       let inPlace = false;
+      let suppressOutput = false;
 
       for (const a of args) {
         if (a === '-i' || a === "-i''") inPlace = true;
-        else if (!expression && (a.startsWith('s/') || a.startsWith('s|'))) expression = a;
-        else files.push(a);
+        else if (a === '-n') suppressOutput = true;
+        else if (!expression && !a.startsWith('-') && (
+          a.startsWith('s/') || a.startsWith('s|') ||
+          /^\d/.test(a) || a.startsWith('/') || a.startsWith("'")
+        )) {
+          // Strip surrounding quotes if present
+          expression = a.replace(/^'(.*)'$/, '$1');
+        }
+        else if (!a.startsWith('-')) files.push(a);
       }
 
       if (!expression) return { stderr: 'sed: no expression provided', exitCode: 1 };
-
-      // Parse s/old/new/flags
-      const delim = expression[1];
-      const parts = expression.slice(2).split(delim);
-      if (parts.length < 2) return { stderr: 'sed: invalid expression', exitCode: 1 };
-      const [search, replace] = parts;
-      const flags = parts[2] || '';
-      const regex = new RegExp(search, flags.includes('g') ? 'g' : '');
-
       if (files.length === 0) return { stderr: 'sed: no input file', exitCode: 1 };
 
       const content = VFS.readFile(files[0]);
       if (content === null) return { stderr: `sed: ${files[0]}: No such file or directory`, exitCode: 1 };
 
-      const result = content.replace(regex, replace);
-      if (inPlace) VFS.writeFile(files[0], result);
-      return { stdout: inPlace ? '' : result, exitCode: 0 };
+      const lines = content.split('\n');
+
+      // Handle line-range print: N,Mp or Np
+      const rangeMatch = expression.match(/^(\d+)(?:,(\d+))?p$/);
+      if (rangeMatch) {
+        const start = parseInt(rangeMatch[1], 10);
+        const end = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : start;
+        const selected = lines.slice(start - 1, end);
+        return { stdout: selected.join('\n'), exitCode: 0 };
+      }
+
+      // Handle pattern-range print: /pat1/,/pat2/p
+      const patternRangeMatch = expression.match(/^\/(.+?)\/,\/(.+?)\/p$/);
+      if (patternRangeMatch) {
+        const startRe = new RegExp(patternRangeMatch[1]);
+        const endRe = new RegExp(patternRangeMatch[2]);
+        const result = [];
+        let inRange = false;
+        for (const line of lines) {
+          if (!inRange && startRe.test(line)) inRange = true;
+          if (inRange) result.push(line);
+          if (inRange && endRe.test(line)) inRange = false;
+        }
+        return { stdout: result.join('\n'), exitCode: 0 };
+      }
+
+      // Handle pattern print: /pattern/p
+      const patternMatch = expression.match(/^\/(.+?)\/p$/);
+      if (patternMatch) {
+        const re = new RegExp(patternMatch[1]);
+        const result = lines.filter(l => re.test(l));
+        return { stdout: result.join('\n'), exitCode: 0 };
+      }
+
+      // Handle line delete: Nd or N,Md
+      const deleteMatch = expression.match(/^(\d+)(?:,(\d+))?d$/);
+      if (deleteMatch) {
+        const start = parseInt(deleteMatch[1], 10);
+        const end = deleteMatch[2] ? parseInt(deleteMatch[2], 10) : start;
+        const result = lines.filter((_, i) => i < start - 1 || i >= end);
+        const out = result.join('\n');
+        if (inPlace) VFS.writeFile(files[0], out);
+        return { stdout: suppressOutput ? '' : out, exitCode: 0 };
+      }
+
+      // Handle substitution: s/old/new/flags
+      if (expression.startsWith('s/') || expression.startsWith('s|')) {
+        const delim = expression[1];
+        const parts = expression.slice(2).split(delim);
+        if (parts.length < 2) return { stderr: 'sed: invalid expression', exitCode: 1 };
+        const [search, replace] = parts;
+        const flags = parts[2] || '';
+        const regex = new RegExp(search, flags.includes('g') ? 'g' : '');
+        const result = content.replace(regex, replace);
+        if (inPlace) VFS.writeFile(files[0], result);
+        return { stdout: inPlace ? '' : result, exitCode: 0 };
+      }
+
+      return { stderr: `sed: unknown expression: ${expression}`, exitCode: 1 };
     },
 
     chmod(args) {
@@ -1738,6 +1795,8 @@ const TerminalChallenge = (() => {
     els.output.innerHTML = '';
     challengeStartTime = Date.now();
     helpUsedThisChallenge = false;
+    helpRequestCount = 0;
+    helpMetAtFirstRequest = 0;
 
     // Update meta
     const topic = TerminalChallengeProvider.TERMINAL_CURRICULUM[profile.currentTopicIndex] || TerminalChallengeProvider.TERMINAL_CURRICULUM[0];
@@ -2075,21 +2134,64 @@ const TerminalChallenge = (() => {
 
   async function askForHelp() {
     helpUsedThisChallenge = true;
+    helpRequestCount++;
     appendOutput('<span class="term-dim">Asking for help...</span>');
+
+    // After 3+ help requests with no progress, check if the challenge is broken
+    const metCount = challenge.objectives.filter(o => o._met).length;
+    if (helpRequestCount >= 3 && metCount === helpMetAtFirstRequest) {
+      try {
+        const diagPrompt = `Analyze if this terminal challenge is solvable in our simulated shell. The shell supports: ls, cd, pwd, cat, echo, touch, mkdir, rm, cp, mv, grep, find, head, tail, wc, sort, uniq, cut, sed (s/old/new/g and line ranges like -n '5,10p'), chmod, chown, ps, kill, export, env, alias, git, docker, npm, pip, curl, ssh, and basic for/if scripting.
+
+Scenario: ${challenge.scenario}
+Remaining objectives: ${challenge.objectives.filter(o => !o._met).map(o => `${o.description} (validation: ${o.validation.type}=${JSON.stringify(o.validation.expected)})`).join('; ')}
+Commands the user tried: ${commandsExecuted.slice(-10).join(', ')}
+Last command output: ${lastOutput.slice(0, 200)}
+
+The user has asked for help ${helpRequestCount} times with no progress on remaining objectives.
+
+Respond with ONLY valid JSON:
+{"kind": "student_issue" | "challenge_issue", "message": "brief explanation", "suggestedAction": "hint for student OR 'skip' if challenge is broken"}`;
+
+        const response = await browser.runtime.sendMessage({ type: 'claudeGenerate', prompt: diagPrompt });
+        if (response.content) {
+          const cleaned = response.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          try {
+            const parsed = JSON.parse(cleaned);
+            if (parsed.kind === 'challenge_issue') {
+              appendOutput(`<span class="term-error">Challenge issue detected: ${escapeHtml(parsed.message)}</span>`);
+              appendOutput('<span class="term-dim">This challenge appears to be broken. Skipping without penalty...</span>');
+              // Remove this challenge's attempts from profile
+              TerminalChallengeProvider.removeChallengeAttempts(profile, challenge);
+              await browser.runtime.sendMessage({ type: 'saveTerminalLearningProfile', profile });
+              setTimeout(() => getChallenge(), 1500);
+              return;
+            }
+            appendOutput(`<span class="term-help">${escapeHtml(parsed.message)}</span>`);
+            els.input.focus();
+            return;
+          } catch { /* fall through to normal help */ }
+        }
+      } catch { /* fall through to normal help */ }
+    }
+
+    // Track objectives met at first help request
+    if (helpRequestCount === 1) helpMetAtFirstRequest = metCount;
+
     try {
-      const helpPrompt = `The user is stuck on a terminal challenge. Here's the context:
+      const helpPrompt = `The user is stuck on a terminal challenge in a simulated shell. The shell supports common Unix commands but not all features of a real shell.
 
 Scenario: ${challenge.scenario}
 Objectives: ${challenge.objectives.map(o => o.description + (o._met ? ' (DONE)' : ' (NOT DONE)')).join(', ')}
-Commands tried: ${commandsExecuted.join(', ') || '(none yet)'}
+Commands tried: ${commandsExecuted.slice(-8).join(', ') || '(none yet)'}
+${lastOutput ? `Last output: ${lastOutput.slice(0, 200)}` : ''}
 
-Give a brief, helpful hint without giving away the exact answer. 2-3 sentences max.`;
+Give a brief, helpful hint without giving away the exact answer. 2-3 sentences max. If the command they're using looks correct but isn't working, consider that this is a simulated shell with limited command support.`;
 
       const response = await browser.runtime.sendMessage({ type: 'claudeGenerate', prompt: helpPrompt });
       if (response.content) {
         appendOutput(`<span class="term-help">${escapeHtml(response.content)}</span>`);
       } else {
-        // No API key — provide local help based on remaining objectives
         showLocalHelp();
       }
     } catch {

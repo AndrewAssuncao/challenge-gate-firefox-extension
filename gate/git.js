@@ -20,6 +20,8 @@ const GitChallenge = (() => {
   let commandsExecuted = [];
   let challengeStartTime = 0;
   let helpUsedThisChallenge = false;
+  let helpRequestCount = 0;
+  let helpMetAtFirstRequest = 0;
 
   // ── Git Simulator ───────────────────────────────────────────────────
 
@@ -1547,15 +1549,57 @@ const GitChallenge = (() => {
 
   async function askForHelp() {
     helpUsedThisChallenge = true;
+    helpRequestCount++;
     appendOutput('<span class="term-dim">Asking for help...</span>');
+
+    // After 3+ help requests with no progress, check if challenge is broken
+    const metCount = challenge.objectives.filter(o => o._met).length;
+    if (helpRequestCount >= 3 && metCount === helpMetAtFirstRequest) {
+      try {
+        const diagPrompt = `Analyze if this git challenge is solvable in our simulated git environment. The environment supports: init, status, add, commit, log, branch, checkout, switch, merge, rebase, cherry-pick, stash, reset, tag, diff, show, reflog, bisect.
+
+Scenario: ${challenge.scenario}
+Remaining objectives: ${challenge.objectives.filter(o => !o._met).map(o => `${o.description} (validation: ${o.validation.type}=${JSON.stringify(o.validation.expected)})`).join('; ')}
+Commands tried: ${commandsExecuted.slice(-10).join(', ')}
+Current git state: ${JSON.stringify({ branches: [...GitSim.branches.entries()], HEAD: GitSim.HEAD, commitCount: GitSim.commits.size, workingTree: [...GitSim.workingTree.entries()] })}
+
+The user has asked for help ${helpRequestCount} times with no progress.
+
+Respond with ONLY valid JSON:
+{"kind": "student_issue" | "challenge_issue", "message": "brief explanation", "suggestedAction": "hint for student OR 'skip' if broken"}`;
+
+        const response = await browser.runtime.sendMessage({ type: 'claudeGenerate', prompt: diagPrompt });
+        if (response.content) {
+          const cleaned = response.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          try {
+            const parsed = JSON.parse(cleaned);
+            if (parsed.kind === 'challenge_issue') {
+              appendOutput(`<span class="term-error">Challenge issue detected: ${escapeHtml(parsed.message)}</span>`);
+              appendOutput('<span class="term-dim">This challenge appears to be broken. Skipping without penalty...</span>');
+              GitChallengeProvider.removeChallengeAttempts(profile, challenge);
+              await browser.runtime.sendMessage({ type: 'saveGitLearningProfile', profile });
+              setTimeout(() => getChallenge(), 1500);
+              return;
+            }
+            appendOutput(`<span class="term-help">${escapeHtml(parsed.message)}</span>`);
+            els.input.focus();
+            return;
+          } catch { /* fall through */ }
+        }
+      } catch { /* fall through */ }
+    }
+
+    if (helpRequestCount === 1) helpMetAtFirstRequest = metCount;
+
     try {
-      const helpPrompt = `The user is stuck on a git challenge. Here's the context:
+      const helpPrompt = `The user is stuck on a git challenge in a simulated git environment. The environment supports common git commands but not all features of real git.
 
 Scenario: ${challenge.scenario}
 Objectives: ${challenge.objectives.map(o => o.description + (o._met ? ' (DONE)' : ' (NOT DONE)')).join(', ')}
-Commands tried: ${commandsExecuted.join(', ') || '(none yet)'}
+Commands tried: ${commandsExecuted.slice(-8).join(', ') || '(none yet)'}
+${lastOutput ? `Last output: ${lastOutput.slice(0, 200)}` : ''}
 
-Give a brief, helpful hint without giving away the exact answer. 2-3 sentences max.`;
+Give a brief, helpful hint without giving away the exact answer. 2-3 sentences max. If the command looks correct but isn't working, consider that this is a simulated environment with limited support.`;
 
       const response = await browser.runtime.sendMessage({ type: 'claudeGenerate', prompt: helpPrompt });
       if (response.content) {
@@ -1635,6 +1679,8 @@ Give a brief, helpful hint without giving away the exact answer. 2-3 sentences m
     els.output.innerHTML = '';
     challengeStartTime = Date.now();
     helpUsedThisChallenge = false;
+    helpRequestCount = 0;
+    helpMetAtFirstRequest = 0;
 
     // Update meta
     const topic = GitChallengeProvider.GIT_CURRICULUM[profile.currentTopicIndex] || GitChallengeProvider.GIT_CURRICULUM[0];
