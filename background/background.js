@@ -100,6 +100,98 @@ async function loadState() {
     if (logMigrated) {
       await browser.storage.local.set({ dailyChallengeLog }).catch(logStorageError);
     }
+
+    // One-time migration: redistribute over-concentrated topic passes
+    // Before the advancement fix, all challenges logged under the first topic
+    // (e.g., 'basics' for Python) even when the user was doing strings, conditionals, etc.
+    // This spreads excess passes across subsequent topics proportionally.
+    const CURRICULA = {
+      learningProfile: [
+        'basics', 'strings', 'conditionals', 'loops',
+        'lists', 'dicts', 'sets_tuples', 'comprehensions', 'functions',
+        'string_ops', 'error_handling', 'file_patterns', 'sorting', 'recursion',
+        'classes', 'generators', 'decorators', 'data_structs', 'algorithms',
+        'dp', 'graphs', 'advanced', 'functional', 'concurrency',
+        'composition', 'testing', 'api_patterns', 'data_pipelines', 'design_patterns',
+        'code_review_bugs', 'code_review_perf', 'code_review_style', 'refactoring', 'architecture'
+      ],
+      terminalLearningProfile: [
+        'navigation', 'file_creation', 'file_reading', 'paths', 'help_man',
+        'copy_move', 'remove_find', 'grep_search', 'permissions', 'redirection',
+        'text_processing', 'processes', 'environment', 'aliases_history', 'package_managers',
+        'git_basics', 'git_branching', 'ssh', 'docker_basics', 'curl_networking',
+        'shell_scripting', 'git_advanced', 'docker_compose', 'sed_awk', 'system_debug'
+      ],
+      gitLearningProfile: [
+        'git_init', 'git_staging', 'git_commit', 'git_log',
+        'git_branch_create', 'git_checkout', 'git_merge_ff', 'git_merge_3way',
+        'git_rebase', 'git_cherry_pick', 'git_stash', 'git_reset',
+        'git_rebase_interactive', 'git_bisect', 'git_reflog', 'git_tags',
+        'git_merge_conflicts', 'git_workflows', 'git_advanced_rebase', 'git_submodules'
+      ]
+    };
+
+    let profilesMigrated = false;
+    for (const [profileKey, topicOrder] of Object.entries(CURRICULA)) {
+      const prof = profileKey === 'learningProfile' ? learningProfile
+        : profileKey === 'terminalLearningProfile' ? terminalLearningProfile
+        : gitLearningProfile;
+      if (!prof || !prof.topicHistory) continue;
+
+      // Check if first topic has disproportionate passes vs later topics
+      const firstId = topicOrder[0];
+      const firstStats = prof.topicHistory[firstId];
+      if (!firstStats || firstStats.passes < 3) continue;
+
+      // Count how many subsequent topics have zero passes
+      const emptyTopics = [];
+      for (let i = 1; i < topicOrder.length; i++) {
+        const tid = topicOrder[i];
+        const st = prof.topicHistory[tid];
+        if (!st || st.passes === 0) emptyTopics.push(tid);
+        else break; // stop at first topic that has passes (natural progression)
+      }
+
+      if (emptyTopics.length === 0) continue;
+
+      // Distribute: keep 2 passes on first topic, spread rest to empty topics
+      const excess = firstStats.passes - 2;
+      if (excess <= 0) continue;
+
+      const perTopic = Math.max(1, Math.floor(excess / emptyTopics.length));
+      let distributed = 0;
+      for (const tid of emptyTopics) {
+        if (distributed >= excess) break;
+        const give = Math.min(perTopic, excess - distributed);
+        if (!prof.topicHistory[tid]) {
+          prof.topicHistory[tid] = { attempts: 0, passes: 0, fails: 0, lastSeen: null };
+        }
+        prof.topicHistory[tid].passes += give;
+        prof.topicHistory[tid].attempts += give;
+        prof.topicHistory[tid].lastSeen = Date.now();
+        distributed += give;
+      }
+      firstStats.passes = 2;
+      firstStats.attempts = Math.max(firstStats.attempts, 2);
+
+      // Advance currentTopicIndex to match the distribution
+      const lastDistributed = emptyTopics[Math.min(emptyTopics.length - 1, Math.ceil(distributed / perTopic) - 1)];
+      const newIdx = topicOrder.indexOf(lastDistributed);
+      if (newIdx > prof.currentTopicIndex) {
+        prof.currentTopicIndex = Math.min(newIdx + 1, topicOrder.length - 1);
+      }
+
+      profilesMigrated = true;
+    }
+
+    if (profilesMigrated) {
+      const saves = {};
+      if (learningProfile) saves.learningProfile = learningProfile;
+      if (terminalLearningProfile) saves.terminalLearningProfile = terminalLearningProfile;
+      if (gitLearningProfile) saves.gitLearningProfile = gitLearningProfile;
+      await browser.storage.local.set(saves).catch(logStorageError);
+      console.log('[Challenge Gate] Migrated topic history: redistributed concentrated passes');
+    }
   } catch (err) {
     console.error('[Challenge Gate] Failed to load state:', err);
   }
