@@ -921,28 +921,45 @@ const Dashboard = (() => {
       if (!pos) continue;
 
       const discColor = disciplines[n.discipline]?.color || '#666';
-      let fillColor, glowColor;
+
+      // Single color system: discipline color at different glow intensities
+      // not_started: dark fill, faint border
+      // started: dim discipline color fill
+      // learning: medium discipline color fill + subtle glow
+      // mastered: bright discipline color fill + strong glow
+      let fillAlpha, borderAlpha, glowAlpha, glowR;
       switch (n.mastery) {
-        case 'mastered':  fillColor = '#44aa44'; glowColor = 'rgba(68,170,68,0.25)'; break;
-        case 'learning':  fillColor = 'rgba(74,126,255,0.7)'; glowColor = 'rgba(74,126,255,0.15)'; break;
-        case 'started':   fillColor = 'rgba(74,126,255,0.4)'; glowColor = null; break;
-        default:          fillColor = '#141414'; glowColor = null;
+        case 'mastered':  fillAlpha = 0.9; borderAlpha = 1.0; glowAlpha = 0.3; glowR = 5; break;
+        case 'learning':  fillAlpha = 0.5; borderAlpha = 0.8; glowAlpha = 0.15; glowR = 4; break;
+        case 'started':   fillAlpha = 0.25; borderAlpha = 0.5; glowAlpha = 0; glowR = 0; break;
+        default:          fillAlpha = 0; borderAlpha = 0.15; glowAlpha = 0; glowR = 0;
       }
 
-      if (glowColor) {
+      if (glowAlpha > 0) {
         ctx.beginPath();
-        ctx.arc(pos.x, pos.y, nodeR + 4, 0, Math.PI * 2);
-        ctx.fillStyle = glowColor;
+        ctx.arc(pos.x, pos.y, nodeR + glowR, 0, Math.PI * 2);
+        ctx.fillStyle = discColor;
+        ctx.globalAlpha = glowAlpha;
         ctx.fill();
+        ctx.globalAlpha = 1;
       }
 
       ctx.beginPath();
       ctx.arc(pos.x, pos.y, nodeR, 0, Math.PI * 2);
-      ctx.fillStyle = fillColor;
-      ctx.fill();
-      ctx.strokeStyle = n.mastery === 'not_started' ? '#3a3a3a' : discColor;
+      if (fillAlpha > 0) {
+        ctx.fillStyle = discColor;
+        ctx.globalAlpha = fillAlpha;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.fillStyle = '#141414';
+        ctx.fill();
+      }
+      ctx.strokeStyle = discColor;
+      ctx.globalAlpha = borderAlpha;
       ctx.lineWidth = n.mastery === 'not_started' ? 1 : 1.5;
       ctx.stroke();
+      ctx.globalAlpha = 1;
 
       // Label — Python: right of node, Terminal: right, Git: left
       // This prevents labels from overlapping the center area
