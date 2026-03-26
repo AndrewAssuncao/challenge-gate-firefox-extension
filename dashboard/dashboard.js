@@ -867,9 +867,9 @@ const Dashboard = (() => {
       const bothActive = from.node.mastery !== 'not_started' && to.node.mastery !== 'not_started';
 
       ctx.beginPath();
-      ctx.strokeStyle = bothActive ? '#4a7eff' : '#444';
-      ctx.globalAlpha = bothActive ? 0.35 : 0.12;
-      ctx.lineWidth = bothActive ? 1.2 : 0.7;
+      ctx.strokeStyle = bothActive ? '#4a7eff' : '#666';
+      ctx.globalAlpha = bothActive ? 0.45 : 0.2;
+      ctx.lineWidth = bothActive ? 1.5 : 0.8;
       ctx.setLineDash([3, 4]);
 
       // Determine if this edge crosses all 3 columns (Python↔Git)

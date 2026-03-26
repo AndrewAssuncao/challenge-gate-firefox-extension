@@ -542,15 +542,15 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
       profile.recentChallenges = profile.recentChallenges.slice(-15);
     }
 
-    // Advance curriculum: confidence-aware advancement
+    // Advance curriculum: move forward when the current topic is learned
     const currentTopic = CURRICULUM[profile.currentTopicIndex];
     if (currentTopic && passed) {
       const topicData = profile.topicHistory[currentTopic.id];
       const hasConfidence = topicData && typeof topicData.confidenceLevel === 'number';
-      // Advance if: 3+ consecutive passes AND confidence >= 3 (confident), OR legacy: 3+ total passes
+      // Advance if confidence >= 2 (familiar) OR 2+ total passes
       const shouldAdvance = hasConfidence
-        ? (topicData.consecutivePasses >= 3 || topicData.confidenceLevel >= 3)
-        : (topicData && topicData.passes >= 3);
+        ? (topicData.confidenceLevel >= 2 || topicData.passes >= 2)
+        : (topicData && topicData.passes >= 2);
       if (shouldAdvance && profile.currentTopicIndex < CURRICULUM.length - 1) {
         profile.currentTopicIndex++;
       }

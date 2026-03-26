@@ -1480,6 +1480,268 @@ const TerminalChallenge = (() => {
         }
       }
       return { stdout: results.join('\n'), exitCode: 0 };
+    },
+
+    // ── Additional common commands ────────────────────────────────────
+
+    less(args, ctx) {
+      // Simulate pager — just show content (can't actually page in browser)
+      if (args.length === 0 && ctx.stdin) return { stdout: ctx.stdin, exitCode: 0 };
+      if (args.length === 0) return { stderr: 'Missing filename', exitCode: 1 };
+      const content = VFS.readFile(args[0]);
+      if (content === null) return { stderr: `${args[0]}: No such file or directory`, exitCode: 1 };
+      return { stdout: content, exitCode: 0 };
+    },
+
+    more(args, ctx) { return COMMANDS.less(args, ctx); },
+
+    tee(args, ctx) {
+      let append = false;
+      const files = [];
+      for (const a of args) {
+        if (a === '-a') append = true;
+        else files.push(a);
+      }
+      const input = ctx.stdin || '';
+      for (const f of files) {
+        if (append) VFS.appendFile(f, input);
+        else VFS.writeFile(f, input);
+      }
+      return { stdout: input, exitCode: 0 };
+    },
+
+    sleep(args) {
+      // Can't actually sleep in browser — just acknowledge
+      const dur = args[0] || '1';
+      return { stdout: '', exitCode: 0 };
+    },
+
+    true() { return { stdout: '', exitCode: 0 }; },
+    false() { return { stdout: '', exitCode: 1 }; },
+
+    yes(args) {
+      const text = args.join(' ') || 'y';
+      return { stdout: Array(10).fill(text).join('\n'), exitCode: 0 };
+    },
+
+    seq(args) {
+      let start = 1, end = 1, step = 1;
+      if (args.length === 1) { end = parseInt(args[0], 10) || 1; }
+      else if (args.length === 2) { start = parseInt(args[0], 10) || 1; end = parseInt(args[1], 10) || 1; }
+      else if (args.length >= 3) { start = parseInt(args[0], 10); step = parseInt(args[1], 10); end = parseInt(args[2], 10); }
+      const result = [];
+      if (step > 0) { for (let i = start; i <= end; i += step) result.push(String(i)); }
+      else if (step < 0) { for (let i = start; i >= end; i += step) result.push(String(i)); }
+      return { stdout: result.join('\n'), exitCode: 0 };
+    },
+
+    basename(args) {
+      if (args.length === 0) return { stderr: 'basename: missing operand', exitCode: 1 };
+      const parts = args[0].split('/').filter(Boolean);
+      let name = parts[parts.length - 1] || '';
+      if (args[1]) name = name.replace(new RegExp(args[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$'), '');
+      return { stdout: name, exitCode: 0 };
+    },
+
+    dirname(args) {
+      if (args.length === 0) return { stderr: 'dirname: missing operand', exitCode: 1 };
+      const path = args[0];
+      const parts = path.split('/');
+      parts.pop();
+      return { stdout: parts.join('/') || '.', exitCode: 0 };
+    },
+
+    realpath(args) {
+      if (args.length === 0) return { stderr: 'realpath: missing operand', exitCode: 1 };
+      return { stdout: VFS.resolvePath(args[0]), exitCode: 0 };
+    },
+
+    ln(args) {
+      let symbolic = false;
+      const paths = [];
+      for (const a of args) {
+        if (a === '-s' || a === '--symbolic') symbolic = true;
+        else paths.push(a);
+      }
+      if (paths.length < 2) return { stderr: 'ln: missing operand', exitCode: 1 };
+      // Simulate: just copy the file (symlinks aren't real in VFS)
+      const src = paths[0], dst = paths[1];
+      if (!VFS.cp(src, dst, false)) return { stderr: `ln: ${src}: No such file or directory`, exitCode: 1 };
+      return { stdout: '', exitCode: 0 };
+    },
+
+    df() {
+      return { stdout: 'Filesystem     Size   Used  Avail  Use%  Mounted on\n/dev/disk1s1   460G   210G   230G   48%  /\ntmpfs          8.0G   1.2G   6.8G   15%  /tmp', exitCode: 0 };
+    },
+
+    du(args) {
+      let summary = false;
+      let human = false;
+      const paths = [];
+      for (const a of args) {
+        if (a.includes('s')) summary = true;
+        if (a.includes('h')) human = true;
+        if (!a.startsWith('-')) paths.push(a);
+      }
+      const target = paths[0] || '.';
+      if (summary) return { stdout: `${human ? '4.2M' : '4300'}\t${target}`, exitCode: 0 };
+      return { stdout: `${human ? '1.2K' : '1200'}\t${target}/src\n${human ? '2.8M' : '2800'}\t${target}/node_modules\n${human ? '4.2M' : '4300'}\t${target}`, exitCode: 0 };
+    },
+
+    tree(args) {
+      let maxDepth = Infinity;
+      const paths = [];
+      for (let i = 0; i < args.length; i++) {
+        if (args[i] === '-L' && args[i + 1]) { maxDepth = parseInt(args[++i], 10); }
+        else if (!args[i].startsWith('-')) paths.push(args[i]);
+      }
+      const target = paths[0] || '.';
+      const abs = VFS.resolvePath(target);
+      const node = VFS.getNode(abs);
+      if (!node || node.type !== 'dir') return { stderr: `${target}: not a directory`, exitCode: 1 };
+
+      const lines = [target];
+      let dirs = 0, files = 0;
+      function walk(dirNode, prefix, depth) {
+        if (depth >= maxDepth) return;
+        const entries = Object.values(dirNode.children || {}).sort((a, b) => a.name.localeCompare(b.name));
+        entries.forEach((e, i) => {
+          const isLast = i === entries.length - 1;
+          const connector = isLast ? '└── ' : '├── ';
+          lines.push(prefix + connector + e.name);
+          if (e.type === 'dir') { dirs++; walk(e, prefix + (isLast ? '    ' : '│   '), depth + 1); }
+          else files++;
+        });
+      }
+      walk(node, '', 0);
+      lines.push(`\n${dirs} directories, ${files} files`);
+      return { stdout: lines.join('\n'), exitCode: 0 };
+    },
+
+    printf(args) {
+      if (args.length === 0) return { stdout: '', exitCode: 0 };
+      let fmt = args[0];
+      const vals = args.slice(1);
+      let vi = 0;
+      const result = fmt.replace(/%s/g, () => vals[vi++] || '').replace(/%d/g, () => vals[vi++] || '0').replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+      return { stdout: result, exitCode: 0 };
+    },
+
+    file(args) {
+      if (args.length === 0) return { stderr: 'file: missing operand', exitCode: 1 };
+      const node = VFS.stat(args[0]);
+      if (!node) return { stderr: `${args[0]}: No such file or directory`, exitCode: 1 };
+      if (node.type === 'dir') return { stdout: `${args[0]}: directory`, exitCode: 0 };
+      const ext = args[0].split('.').pop();
+      const types = { js: 'JavaScript source', py: 'Python script', json: 'JSON data', md: 'Markdown', sh: 'Bourne-Again shell script', css: 'CSS', html: 'HTML document', txt: 'ASCII text', log: 'ASCII text', yml: 'YAML', yaml: 'YAML', toml: 'TOML', xml: 'XML' };
+      return { stdout: `${args[0]}: ${types[ext] || 'ASCII text'}`, exitCode: 0 };
+    },
+
+    type(args) {
+      if (args.length === 0) return { stderr: 'type: missing argument', exitCode: 1 };
+      const cmd = args[0];
+      if (COMMANDS[cmd]) return { stdout: `${cmd} is a shell builtin`, exitCode: 0 };
+      if (aliases[cmd]) return { stdout: `${cmd} is an alias for '${aliases[cmd]}'`, exitCode: 0 };
+      return { stderr: `${cmd}: not found`, exitCode: 1 };
+    },
+
+    time(args, ctx) {
+      if (args.length === 0) return { stderr: 'time: missing command', exitCode: 1 };
+      const result = execute(args.join(' '));
+      const elapsed = (Math.random() * 0.5 + 0.01).toFixed(3);
+      return { stdout: (result.stdout || '') + `\nreal\t0m${elapsed}s\nuser\t0m${(elapsed * 0.8).toFixed(3)}s\nsys\t0m${(elapsed * 0.2).toFixed(3)}s`, exitCode: result.exitCode };
+    },
+
+    diff(args) {
+      const files = args.filter(a => !a.startsWith('-'));
+      if (files.length < 2) return { stderr: 'diff: missing operand', exitCode: 1 };
+      const a = VFS.readFile(files[0]);
+      const b = VFS.readFile(files[1]);
+      if (a === null) return { stderr: `diff: ${files[0]}: No such file or directory`, exitCode: 2 };
+      if (b === null) return { stderr: `diff: ${files[1]}: No such file or directory`, exitCode: 2 };
+      if (a === b) return { stdout: '', exitCode: 0 };
+      const aLines = a.split('\n'), bLines = b.split('\n');
+      const out = [`--- ${files[0]}`, `+++ ${files[1]}`];
+      const maxLen = Math.max(aLines.length, bLines.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (aLines[i] !== bLines[i]) {
+          if (aLines[i] !== undefined) out.push(`-${aLines[i]}`);
+          if (bLines[i] !== undefined) out.push(`+${bLines[i]}`);
+        }
+      }
+      return { stdout: out.join('\n'), exitCode: 1 };
+    },
+
+    tar(args) {
+      const hasCreate = args.some(a => a.includes('c'));
+      const hasExtract = args.some(a => a.includes('x'));
+      const hasView = args.some(a => a.includes('t'));
+      const file = args.find(a => !a.startsWith('-') && (a.includes('.tar') || a.includes('.tgz')));
+      if (hasCreate) return { stdout: '', exitCode: 0 };
+      if (hasExtract) return { stdout: `Extracted to ./`, exitCode: 0 };
+      if (hasView) return { stdout: 'drwxr-xr-x  user/staff  0 2024-01-15 10:00 ./\n-rw-r--r--  user/staff  1234 2024-01-15 10:00 ./package.json\n-rw-r--r--  user/staff  567 2024-01-15 10:00 ./README.md', exitCode: 0 };
+      return { stderr: 'tar: missing operation', exitCode: 1 };
+    },
+
+    awk(args, ctx) {
+      if (args.length === 0) return { stderr: 'awk: missing program', exitCode: 1 };
+      const program = args[0];
+      const files = args.slice(1).filter(a => !a.startsWith('-'));
+      const content = files.length > 0 ? VFS.readFile(files[0]) : (ctx.stdin || '');
+      if (content === null) return { stderr: `awk: ${files[0]}: No such file or directory`, exitCode: 1 };
+
+      // Basic {print $N} support
+      const printMatch = program.match(/\{\s*print\s+\$(\d+)\s*\}/);
+      if (printMatch) {
+        const fieldNum = parseInt(printMatch[1], 10);
+        const lines = content.split('\n').map(line => {
+          const fields = line.split(/\s+/);
+          return fields[fieldNum - 1] || '';
+        });
+        return { stdout: lines.join('\n'), exitCode: 0 };
+      }
+
+      // {print} — print whole line
+      if (/\{\s*print\s*\}/.test(program)) return { stdout: content, exitCode: 0 };
+
+      // /pattern/ — filter lines
+      const filterMatch = program.match(/^\/(.+)\/$/);
+      if (filterMatch) {
+        const regex = new RegExp(filterMatch[1]);
+        const lines = content.split('\n').filter(l => regex.test(l));
+        return { stdout: lines.join('\n'), exitCode: 0 };
+      }
+
+      return { stdout: content, exitCode: 0 };
+    },
+
+    tac(args, ctx) {
+      const content = args.length > 0 ? VFS.readFile(args[0]) : (ctx.stdin || '');
+      if (content === null) return { stderr: `tac: ${args[0]}: No such file or directory`, exitCode: 1 };
+      return { stdout: content.split('\n').reverse().join('\n'), exitCode: 0 };
+    },
+
+    rev(args, ctx) {
+      const content = args.length > 0 ? VFS.readFile(args[0]) : (ctx.stdin || '');
+      if (content === null) return { stderr: `rev: ${args[0]}: No such file or directory`, exitCode: 1 };
+      return { stdout: content.split('\n').map(l => l.split('').reverse().join('')).join('\n'), exitCode: 0 };
+    },
+
+    nl(args, ctx) {
+      const files = args.filter(a => !a.startsWith('-'));
+      const content = files.length > 0 ? VFS.readFile(files[0]) : (ctx.stdin || '');
+      if (content === null) return { stderr: `nl: ${files[0]}: No such file or directory`, exitCode: 1 };
+      return { stdout: content.split('\n').map((l, i) => `     ${i + 1}\t${l}`).join('\n'), exitCode: 0 };
+    },
+
+    read() {
+      // Can't read interactive input — just simulate
+      return { stdout: '', exitCode: 0 };
+    },
+
+    eval(args) {
+      if (args.length === 0) return { stdout: '', exitCode: 0 };
+      return execute(args.join(' '));
     }
   };
 
