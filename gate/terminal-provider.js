@@ -108,7 +108,7 @@ The user uses macOS with Oh My Zsh, iTerm2, zsh-autosuggestions, zsh-syntax-high
 ## Current Curriculum Position
 Topic: ${currentTopic.name} (Tier ${tier}/5)
 Curriculum position: ${profile.currentTopicIndex + 1}/${TERMINAL_CURRICULUM.length}
-Total sessions: ${profile.totalSessions}
+Total challenge attempts: ${profile.totalSessions}
 
 ## What the User Knows
 ${topicSummary || '  (New user — no history yet)'}
@@ -360,15 +360,22 @@ IMPORTANT: The "filesystem" field must be a flat object mapping path strings to 
     }
 
     // Advance curriculum: move forward when the current topic is learned
-    const currentTopic = TERMINAL_CURRICULUM[profile.currentTopicIndex];
-    if (currentTopic && passed) {
-      const topicData = profile.topicHistory[currentTopic.id];
+    if (passed && profile.currentTopicIndex < TERMINAL_CURRICULUM.length - 1) {
+      const currentTopic = TERMINAL_CURRICULUM[profile.currentTopicIndex];
+      const topicData = currentTopic ? profile.topicHistory[currentTopic.id] : null;
       const hasConfidence = topicData && typeof topicData.confidenceLevel === 'number';
       const shouldAdvance = hasConfidence
         ? (topicData.confidenceLevel >= 2 || topicData.passes >= 2)
         : (topicData && topicData.passes >= 2);
-      if (shouldAdvance && profile.currentTopicIndex < TERMINAL_CURRICULUM.length - 1) {
+
+      if (shouldAdvance) {
         profile.currentTopicIndex++;
+        while (profile.currentTopicIndex < TERMINAL_CURRICULUM.length - 1) {
+          const nextTopic = TERMINAL_CURRICULUM[profile.currentTopicIndex];
+          const nextData = profile.topicHistory[nextTopic.id];
+          if (nextData && nextData.passes >= 2) profile.currentTopicIndex++;
+          else break;
+        }
       }
     }
 

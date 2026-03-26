@@ -103,7 +103,7 @@ The user is a developer who needs to build deep Git proficiency. Challenges run 
 ## Current Curriculum Position
 Topic: ${currentTopic.name} (Tier ${tier}/5)
 Curriculum position: ${profile.currentTopicIndex + 1}/${GIT_CURRICULUM.length}
-Total sessions: ${profile.totalSessions}
+Total challenge attempts: ${profile.totalSessions}
 
 ## What the User Knows
 ${topicSummary || '  (New user — no history yet)'}
@@ -390,15 +390,22 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
     }
 
     // Advance curriculum: move forward when the current topic is learned
-    const currentTopic = GIT_CURRICULUM[profile.currentTopicIndex];
-    if (currentTopic && passed) {
-      const topicData = profile.topicHistory[currentTopic.id];
+    if (passed && profile.currentTopicIndex < GIT_CURRICULUM.length - 1) {
+      const currentTopic = GIT_CURRICULUM[profile.currentTopicIndex];
+      const topicData = currentTopic ? profile.topicHistory[currentTopic.id] : null;
       const hasConfidence = topicData && typeof topicData.confidenceLevel === 'number';
       const shouldAdvance = hasConfidence
         ? (topicData.confidenceLevel >= 2 || topicData.passes >= 2)
         : (topicData && topicData.passes >= 2);
-      if (shouldAdvance && profile.currentTopicIndex < GIT_CURRICULUM.length - 1) {
+
+      if (shouldAdvance) {
         profile.currentTopicIndex++;
+        while (profile.currentTopicIndex < GIT_CURRICULUM.length - 1) {
+          const nextTopic = GIT_CURRICULUM[profile.currentTopicIndex];
+          const nextData = profile.topicHistory[nextTopic.id];
+          if (nextData && nextData.passes >= 2) profile.currentTopicIndex++;
+          else break;
+        }
       }
     }
 

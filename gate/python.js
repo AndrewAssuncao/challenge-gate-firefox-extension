@@ -529,7 +529,7 @@ Respond with ONLY valid JSON:
     await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
 
     // Log failed attempt so heatmap shows engagement
-    const solveTime = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+    const solveTime = challengeStartTime ? Math.round((Date.now() - challengeStartTime) / 1000) : 0;
     browser.runtime.sendMessage({ type: 'logChallengeCompletion', challengeType: 'python', solveTime }).catch(() => {});
   }
 
@@ -628,7 +628,7 @@ ${formatDiagnosticsForHelp(lastRunDiagnostics)}
 
     // Record a skip (counts as a fail for progression)
     if (challenge) {
-      profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource);
+      profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource, false, helpUsedThisChallenge);
       await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
     }
     // Re-init to get a new challenge

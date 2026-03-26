@@ -121,7 +121,7 @@ const ChallengeProvider = (() => {
 ## Current Curriculum Position
 Topic: ${currentTopic.name} (Tier ${tier}/7)
 Curriculum position: ${profile.currentTopicIndex + 1}/${CURRICULUM.length}
-Total sessions: ${profile.totalSessions}
+Total challenge attempts: ${profile.totalSessions}
 
 ## What the User Knows
 ${topicSummary || '  (New user — no history yet)'}
@@ -543,16 +543,27 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
     }
 
     // Advance curriculum: move forward when the current topic is learned
-    const currentTopic = CURRICULUM[profile.currentTopicIndex];
-    if (currentTopic && passed) {
-      const topicData = profile.topicHistory[currentTopic.id];
+    // Also handles review challenges by checking if the challenge topic is ahead of current
+    if (passed && profile.currentTopicIndex < CURRICULUM.length - 1) {
+      const currentTopic = CURRICULUM[profile.currentTopicIndex];
+      const topicData = currentTopic ? profile.topicHistory[currentTopic.id] : null;
       const hasConfidence = topicData && typeof topicData.confidenceLevel === 'number';
-      // Advance if confidence >= 2 (familiar) OR 2+ total passes
       const shouldAdvance = hasConfidence
         ? (topicData.confidenceLevel >= 2 || topicData.passes >= 2)
         : (topicData && topicData.passes >= 2);
-      if (shouldAdvance && profile.currentTopicIndex < CURRICULUM.length - 1) {
+
+      if (shouldAdvance) {
         profile.currentTopicIndex++;
+        // Keep advancing through topics that already have 2+ passes (catchup)
+        while (profile.currentTopicIndex < CURRICULUM.length - 1) {
+          const nextTopic = CURRICULUM[profile.currentTopicIndex];
+          const nextData = profile.topicHistory[nextTopic.id];
+          if (nextData && nextData.passes >= 2) {
+            profile.currentTopicIndex++;
+          } else {
+            break;
+          }
+        }
       }
     }
 
