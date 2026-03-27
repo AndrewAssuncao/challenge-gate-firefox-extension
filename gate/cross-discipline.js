@@ -78,7 +78,7 @@ const CrossDiscipline = (() => {
       const otherProfile = allProfiles[otherDisc];
       if (!otherProfile?.topicHistory?.[otherTopicId]) continue;
       const stats = otherProfile.topicHistory[otherTopicId];
-      if (!stats || stats.passes === 0) continue;
+      if (!stats) continue;
 
       const conf = stats.confidenceLevel || 0;
       const level = conf >= 3 ? 'mastered' : conf >= 1 ? 'familiar with' : 'attempted';
