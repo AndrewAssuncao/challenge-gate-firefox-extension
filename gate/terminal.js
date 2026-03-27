@@ -2038,9 +2038,8 @@ const TerminalChallenge = (() => {
   function checkObjectives() {
     if (!challenge || !challenge.objectives) return { allMet: false, results: [] };
 
+    // Re-validate every objective from scratch (no permanent caching)
     const results = challenge.objectives.map(obj => {
-      if (obj._met) return { ...obj, met: true };
-
       const v = obj.validation;
       let met = false;
 
@@ -2058,7 +2057,7 @@ const TerminalChallenge = (() => {
           met = VFS.stat(v.expected) !== null;
           break;
         case 'fileContains': {
-          if (!v.path) break; // fileContains requires both path and expected
+          if (!v.path) break;
           const content = VFS.readFile(v.path);
           met = content !== null && content.includes(v.expected);
           break;
@@ -2071,11 +2070,14 @@ const TerminalChallenge = (() => {
           break;
       }
 
-      if (met) obj._met = true;
       return { ...obj, met };
     });
 
-    return { allMet: results.every(r => r.met), results };
+    const allMet = results.every(r => r.met);
+    if (allMet) {
+      challenge.objectives.forEach(obj => { obj._met = true; });
+    }
+    return { allMet, results };
   }
 
   // ── UI ────────────────────────────────────────────────────────────────
@@ -2229,15 +2231,16 @@ const TerminalChallenge = (() => {
     els.input.focus();
   }
 
-  function renderObjectives() {
+  function renderObjectives(results) {
     if (!els.objectivesPanel) return;
     els.objectivesPanel.innerHTML = '';
     if (!challenge || !challenge.objectives) return;
 
-    for (const obj of challenge.objectives) {
+    const objs = results || checkObjectives().results;
+    for (const obj of objs) {
       const div = document.createElement('div');
-      div.className = 'terminal-objective' + (obj._met ? ' met' : '');
-      div.innerHTML = `<span class="objective-check">${obj._met ? '&#10003;' : '&#9675;'}</span> ${escapeHtml(obj.description)}`;
+      div.className = 'terminal-objective' + (obj.met ? ' met' : '');
+      div.innerHTML = `<span class="objective-check">${obj.met ? '&#10003;' : '&#9675;'}</span> ${escapeHtml(obj.description)}`;
       els.objectivesPanel.appendChild(div);
     }
   }
@@ -2289,9 +2292,9 @@ const TerminalChallenge = (() => {
       els.inputDisplay.innerHTML = '';
       els.suggestion.textContent = '';
 
-      // Check objectives
+      // Check objectives and render with live results
       const check = checkObjectives();
-      renderObjectives();
+      renderObjectives(check.results);
 
       if (check.allMet && !challengeResolved) {
         onPassed();

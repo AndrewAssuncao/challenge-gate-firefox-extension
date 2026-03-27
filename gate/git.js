@@ -1224,9 +1224,9 @@ const GitChallenge = (() => {
 
     const currentState = GitSim.serialize();
 
+    // Re-validate every objective from scratch (no permanent caching)
+    // so undone actions correctly un-check objectives
     const results = challenge.objectives.map(obj => {
-      if (obj._met) return { ...obj, met: true };
-
       const v = obj.validation;
       let met = false;
 
@@ -1256,10 +1256,9 @@ const GitChallenge = (() => {
           met = GitSim.commits.size >= Number(v.expected);
           break;
         case 'commitMessageExists':
-          met = [...GitSim.commits.values()].some(c => c.message === v.expected || c.message.includes(v.expected));
+          met = [...GitSim.commits.values()].some(c => c.message === v.expected);
           break;
         case 'mergeCommitExists': {
-          // Check for a commit with 2+ parents
           met = [...GitSim.commits.values()].some(c => c.parents.length >= 2);
           break;
         }
@@ -1279,11 +1278,15 @@ const GitChallenge = (() => {
           break;
       }
 
-      if (met) obj._met = true;
       return { ...obj, met };
     });
 
-    return { allMet: results.every(r => r.met), results };
+    const allMet = results.every(r => r.met);
+    // Freeze _met flags only when all objectives pass (for display/help)
+    if (allMet) {
+      challenge.objectives.forEach(obj => { obj._met = true; });
+    }
+    return { allMet, results };
   }
 
   function validateStateMatch(v) {
@@ -1435,15 +1438,17 @@ const GitChallenge = (() => {
 
   // ── Objectives Rendering ────────────────────────────────────────────
 
-  function renderObjectives() {
+  function renderObjectives(results) {
     if (!els.objectivesPanel) return;
     els.objectivesPanel.innerHTML = '';
     if (!challenge || !challenge.objectives) return;
 
-    for (const obj of challenge.objectives) {
+    // Use live results if provided, otherwise re-check
+    const objs = results || checkObjectives().results;
+    for (const obj of objs) {
       const div = document.createElement('div');
-      div.className = 'git-objective' + (obj._met ? ' met' : '');
-      div.innerHTML = `<span class="objective-check">${obj._met ? '&#10003;' : '&#9675;'}</span> ${escapeHtml(obj.description)}`;
+      div.className = 'git-objective' + (obj.met ? ' met' : '');
+      div.innerHTML = `<span class="objective-check">${obj.met ? '&#10003;' : '&#9675;'}</span> ${escapeHtml(obj.description)}`;
       els.objectivesPanel.appendChild(div);
     }
   }
@@ -1476,6 +1481,7 @@ const GitChallenge = (() => {
 
       appendPromptLine(input);
 
+      lastOutput = '';  // Reset so stale output doesn't match outputContains
       const result = execute(input);
       lastExitCode = result.exitCode || 0;
       lastOutput = result.stdout || '';
@@ -1496,9 +1502,9 @@ const GitChallenge = (() => {
       // Update current graph
       renderGraph(GitSim.serialize(), 'git-current-svg');
 
-      // Check objectives
+      // Check objectives and render with live results
       const check = checkObjectives();
-      renderObjectives();
+      renderObjectives(check.results);
 
       if (check.allMet && !challengeResolved) {
         onPassed();

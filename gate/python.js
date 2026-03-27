@@ -17,6 +17,8 @@ const PythonChallenge = (() => {
   let challengeStartTime = 0;
   let failedBeforePass = 0;
   let helpUsedThisChallenge = false;
+  let helpRequestCount = 0;
+  let failedRunsSinceHelp = 0;
 
   const promptEl = document.getElementById('python-prompt');
   const editorEl = document.getElementById('python-editor');
@@ -56,6 +58,8 @@ const PythonChallenge = (() => {
     challengeStartTime = Date.now();
     failedBeforePass = 0;
     helpUsedThisChallenge = false;
+    helpRequestCount = 0;
+    failedRunsSinceHelp = 0;
     outputEl.classList.add('hidden');
     hintBtn.disabled = false;
     helpBtn.disabled = false;
@@ -400,7 +404,7 @@ Respond with ONLY valid JSON:
       }
 
       let html = '';
-      if (result.correct || result.score >= 70) {
+      if (result.correct === true) {
         html += `<div class="test-summary all-pass">Good analysis! (${result.score || 100}%)</div>`;
         html += `<div class="test-detail">${escapeHtml(result.feedback || '')}</div>`;
         if (challenge.afterSolve) {
@@ -524,6 +528,9 @@ Respond with ONLY valid JSON:
     if (challengeResolved) return;
     failedBeforePass++;
 
+    // Track failed runs for help-bypass gating
+    failedRunsSinceHelp++;
+
     // Record failure in learning profile (no gate unlock)
     profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource, false, helpUsedThisChallenge);
     await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
@@ -555,22 +562,27 @@ Respond with ONLY valid JSON:
   async function askForHelp() {
     if (!challenge || challengeResolved) return;
     helpUsedThisChallenge = true;
+    helpRequestCount++;
 
     helpBtn.disabled = true;
     helpBtn.textContent = 'Thinking…';
 
     const userCode = editorEl.value;
+
+    // Only check for challenge issues after 3+ help requests with failed runs
+    // (prevents false bypass on first help click)
+    const shouldCheckChallengeIssue = helpRequestCount >= 3 && failedRunsSinceHelp >= 2;
+
     const prompt = `You are reviewing a Python challenge in a browser extension.
-Decide whether the problem is in the student's code or in the challenge itself.
+${shouldCheckChallengeIssue ? 'Decide whether the problem is in the student\'s code or in the challenge itself.' : 'Help the student understand their mistake. Do NOT suggest the challenge is broken.'}
 Return ONLY valid JSON:
 {
-  "kind": "student_issue" | "challenge_issue",
+  "kind": "student_issue"${shouldCheckChallengeIssue ? ' | "challenge_issue"' : ''},
   "message": "2-4 sentence response",
-  "suggestedAction": "none" | "bypass"
+  "suggestedAction": "none"${shouldCheckChallengeIssue ? ' | "bypass"' : ''}
 }
 
-Use "challenge_issue" only if the prompt/tests are flawed or the test harness is calling the function incorrectly.
-If it is a challenge issue, say that plainly and do not blame the student's logic.
+${shouldCheckChallengeIssue ? 'Use "challenge_issue" only if the prompt/tests are flawed or the test harness is calling the function incorrectly.\nIf it is a challenge issue, say that plainly and do not blame the student\'s logic.' : ''}
 Do not provide the full solution.
 
 The student is working on this problem:
@@ -610,7 +622,7 @@ ${formatDiagnosticsForHelp(lastRunDiagnostics)}
       outputEl.classList.remove('hidden');
       outputEl.appendChild(div);
 
-      if (parsed?.kind === 'challenge_issue') {
+      if (shouldCheckChallengeIssue && parsed?.kind === 'challenge_issue') {
         await bypassChallengeForIssue(parsed.message);
       }
     } catch (err) {

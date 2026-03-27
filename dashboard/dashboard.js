@@ -320,9 +320,9 @@ const Dashboard = (() => {
     ctx.textAlign = 'center';
     ctx.fillText('tests', W / 2, H - 4);
 
-    // ── Trendline (moving average, window = max(5, n/10)) ──
+    // ── Trendline (moving average + Catmull-Rom Bezier smoothing) ──
     if (n >= 2) {
-      const windowSize = Math.max(5, Math.floor(n / 10));
+      const windowSize = Math.max(7, Math.floor(n / 8));
       const trend = [];
       for (let i = 0; i < n; i++) {
         const start = Math.max(0, i - Math.floor(windowSize / 2));
@@ -336,11 +336,18 @@ const Dashboard = (() => {
       ctx.lineWidth = 2.5;
       ctx.lineJoin = 'round';
       ctx.beginPath();
-      for (let i = 0; i < n; i++) {
-        const x = toX(i);
-        const y = toY(trend[i]);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+      ctx.moveTo(toX(0), toY(trend[0]));
+      // Catmull-Rom to cubic Bezier interpolation for smooth curves
+      for (let i = 1; i < n; i++) {
+        const p0 = { x: toX(Math.max(0, i - 2)), y: toY(trend[Math.max(0, i - 2)]) };
+        const p1 = { x: toX(i - 1), y: toY(trend[i - 1]) };
+        const p2 = { x: toX(i), y: toY(trend[i]) };
+        const p3 = { x: toX(Math.min(n - 1, i + 1)), y: toY(trend[Math.min(n - 1, i + 1)]) };
+        const cp1x = p1.x + (p2.x - p0.x) / 6;
+        const cp1y = p1.y + (p2.y - p0.y) / 6;
+        const cp2x = p2.x - (p3.x - p1.x) / 6;
+        const cp2y = p2.y - (p3.y - p1.y) / 6;
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
       }
       ctx.stroke();
     }
