@@ -14,6 +14,7 @@ const Dashboard = (() => {
   const els = {
     tabOverview: document.getElementById('tab-overview'),
     tabLearning: document.getElementById('tab-learning'),
+    tabSettings: document.getElementById('tab-settings'),
     statChallenges: document.getElementById('stat-challenges'),
     statTier: document.getElementById('stat-tier'),
     sitesTbody: document.getElementById('sites-tbody'),
@@ -1062,10 +1063,13 @@ const Dashboard = (() => {
         activeTab = tab.dataset.tab;
         els.tabOverview.classList.toggle('hidden', activeTab !== 'overview');
         els.tabLearning.classList.toggle('hidden', activeTab !== 'learning');
+        els.tabSettings.classList.toggle('hidden', activeTab !== 'settings');
         // Re-render the active tab's content (canvases need redraw)
         if (activeTab === 'learning') {
           renderProgress();
           renderKnowledgeTree();
+        } else if (activeTab === 'settings') {
+          renderSettings();
         }
       });
     });
