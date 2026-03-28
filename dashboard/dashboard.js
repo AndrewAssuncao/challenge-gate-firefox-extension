@@ -392,7 +392,7 @@ const Dashboard = (() => {
       // Tier 3
       { id: 'string_ops',    name: 'String parsing',                       tier: 3 },
       { id: 'error_handling',name: 'Error handling',                       tier: 3 },
-      { id: 'file_patterns', name: 'File I/O patterns',                    tier: 3 },
+      { id: 'file_io',       name: 'File I/O patterns',                    tier: 3 },
       { id: 'sorting',       name: 'Sorting and custom sorts',             tier: 3 },
       { id: 'recursion',     name: 'Recursion',                            tier: 3 },
       // Tier 4
@@ -404,7 +404,7 @@ const Dashboard = (() => {
       // Tier 5
       { id: 'dp',            name: 'Dynamic programming',                  tier: 5 },
       { id: 'graphs',        name: 'Graph traversal',                      tier: 5 },
-      { id: 'advanced',      name: 'Advanced patterns',                    tier: 5 },
+      { id: 'advanced_python', name: 'Advanced patterns',                   tier: 5 },
       { id: 'functional',    name: 'Functional programming',               tier: 5 },
       { id: 'concurrency',   name: 'Concurrency basics',                   tier: 5 },
       // Tier 6 — Multi-function
@@ -464,10 +464,10 @@ const Dashboard = (() => {
   function renderTerminalLearning() {
     const profile = state.terminalLearningProfile;
     const TERMINAL_CURRICULUM = [
+      { id: 'paths',            name: 'Relative and absolute paths',          tier: 1 },
       { id: 'navigation',       name: 'Navigation (pwd, ls, cd)',             tier: 1 },
       { id: 'file_creation',    name: 'Creating files and directories',       tier: 1 },
       { id: 'file_reading',     name: 'Reading files (cat, head, tail)',      tier: 1 },
-      { id: 'paths',            name: 'Relative and absolute paths',          tier: 1 },
       { id: 'help_man',         name: 'Getting help (man, which)',            tier: 1 },
       { id: 'copy_move',        name: 'Copying and moving (cp, mv)',          tier: 2 },
       { id: 'remove_find',      name: 'Removing and finding (rm, find)',      tier: 2 },
@@ -539,10 +539,13 @@ const Dashboard = (() => {
       { id: 'git_staging', name: 'Staging changes (add, restore)', tier: 1 },
       { id: 'git_commit', name: 'Making commits', tier: 1 },
       { id: 'git_log', name: 'Viewing history (log, show)', tier: 1 },
+      { id: 'git_remote', name: 'Working with remotes', tier: 2 },
       { id: 'git_branch_create', name: 'Creating branches', tier: 2 },
       { id: 'git_checkout', name: 'Switching branches', tier: 2 },
       { id: 'git_merge_ff', name: 'Fast-forward merges', tier: 2 },
       { id: 'git_merge_3way', name: 'Three-way merges', tier: 2 },
+      { id: 'git_merge_conflicts', name: 'Resolving merge conflicts', tier: 3 },
+      { id: 'git_diff', name: 'Comparing changes (diff)', tier: 3 },
       { id: 'git_rebase', name: 'Rebasing branches', tier: 3 },
       { id: 'git_cherry_pick', name: 'Cherry-picking commits', tier: 3 },
       { id: 'git_stash', name: 'Stashing changes', tier: 3 },
@@ -551,7 +554,6 @@ const Dashboard = (() => {
       { id: 'git_bisect', name: 'Finding bugs with bisect', tier: 4 },
       { id: 'git_reflog', name: 'Recovery with reflog', tier: 4 },
       { id: 'git_tags', name: 'Tagging releases', tier: 4 },
-      { id: 'git_merge_conflicts', name: 'Resolving merge conflicts', tier: 5 },
       { id: 'git_workflows', name: 'Git workflows', tier: 5 },
       { id: 'git_advanced_rebase', name: 'Advanced rebase', tier: 5 },
       { id: 'git_submodules', name: 'Submodules and subtrees', tier: 5 }

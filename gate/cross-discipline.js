@@ -15,7 +15,7 @@ const CrossDiscipline = (() => {
     { from: 'py:strings', to: 'term:grep_search' },
     { from: 'py:loops', to: 'term:shell_scripting' },
     { from: 'py:dicts', to: 'term:environment' },
-    { from: 'term:redirection', to: 'py:file_patterns' },
+    { from: 'term:redirection', to: 'py:file_io' },
     { from: 'py:sorting', to: 'term:text_processing' },
     { from: 'py:error_handling', to: 'term:environment' },
     { from: 'py:recursion', to: 'term:remove_find' },
@@ -43,7 +43,10 @@ const CrossDiscipline = (() => {
     { from: 'py:design_patterns', to: 'git:git_workflows' },
     // Git → Terminal
     { from: 'git:git_log', to: 'term:grep_search' },
-    { from: 'git:git_stash', to: 'term:aliases_history' }
+    { from: 'git:git_stash', to: 'term:aliases_history' },
+    { from: 'git:git_remote', to: 'term:ssh' },
+    { from: 'git:git_remote', to: 'term:curl_networking' },
+    { from: 'git:git_diff', to: 'py:string_ops' }
   ];
 
   const PREFIX_MAP = { python: 'py', terminal: 'term', git: 'git' };

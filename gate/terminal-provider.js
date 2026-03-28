@@ -15,40 +15,90 @@ const TerminalChallengeProvider = (() => {
   // Ordered topics. The mentor advances through these, but can revisit.
 
   const TERMINAL_CURRICULUM = [
-    // Tier 1 — Shell Basics
-    { id: 'navigation',       name: 'Navigation (pwd, ls, cd)',                        tier: 1 },
-    { id: 'file_creation',    name: 'Creating files and directories (touch, mkdir)',    tier: 1 },
-    { id: 'file_reading',     name: 'Reading files (cat, echo, head, tail)',            tier: 1 },
-    { id: 'paths',            name: 'Relative and absolute paths',                     tier: 1 },
-    { id: 'help_man',         name: 'Getting help (man, --help, which)',               tier: 1 },
+    // Tier 1 — Shell Basics (paths first — you need to understand paths before cd)
+    { id: 'paths', name: 'Relative and absolute paths', tier: 1,
+      concepts: ['absolute paths starting with /', 'relative paths and current directory (.)', 'parent directory (..)', 'home directory (~)', 'path separator and path construction', 'tab completion for paths'],
+      progressionSignal: 'Navigate using relative and absolute paths, understand ~, ., and .. without confusion.' },
+    { id: 'navigation', name: 'Navigation (pwd, ls, cd)', tier: 1,
+      concepts: ['pwd to print working directory', 'cd with relative and absolute paths', 'cd - to go back, cd ~ to go home', 'ls basic listing', 'ls flags (-l, -a, -h, -R)', 'combining ls flags for detailed output'],
+      progressionSignal: 'Navigate freely between directories and read ls -la output.' },
+    { id: 'file_creation', name: 'Creating files and directories (touch, mkdir)', tier: 1,
+      concepts: ['touch to create empty files', 'mkdir to create directories', 'mkdir -p for nested directories', 'echo with redirection to create files with content', 'file naming conventions (no spaces, lowercase)', 'creating multiple files/dirs at once'],
+      progressionSignal: 'Create files and directory structures efficiently using touch, mkdir -p, and echo.' },
+    { id: 'file_reading', name: 'Reading files (cat, echo, head, tail)', tier: 1,
+      concepts: ['cat to display file contents', 'head and tail with -n flag', 'less for paging through files', 'echo for printing text', 'wc for counting lines/words/chars', 'file command to check file type'],
+      progressionSignal: 'Read and inspect files of any size using the right tool for the job.' },
+    { id: 'help_man', name: 'Getting help (man, --help, which)', tier: 1,
+      concepts: ['man pages and navigating them', '--help flag convention', 'which and type to find command locations', 'reading command synopsis (brackets = optional, ... = repeatable)', 'searching man pages with /', 'tldr for quick summaries'],
+      progressionSignal: 'Look up any unfamiliar command independently using man, --help, or which.' },
 
     // Tier 2 — File Operations
-    { id: 'copy_move',        name: 'Copying and moving (cp, mv)',                     tier: 2 },
-    { id: 'remove_find',      name: 'Removing and finding (rm, find)',                 tier: 2 },
-    { id: 'grep_search',      name: 'Searching text (grep)',                           tier: 2 },
-    { id: 'permissions',      name: 'Permissions (chmod, chown, ls -l)',               tier: 2 },
-    { id: 'redirection',      name: 'Redirection and pipes (>, >>, |)',                tier: 2 },
+    { id: 'copy_move', name: 'Copying and moving (cp, mv)', tier: 2,
+      concepts: ['cp file to new location', 'cp -r for directories', 'mv for moving and renaming', 'overwrite behavior and -i flag', 'copying multiple files to a directory', 'preserving permissions with cp -p'],
+      progressionSignal: 'Copy and move files/directories confidently, including recursive operations.' },
+    { id: 'remove_find', name: 'Removing and finding (rm, find)', tier: 2,
+      concepts: ['rm for files, rm -r for directories', 'rm -i for safe deletion', 'find by name (-name, -iname)', 'find by type (-type f, -type d)', 'find by time (-mtime, -newer)', 'find with -exec for actions on results'],
+      progressionSignal: 'Remove files safely and construct find commands with multiple criteria and actions.' },
+    { id: 'grep_search', name: 'Searching text (grep)', tier: 2,
+      concepts: ['grep for pattern in file', 'grep -r for recursive search', 'grep -i for case-insensitive', 'grep -n for line numbers, -l for filenames only', 'grep -E for extended regex', 'grep -v for inverted matches'],
+      progressionSignal: 'Search codebases with grep using regex, recursion, and output formatting flags.' },
+    { id: 'permissions', name: 'Permissions (chmod, chown, ls -l)', tier: 2,
+      concepts: ['reading ls -l permission string (rwxrwxrwx)', 'user, group, other permission model', 'chmod with symbolic mode (u+x, go-w)', 'chmod with octal mode (755, 644)', 'chown for changing ownership', 'umask for default permissions'],
+      progressionSignal: 'Read and set file permissions using both symbolic and octal notation.' },
+    { id: 'redirection', name: 'Redirection and pipes (>, >>, |)', tier: 2,
+      concepts: ['stdout redirection (> and >>)', 'stdin redirection (<)', 'stderr redirection (2> and 2>&1)', 'pipes (|) to chain commands', '/dev/null for discarding output', 'tee for splitting output to file and stdout'],
+      progressionSignal: 'Chain commands with pipes, redirect stdout/stderr independently, and use tee.' },
 
     // Tier 3 — Power User
-    { id: 'text_processing',  name: 'Text processing (sort, uniq, wc, cut)',           tier: 3 },
-    { id: 'processes',        name: 'Process management (ps, kill, jobs, bg, fg)',      tier: 3 },
-    { id: 'environment',      name: 'Environment variables (export, PATH, env)',        tier: 3 },
-    { id: 'aliases_history',  name: 'Aliases, history, shell config (.zshrc)',          tier: 3 },
-    { id: 'package_managers', name: 'Package managers (brew, pip, npm)',                tier: 3 },
+    { id: 'text_processing', name: 'Text processing (sort, uniq, wc, cut)', tier: 3,
+      concepts: ['sort (-n, -r, -k, -t for field sorting)', 'uniq (-c for counts, -d for duplicates)', 'cut (-d delimiter, -f fields)', 'tr for character translation and deletion', 'paste and column for formatting', 'chaining text tools with pipes'],
+      progressionSignal: 'Extract, transform, and analyze text data by chaining sort/uniq/cut/tr in pipelines.' },
+    { id: 'processes', name: 'Process management (ps, kill, jobs, bg, fg)', tier: 3,
+      concepts: ['ps aux and reading process listings', 'kill with signal numbers (SIGTERM, SIGKILL)', 'running commands in background (&)', 'jobs, fg, bg for job control', 'Ctrl+C (SIGINT) and Ctrl+Z (SIGTSTP)', 'nohup and disown for persistent processes'],
+      progressionSignal: 'Find and manage processes, use job control, and keep processes running after logout.' },
+    { id: 'environment', name: 'Environment variables (export, PATH, env)', tier: 3,
+      concepts: ['viewing env variables (echo $VAR, env, printenv)', 'setting variables (VAR=value, export VAR=value)', 'PATH variable and how commands are found', 'modifying PATH safely', '.env files and source command', 'variable expansion and quoting ("$VAR" vs \'$VAR\')'],
+      progressionSignal: 'Manage environment variables, modify PATH, and understand variable expansion and quoting.' },
+    { id: 'aliases_history', name: 'Aliases, history, shell config (.zshrc)', tier: 3,
+      concepts: ['alias for command shortcuts', 'persisting aliases in .zshrc', 'history command and !!, !$, !n', 'reverse search with Ctrl+R', 'shell functions vs aliases', 'source ~/.zshrc to reload config'],
+      progressionSignal: 'Create aliases, write shell functions, and navigate history efficiently.' },
+    { id: 'package_managers', name: 'Package managers (brew, pip, npm)', tier: 3,
+      concepts: ['brew install/uninstall/update/upgrade', 'pip install, pip freeze, requirements.txt', 'npm install, package.json, node_modules', 'global vs local installation', 'version pinning and lock files', 'virtual environments (python -m venv)'],
+      progressionSignal: 'Install and manage packages across brew/pip/npm. Use virtual environments and lock files.' },
 
     // Tier 4 — Developer Tools
-    { id: 'git_basics',       name: 'Git basics (init, add, commit, status, log)',     tier: 4 },
-    { id: 'git_branching',    name: 'Git branching (branch, checkout, merge)',          tier: 4 },
-    { id: 'ssh',              name: 'SSH (keys, config, tunneling)',                    tier: 4 },
-    { id: 'docker_basics',    name: 'Docker (images, containers, run, build)',          tier: 4 },
-    { id: 'curl_networking',  name: 'curl, wget, and basic networking',                tier: 4 },
+    { id: 'git_basics', name: 'Git basics (init, add, commit, status, log)', tier: 4,
+      concepts: ['git init and .git directory', 'git status to check state', 'git add (staging files, -p for partial)', 'git commit with message', 'git log (--oneline, --graph)', 'git diff (unstaged, staged, between commits)'],
+      progressionSignal: 'Initialize repos, stage selectively, commit, and read log/diff output from the command line.' },
+    { id: 'git_branching', name: 'Git branching (branch, checkout, merge)', tier: 4,
+      concepts: ['git branch to list/create branches', 'git checkout / git switch to move between branches', 'git merge basics (fast-forward and 3-way)', 'resolving simple merge conflicts', 'git branch -d to delete merged branches', 'git stash for saving work in progress'],
+      progressionSignal: 'Create branches, switch between them, merge, and handle basic conflicts from the CLI.' },
+    { id: 'ssh', name: 'SSH (keys, config, tunneling)', tier: 4,
+      concepts: ['ssh to connect to remote hosts', 'ssh-keygen for key generation', '~/.ssh/config for host aliases', 'ssh-add and ssh-agent', 'scp and rsync for file transfer', 'port forwarding (-L, -R basics)'],
+      progressionSignal: 'Set up SSH keys, configure host aliases, transfer files, and use basic port forwarding.' },
+    { id: 'docker_basics', name: 'Docker (images, containers, run, build)', tier: 4,
+      concepts: ['docker pull and image layers', 'docker run (-d, -p, -v, --rm, -e flags)', 'docker ps and docker logs', 'docker exec for running commands in containers', 'Dockerfile basics (FROM, COPY, RUN, CMD)', 'docker build and tagging images'],
+      progressionSignal: 'Run containers with proper flags, inspect logs, and build images from Dockerfiles.' },
+    { id: 'curl_networking', name: 'curl, wget, and basic networking', tier: 4,
+      concepts: ['curl GET requests', 'curl with headers (-H) and POST data (-d, -X POST)', 'curl output options (-o, -s, -w)', 'wget for downloading files', 'ping, traceroute, dig for DNS', 'jq for parsing JSON responses'],
+      progressionSignal: 'Make API calls with curl, parse JSON with jq, and diagnose basic networking issues.' },
 
     // Tier 5 — Mastery
-    { id: 'shell_scripting',  name: 'Shell scripting (loops, conditionals, functions)', tier: 5 },
-    { id: 'git_advanced',     name: 'Advanced git (rebase, cherry-pick, bisect)',       tier: 5 },
-    { id: 'docker_compose',   name: 'Docker compose and multi-container',              tier: 5 },
-    { id: 'sed_awk',          name: 'sed and awk text processing',                     tier: 5 },
-    { id: 'system_debug',     name: 'System debugging (lsof, netstat, dig, dmesg)',    tier: 5 }
+    { id: 'shell_scripting', name: 'Shell scripting (loops, conditionals, functions)', tier: 5,
+      concepts: ['shebang (#!/bin/bash or #!/bin/zsh)', 'variables and parameter expansion ($1, $@, $#, $?)', 'if/then/else/fi conditionals', 'for and while loops in scripts', 'functions in shell scripts', 'exit codes and error handling (set -e, trap)'],
+      progressionSignal: 'Write shell scripts with arguments, conditionals, loops, functions, and proper error handling.' },
+    { id: 'git_advanced', name: 'Advanced git (rebase, cherry-pick, bisect)', tier: 5,
+      concepts: ['git rebase vs merge (when to use each)', 'interactive rebase (squash, fixup, reword)', 'git cherry-pick for selective commits', 'git bisect for finding bug-introducing commits', 'git reflog for recovery', 'git reset --soft/--mixed/--hard'],
+      progressionSignal: 'Rebase interactively, cherry-pick, bisect bugs, and recover from mistakes with reflog.' },
+    { id: 'docker_compose', name: 'Docker compose and multi-container', tier: 5,
+      concepts: ['docker-compose.yml structure (services, networks, volumes)', 'docker compose up/down/logs', 'service dependencies (depends_on)', 'environment variables and .env files', 'volume mounts for development', 'multi-stage builds for production'],
+      progressionSignal: 'Define multi-service apps in compose, manage volumes, and use multi-stage builds.' },
+    { id: 'sed_awk', name: 'sed and awk text processing', tier: 5,
+      concepts: ['sed s/old/new/g substitution', 'sed with address ranges (line numbers, patterns)', 'sed -i for in-place editing', 'awk field splitting ($1, $2, $NF)', 'awk patterns and actions {print ...}', 'awk with BEGIN/END blocks and variables'],
+      progressionSignal: 'Transform text files with sed substitutions and awk field processing.' },
+    { id: 'system_debug', name: 'System debugging (lsof, netstat, dig, dmesg)', tier: 5,
+      concepts: ['lsof for open file and port inspection', 'netstat/ss for network connections', 'top/htop for system resource monitoring', 'dig for DNS queries', 'strace/dtruss for system call tracing', 'dmesg for kernel messages'],
+      progressionSignal: 'Diagnose port conflicts, network issues, resource usage, and DNS problems from the terminal.' }
   ];
 
   // ── Default learning profile ────────────────────────────────────────────
@@ -92,6 +142,14 @@ const TerminalChallengeProvider = (() => {
     const weakList = profile.weakAreas.join(', ');
     const difficulty = isSettingsGate ? 'harder than usual (this is a settings-gate challenge)' : 'appropriate for the current level';
 
+    // Sub-concept coverage for current topic
+    const topicConcepts = currentTopic.concepts || [];
+    const introduced = profile.conceptsIntroduced || [];
+    const nextConcept = topicConcepts.find(c => !introduced.includes(c));
+    const conceptProgress = topicConcepts.length > 0
+      ? topicConcepts.map(c => `  ${introduced.includes(c) ? '✓' : '○'} ${c}`).join('\n')
+      : '';
+
     return `You are a terminal/shell mentor embedded in a browser extension. The user must solve your challenge to access a blocked site. Your job is to genuinely teach them to master the terminal — not just test them.
 
 ## Context
@@ -106,10 +164,14 @@ The user uses macOS with Oh My Zsh, iTerm2, zsh-autosuggestions, zsh-syntax-high
 - Gradually increase complexity within a topic before moving to the next.
 - Frame scenarios realistically: debugging a deploy, managing a project, setting up a dev environment.
 
-## Current Curriculum Position
-Topic: ${currentTopic.name} (Tier ${tier}/5)
+## Current Topic: ${currentTopic.name} (Tier ${tier}/5)
 Curriculum position: ${profile.currentTopicIndex + 1}/${TERMINAL_CURRICULUM.length}
 Total challenge attempts: ${profile.totalSessions}
+${conceptProgress ? `
+Sub-concepts to cover in order (introduce ONE per challenge):
+${conceptProgress}
+${nextConcept ? `Next to introduce: "${nextConcept}". Teach this with syntax + example, then build a challenge around it.` : 'All sub-concepts covered. Focus on mastery, edge cases, and harder variants.'}` : ''}
+${currentTopic.progressionSignal ? `Mastery signal — advance when the user can: ${currentTopic.progressionSignal}` : ''}
 
 ## What the User Knows
 ${topicSummary || '  (New user — no history yet)'}
@@ -147,7 +209,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
   "id": "tm-<unique-8-char-id>",
   "topic": "${currentTopic.id}",
   "tier": ${tier},
-  "conceptIntroduced": "brief name of new concept if any, or null",
+  "conceptIntroduced": "EXACT string from sub-concepts list above, or null if reinforcing",
   "teachingNote": "1-3 sentence explanation of a concept IF introducing something new. null if just reinforcing.",
   "scenario": "A realistic scenario description. What the user needs to accomplish and why.",
   "filesystem": {

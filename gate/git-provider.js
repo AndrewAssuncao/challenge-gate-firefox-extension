@@ -16,34 +16,80 @@ const GitChallengeProvider = (() => {
 
   const GIT_CURRICULUM = [
     // Tier 1 — Git Basics
-    { id: 'git_init',           name: 'Repository setup (init, status)',                tier: 1 },
-    { id: 'git_staging',        name: 'Staging changes (add, restore)',                 tier: 1 },
-    { id: 'git_commit',         name: 'Making commits',                                tier: 1 },
-    { id: 'git_log',            name: 'Viewing history (log, show)',                    tier: 1 },
+    { id: 'git_init', name: 'Repository setup (init, status)', tier: 1,
+      concepts: ['git init to create a repository', '.git directory and what it contains', 'git status to check working tree state', 'tracked vs untracked files', '.gitignore patterns', 'git config (user.name, user.email)'],
+      progressionSignal: 'Initialize repos, read status output, and configure .gitignore.' },
+    { id: 'git_staging', name: 'Staging changes (add, restore)', tier: 1,
+      concepts: ['git add to stage files', 'git add -p for partial staging', 'working directory → staging area → repository model', 'git restore to discard working changes', 'git restore --staged to unstage', 'git diff --staged to see what will be committed'],
+      progressionSignal: 'Stage files selectively, unstage mistakes, and understand the three-area model.' },
+    { id: 'git_commit', name: 'Making commits', tier: 1,
+      concepts: ['git commit -m for quick commits', 'writing good commit messages (imperative mood)', 'git commit --amend to fix the last commit', 'what a commit contains (tree, parent, author, message)', 'commit hashes (SHA-1) and referencing them', 'HEAD as pointer to current commit'],
+      progressionSignal: 'Make clean commits with good messages. Amend the last commit. Understand HEAD.' },
+    { id: 'git_log', name: 'Viewing history (log, show)', tier: 1,
+      concepts: ['git log basic output', 'git log --oneline --graph --decorate', 'git log with path filtering', 'git show to inspect a specific commit', 'git diff between two commits', 'HEAD~N notation for ancestor commits'],
+      progressionSignal: 'Read log output, inspect individual commits, and navigate history with HEAD~N.' },
 
-    // Tier 2 — Branching
-    { id: 'git_branch_create',  name: 'Creating branches',                             tier: 2 },
-    { id: 'git_checkout',       name: 'Switching branches (checkout, switch)',          tier: 2 },
-    { id: 'git_merge_ff',       name: 'Fast-forward merges',                           tier: 2 },
-    { id: 'git_merge_3way',     name: 'Three-way merges',                              tier: 2 },
+    // Tier 2 — Branching & Remote
+    { id: 'git_remote', name: 'Working with remotes (push, pull, fetch)', tier: 2,
+      concepts: ['git remote add origin <url>', 'git push to upload commits', 'git pull to fetch and merge', 'git fetch vs git pull distinction', 'tracking branches (origin/main)', 'git push -u to set upstream'],
+      progressionSignal: 'Push and pull to remotes. Understand the relationship between local and tracking branches.' },
+    { id: 'git_branch_create', name: 'Creating branches', tier: 2,
+      concepts: ['git branch <name> to create', 'git switch -c <name> to create and switch', 'branches as pointers to commits', 'git branch to list all branches', 'git branch -d to delete merged branches', 'naming conventions (feature/, bugfix/, hotfix/)'],
+      progressionSignal: 'Create, list, and delete branches. Understand branches as movable pointers.' },
+    { id: 'git_checkout', name: 'Switching branches (checkout, switch)', tier: 2,
+      concepts: ['git checkout <branch> to switch', 'git switch <branch> (modern syntax)', 'detached HEAD state and what it means', 'git checkout <commit> for detached HEAD', 'stashing before switching (dirty working tree)', 'git switch - to toggle between last two branches'],
+      progressionSignal: 'Switch branches confidently. Recognize and recover from detached HEAD.' },
+    { id: 'git_merge_ff', name: 'Fast-forward merges', tier: 2,
+      concepts: ['what fast-forward means (linear history)', 'git merge <branch> when FF is possible', 'git merge --no-ff to force a merge commit', 'when fast-forward applies (no divergence)', 'merge commit vs no merge commit', 'deleting branch after merge'],
+      progressionSignal: 'Identify when FF applies, perform FF merges, and know when to use --no-ff.' },
+    { id: 'git_merge_3way', name: 'Three-way merges', tier: 2,
+      concepts: ['what triggers a three-way merge (diverged branches)', 'merge commit with two parents', 'git merge and the merge commit message', 'reading the merge graph', 'git log --graph to visualize merges', 'merge strategies (recursive, ort)'],
+      progressionSignal: 'Perform three-way merges and read the resulting commit graph.' },
 
     // Tier 3 — Intermediate
-    { id: 'git_rebase',         name: 'Rebasing branches',                             tier: 3 },
-    { id: 'git_cherry_pick',    name: 'Cherry-picking commits',                        tier: 3 },
-    { id: 'git_stash',          name: 'Stashing changes',                              tier: 3 },
-    { id: 'git_reset',          name: 'Reset (soft, mixed, hard)',                     tier: 3 },
+    { id: 'git_merge_conflicts', name: 'Resolving merge conflicts', tier: 3,
+      concepts: ['what causes a conflict (same lines changed)', 'reading conflict markers (<<<<<<<, =======, >>>>>>>)', 'resolving conflicts manually', 'git add to mark resolved', 'git merge --abort to cancel', 'git diff during conflict resolution'],
+      progressionSignal: 'Read conflict markers, resolve conflicts manually, and complete or abort merges.' },
+    { id: 'git_diff', name: 'Comparing changes (diff)', tier: 3,
+      concepts: ['git diff for unstaged changes', 'git diff --staged for staged changes', 'git diff branch1..branch2', 'git diff --stat for summary', 'reading diff output (hunks, +/- lines)', 'git diff HEAD~N for comparing with ancestors'],
+      progressionSignal: 'Use diff to compare any two states. Read diff output including hunks and stats.' },
+    { id: 'git_rebase', name: 'Rebasing branches', tier: 3,
+      concepts: ['git rebase <base> to replay commits', 'rebase vs merge tradeoffs (linear vs merge commits)', 'when to rebase (local branches before pushing)', 'when NOT to rebase (shared/public branches)', 'resolving conflicts during rebase', 'git rebase --abort and --continue'],
+      progressionSignal: 'Rebase feature branches, resolve rebase conflicts, and know the rebase vs merge tradeoff.' },
+    { id: 'git_cherry_pick', name: 'Cherry-picking commits', tier: 3,
+      concepts: ['git cherry-pick <sha> to apply a commit', 'cherry-picking a range of commits', 'cherry-pick --no-commit for staging only', 'resolving cherry-pick conflicts', 'when cherry-pick is appropriate (hotfixes, backports)', 'cherry-pick vs merge vs rebase'],
+      progressionSignal: 'Cherry-pick individual commits and ranges. Know when cherry-pick is the right tool.' },
+    { id: 'git_stash', name: 'Stashing changes', tier: 3,
+      concepts: ['git stash to save dirty state', 'git stash pop vs git stash apply', 'git stash list to see all stashes', 'git stash drop and git stash clear', 'git stash push -m "message" for named stashes', 'git stash show -p to preview stash contents'],
+      progressionSignal: 'Stash and restore work in progress. Manage multiple named stashes.' },
+    { id: 'git_reset', name: 'Reset (soft, mixed, hard)', tier: 3,
+      concepts: ['git reset --soft (move HEAD, keep staged and working)', 'git reset --mixed (move HEAD, unstage, keep working)', 'git reset --hard (move HEAD, discard everything)', 'reset HEAD~N to undo N commits', 'difference between reset and revert', 'dangers of reset on pushed commits'],
+      progressionSignal: 'Use all three reset modes intentionally. Know when reset vs revert is appropriate.' },
 
     // Tier 4 — Advanced
-    { id: 'git_rebase_interactive', name: 'Interactive rebase concepts',                tier: 4 },
-    { id: 'git_bisect',         name: 'Finding bugs with bisect',                      tier: 4 },
-    { id: 'git_reflog',         name: 'Recovery with reflog',                          tier: 4 },
-    { id: 'git_tags',           name: 'Tagging releases',                              tier: 4 },
+    { id: 'git_rebase_interactive', name: 'Interactive rebase concepts', tier: 4,
+      concepts: ['git rebase -i HEAD~N', 'pick, squash, fixup operations', 'reword to change commit messages', 'drop to remove commits', 'reordering commits', 'edit for splitting commits'],
+      progressionSignal: 'Clean up history with interactive rebase: squash, reword, reorder, and split commits.' },
+    { id: 'git_bisect', name: 'Finding bugs with bisect', tier: 4,
+      concepts: ['git bisect start', 'git bisect good/bad to narrow down', 'bisect uses binary search on commit history', 'git bisect reset to finish', 'automated bisect with git bisect run', 'interpreting bisect results'],
+      progressionSignal: 'Use bisect to find the exact commit that introduced a bug, both manually and automated.' },
+    { id: 'git_reflog', name: 'Recovery with reflog', tier: 4,
+      concepts: ['git reflog to see all HEAD movements', 'reflog entries and expiration', 'recovering deleted branches', 'recovering after bad reset', 'git checkout <reflog-sha> to inspect', 'reflog as safety net for destructive operations'],
+      progressionSignal: 'Use reflog to recover from any git mistake — deleted branches, bad resets, lost commits.' },
+    { id: 'git_tags', name: 'Tagging releases', tier: 4,
+      concepts: ['lightweight vs annotated tags', 'git tag <name> and git tag -a <name> -m "msg"', 'git tag to list tags', 'git push --tags to push tags to remote', 'semantic versioning (v1.2.3)', 'git describe for version strings'],
+      progressionSignal: 'Create annotated tags, push them, and use semantic versioning conventions.' },
 
     // Tier 5 — Mastery
-    { id: 'git_merge_conflicts', name: 'Resolving merge conflicts',                    tier: 5 },
-    { id: 'git_workflows',      name: 'Git workflows (GitFlow, trunk-based)',          tier: 5 },
-    { id: 'git_advanced_rebase', name: 'Advanced rebase and history rewriting',        tier: 5 },
-    { id: 'git_submodules',     name: 'Submodules and subtrees',                       tier: 5 }
+    { id: 'git_workflows', name: 'Git workflows (GitFlow, trunk-based)', tier: 5,
+      concepts: ['GitFlow model (main, develop, feature, release, hotfix)', 'trunk-based development (short-lived branches)', 'PR-based workflow and code review', 'branch protection rules', 'release strategies (tagging, release branches)', 'choosing a workflow for team size'],
+      progressionSignal: 'Understand and compare major workflows. Choose the right one for a given team context.' },
+    { id: 'git_advanced_rebase', name: 'Advanced rebase and history rewriting', tier: 5,
+      concepts: ['rebase --onto for transplanting branches', 'splitting commits with edit', 'exec for running commands during rebase', 'git rerere for conflict reuse', 'filter-branch vs filter-repo for bulk rewriting', 'rewriting shared history (risks and coordination)'],
+      progressionSignal: 'Use --onto, split commits, leverage rerere, and understand the consequences of rewriting shared history.' },
+    { id: 'git_submodules', name: 'Submodules and subtrees', tier: 5,
+      concepts: ['git submodule add for embedding repos', 'git submodule update --init --recursive', 'submodule gotchas (detached HEAD, version pinning)', 'git subtree as alternative to submodules', 'when to use submodules vs subtrees vs monorepo', 'updating submodule references'],
+      progressionSignal: 'Add and update submodules. Understand tradeoffs vs subtrees and monorepos.' }
   ];
 
   // ── Default learning profile ──────────────────────────────────────────
@@ -87,6 +133,14 @@ const GitChallengeProvider = (() => {
     const weakList = profile.weakAreas.join(', ');
     const difficulty = isSettingsGate ? 'harder than usual (this is a settings-gate challenge)' : 'appropriate for the current level';
 
+    // Sub-concept coverage for current topic
+    const topicConcepts = currentTopic.concepts || [];
+    const introduced = profile.conceptsIntroduced || [];
+    const nextConcept = topicConcepts.find(c => !introduced.includes(c));
+    const conceptProgress = topicConcepts.length > 0
+      ? topicConcepts.map(c => `  ${introduced.includes(c) ? '✓' : '○'} ${c}`).join('\n')
+      : '';
+
     return `You are a Git mentor embedded in a browser extension. The user must solve your challenge to access a blocked site. Your job is to genuinely teach them to master Git — not just test them.
 
 ## Context
@@ -101,10 +155,14 @@ The user is a developer who needs to build deep Git proficiency. Challenges run 
 - Gradually increase complexity within a topic before moving to the next.
 - Frame scenarios realistically: fixing a release branch, cleaning up history, preparing for code review.
 
-## Current Curriculum Position
-Topic: ${currentTopic.name} (Tier ${tier}/5)
+## Current Topic: ${currentTopic.name} (Tier ${tier}/5)
 Curriculum position: ${profile.currentTopicIndex + 1}/${GIT_CURRICULUM.length}
 Total challenge attempts: ${profile.totalSessions}
+${conceptProgress ? `
+Sub-concepts to cover in order (introduce ONE per challenge):
+${conceptProgress}
+${nextConcept ? `Next to introduce: "${nextConcept}". Teach this with syntax + example, then build a challenge around it.` : 'All sub-concepts covered. Focus on mastery, edge cases, and harder variants.'}` : ''}
+${currentTopic.progressionSignal ? `Mastery signal — advance when the user can: ${currentTopic.progressionSignal}` : ''}
 
 ## What the User Knows
 ${topicSummary || '  (New user — no history yet)'}
@@ -159,7 +217,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
   "id": "g-<unique-8-char-id>",
   "topic": "${currentTopic.id}",
   "tier": ${tier},
-  "conceptIntroduced": "brief name of new concept if any, or null",
+  "conceptIntroduced": "EXACT string from sub-concepts list above, or null if reinforcing",
   "teachingNote": "1-3 sentence explanation of a concept IF introducing something new. null if just reinforcing.",
   "scenario": "A realistic scenario description. What the user needs to accomplish and why.",
   "initialState": {

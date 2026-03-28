@@ -16,52 +16,120 @@ const ChallengeProvider = (() => {
 
   const CURRICULUM = [
     // Tier 1 — Fundamentals
-    { id: 'basics',        name: 'Variables, types, basic operations',    tier: 1 },
-    { id: 'strings',       name: 'Strings and string methods',           tier: 1 },
-    { id: 'conditionals',  name: 'Conditionals (if/elif/else)',          tier: 1 },
-    { id: 'loops',         name: 'Loops (for, while, break, continue)',  tier: 1 },
+    { id: 'basics', name: 'Variables, types, basic operations', tier: 1,
+      concepts: ['variable assignment (=)', 'int, float, str, bool types', 'arithmetic operators (+, -, *, /, //, %, **)', 'type conversion (int(), str(), float())', 'f-strings and string concatenation', 'comparison operators (==, !=, <, >, <=, >=)'],
+      progressionSignal: 'Assign variables, do multi-step arithmetic, convert between types, and format strings without hints.' },
+    { id: 'strings', name: 'Strings and string methods', tier: 1,
+      concepts: ['indexing and slicing (s[0], s[1:3], s[::-1])', 'common methods (upper, lower, strip, replace)', 'split() and join()', 'string searching (in, find, count, startswith/endswith)', 'string immutability', 'multi-line strings and escape characters'],
+      progressionSignal: 'Use slicing, split/join, and search methods fluently. Understand string immutability.' },
+    { id: 'conditionals', name: 'Conditionals (if/elif/else)', tier: 1,
+      concepts: ['if statement with boolean condition', 'if/else branching', 'if/elif/else chains', 'logical operators (and, or, not)', 'ternary expression (x if cond else y)', 'truthy/falsy values (0, "", None, [], {})'],
+      progressionSignal: 'Write multi-branch conditionals with compound logic, use ternary expressions, and understand truthiness.' },
+    { id: 'loops', name: 'Loops (for, while, break, continue)', tier: 1,
+      concepts: ['for loop with range()', 'for loop over collections (list, string, dict)', 'while loop with condition', 'break and continue', 'enumerate() and zip()', 'nested loops'],
+      progressionSignal: 'Write for/while loops over different iterables, use break/continue, and handle nested iteration.' },
 
     // Tier 2 — Data Structures & Functions
-    { id: 'lists',         name: 'Lists and list operations',            tier: 2 },
-    { id: 'dicts',         name: 'Dictionaries',                         tier: 2 },
-    { id: 'sets_tuples',   name: 'Sets and tuples',                      tier: 2 },
-    { id: 'comprehensions',name: 'List/dict/set comprehensions',         tier: 2 },
-    { id: 'functions',     name: 'Functions, scope, default args',       tier: 2 },
+    { id: 'lists', name: 'Lists and list operations', tier: 2,
+      concepts: ['creating lists and indexing', 'slicing and negative indices', 'append, extend, insert, pop, remove', 'list as stack (append/pop)', 'sorting in-place vs sorted()', 'list unpacking and tuple basics'],
+      progressionSignal: 'Manipulate lists fluently with slicing, mutation methods, and unpacking.' },
+    { id: 'dicts', name: 'Dictionaries', tier: 2,
+      concepts: ['creating dicts and accessing keys', 'get() with default, setdefault()', 'iterating keys/values/items', 'dict comprehension basics', 'nested dicts', 'defaultdict and Counter from collections'],
+      progressionSignal: 'Build, query, and iterate dicts. Use get() defaults and basic collections helpers.' },
+    { id: 'sets_tuples', name: 'Sets and tuples', tier: 2,
+      concepts: ['set creation and membership (in)', 'set operations (union, intersection, difference)', 'set for deduplication', 'tuple creation and immutability', 'tuple unpacking and swapping', 'named tuples basics'],
+      progressionSignal: 'Use sets for dedup and membership, apply set operations, and leverage tuple unpacking.' },
+    { id: 'comprehensions', name: 'List/dict/set comprehensions', tier: 2,
+      concepts: ['basic list comprehension [expr for x in iterable]', 'comprehension with condition [x for x in list if cond]', 'dict comprehension {k: v for ...}', 'set comprehension {x for ...}', 'nested comprehension', 'generator expression (x for x in ...)'],
+      progressionSignal: 'Write list/dict/set comprehensions with filters. Recognize when to use a generator expression.' },
+    { id: 'functions', name: 'Functions, scope, default args', tier: 2,
+      concepts: ['def, parameters, return', 'default arguments and keyword arguments', '*args and **kwargs', 'scope: local, enclosing, global (LEGB)', 'lambda basics', 'docstrings'],
+      progressionSignal: 'Define functions with flexible signatures, understand scope rules, and use lambda for simple cases.' },
 
     // Tier 3 — Intermediate
-    { id: 'string_ops',    name: 'String parsing and manipulation',      tier: 3 },
-    { id: 'error_handling',name: 'Try/except, error types, raising',     tier: 3 },
-    { id: 'file_patterns', name: 'File I/O patterns (conceptual)',       tier: 3 },
-    { id: 'sorting',       name: 'Sorting, key functions, custom sorts', tier: 3 },
-    { id: 'recursion',     name: 'Recursion and recursive thinking',     tier: 3 },
+    { id: 'string_ops', name: 'String parsing and manipulation', tier: 3,
+      concepts: ['regex basics: re.search, re.findall', 'character classes and quantifiers ([a-z], +, *, ?)', 'groups and capturing (...)', 're.sub for replacement', 'parsing structured text (CSV-like, key=value)', 'string translate and maketrans'],
+      progressionSignal: 'Write basic regex patterns, extract groups, and parse structured text.' },
+    { id: 'error_handling', name: 'Try/except, error types, raising', tier: 3,
+      concepts: ['try/except basic syntax', 'catching specific exceptions (ValueError, TypeError, KeyError)', 'else and finally clauses', 'raise and custom exceptions', 'exception chaining (from)', 'using exceptions for flow control vs LBYL'],
+      progressionSignal: 'Handle specific exceptions, define custom exceptions, and choose between EAFP and LBYL.' },
+    { id: 'file_io', name: 'File I/O patterns', tier: 3,
+      concepts: ['open() with mode strings (r, w, a, rb)', 'with statement for auto-close', 'reading: read(), readline(), readlines(), iteration', 'writing: write(), writelines()', 'os.path and pathlib basics', 'CSV and JSON reading/writing'],
+      progressionSignal: 'Read and write files safely with context managers. Parse CSV and JSON.' },
+    { id: 'sorting', name: 'Sorting, key functions, custom sorts', tier: 3,
+      concepts: ['sorted() vs list.sort()', 'key= parameter with lambda', 'operator.itemgetter and attrgetter', 'reverse sorting', 'sorting by multiple criteria (tuple key)', 'stable sort behavior'],
+      progressionSignal: 'Sort complex data by custom keys, chain sort criteria, and leverage sort stability.' },
+    { id: 'recursion', name: 'Recursion and recursive thinking', tier: 3,
+      concepts: ['base case and recursive case', 'recursive functions (factorial, fibonacci)', 'recursion on data structures (nested lists, trees)', 'recursion vs iteration tradeoffs', 'memoization with functools.lru_cache', 'recursive backtracking basics'],
+      progressionSignal: 'Write recursive solutions with clear base cases. Apply memoization. Convert between recursive and iterative.' },
 
     // Tier 4 — Advanced Concepts
-    { id: 'classes',       name: 'Classes, OOP basics, dunder methods',  tier: 4 },
-    { id: 'generators',    name: 'Generators, iterators, yield',         tier: 4 },
-    { id: 'decorators',    name: 'Decorators and higher-order functions',tier: 4 },
-    { id: 'data_structs',  name: 'Stacks, queues, linked structures',    tier: 4 },
-    { id: 'algorithms',    name: 'Two pointers, sliding window, binary search', tier: 4 },
+    { id: 'classes', name: 'Classes, OOP basics, dunder methods', tier: 4,
+      concepts: ['class definition, __init__, self', 'instance vs class attributes', 'methods: instance, @classmethod, @staticmethod', '__repr__ and __str__', 'operator overloading (__add__, __eq__, __lt__)', 'inheritance and super()'],
+      progressionSignal: 'Design classes with proper init, implement dunder methods for comparison/display, and use inheritance.' },
+    { id: 'generators', name: 'Generators, iterators, yield', tier: 4,
+      concepts: ['yield keyword and generator functions', 'generator as lazy iterator', 'next() and StopIteration', 'generator expressions vs list comprehensions', 'yield from for delegation', 'send() and generator coroutines'],
+      progressionSignal: 'Write generators for lazy sequences, chain with yield from, and understand memory advantages.' },
+    { id: 'decorators', name: 'Decorators and higher-order functions', tier: 4,
+      concepts: ['functions as first-class objects', 'closures and free variables', 'basic decorator pattern (wrapper function)', '@decorator syntax and functools.wraps', 'decorators with arguments', 'chaining multiple decorators'],
+      progressionSignal: 'Write decorators with and without arguments, use wraps, and chain decorators.' },
+    { id: 'data_structs', name: 'Stacks, queues, linked structures', tier: 4,
+      concepts: ['stack with list (append/pop)', 'queue with collections.deque', 'priority queue with heapq', 'linked list concept (node with next pointer)', 'hash map internals (how dict works)', 'choosing the right data structure'],
+      progressionSignal: 'Implement stack/queue/priority queue operations. Understand when to use each structure.' },
+    { id: 'algorithms', name: 'Two pointers, sliding window, binary search', tier: 4,
+      concepts: ['two-pointer technique (sorted array, palindrome)', 'sliding window (fixed and variable size)', 'binary search on sorted data', 'bisect module', 'algorithm complexity analysis (Big-O basics)', 'greedy algorithm basics'],
+      progressionSignal: 'Apply two-pointer, sliding window, and binary search to novel problems. Reason about time complexity.' },
 
     // Tier 5 — Expert Algorithms
-    { id: 'dp',            name: 'Dynamic programming',                  tier: 5 },
-    { id: 'graphs',        name: 'Graph traversal (BFS, DFS)',           tier: 5 },
-    { id: 'advanced',      name: 'Context managers, metaclasses, advanced patterns', tier: 5 },
-    { id: 'functional',    name: 'Functional programming patterns',      tier: 5 },
-    { id: 'concurrency',   name: 'Threading and async basics',           tier: 5 },
+    { id: 'dp', name: 'Dynamic programming', tier: 5,
+      concepts: ['overlapping subproblems and optimal substructure', 'top-down memoization', 'bottom-up tabulation', 'classic 1D problems (climbing stairs, coin change)', '2D DP (grid paths, edit distance)', 'state transition design'],
+      progressionSignal: 'Identify DP problems, choose memoization vs tabulation, and design state transitions.' },
+    { id: 'graphs', name: 'Graph traversal (BFS, DFS)', tier: 5,
+      concepts: ['adjacency list and adjacency matrix representations', 'BFS with deque (level-order, shortest path)', 'DFS recursive and iterative', 'cycle detection', 'topological sort', 'connected components'],
+      progressionSignal: 'Represent graphs, implement BFS/DFS, detect cycles, and perform topological sort.' },
+    { id: 'advanced_python', name: 'Context managers, metaclasses, advanced patterns', tier: 5,
+      concepts: ['__enter__ and __exit__ protocol', 'contextlib.contextmanager decorator', 'metaclass basics (__new__ vs __init__)', 'descriptors (__get__, __set__, __delete__)', '__slots__ for memory optimization', 'abstract base classes (ABC, abstractmethod)'],
+      progressionSignal: 'Write context managers, understand the descriptor protocol, and use ABCs for interfaces.' },
+    { id: 'functional', name: 'Functional programming patterns', tier: 5,
+      concepts: ['map, filter, reduce', 'functools.partial and partialmethod', 'function composition patterns', 'immutability and pure functions', 'itertools (chain, product, combinations, groupby)', 'operator module for functional-style code'],
+      progressionSignal: 'Apply map/filter/reduce, use itertools fluently, and compose functions.' },
+    { id: 'concurrency', name: 'Threading and async basics', tier: 5,
+      concepts: ['threading.Thread and thread safety', 'GIL and its implications', 'locks and synchronization primitives', 'asyncio event loop basics', 'async/await syntax', 'concurrent.futures (ThreadPoolExecutor, ProcessPoolExecutor)'],
+      progressionSignal: 'Write threaded and async code. Understand GIL limitations and when to use processes vs threads.' },
 
     // Tier 6 — Multi-function & System Design
-    { id: 'composition',     name: 'Multi-function composition',           tier: 6 },
-    { id: 'testing',         name: 'Testing patterns (unittest, pytest)',   tier: 6 },
-    { id: 'api_patterns',    name: 'API design patterns',                  tier: 6 },
-    { id: 'data_pipelines',  name: 'Data transformation pipelines',        tier: 6 },
-    { id: 'design_patterns', name: 'Design patterns (strategy, observer)', tier: 6 },
+    { id: 'composition', name: 'Multi-function composition', tier: 6,
+      concepts: ['breaking problems into small functions', 'function pipelines (output of one feeds next)', 'dependency injection basics', 'callback and hook patterns', 'separation of concerns in function design', 'building a mini-framework from composed functions'],
+      progressionSignal: 'Decompose complex problems into clean function pipelines with clear interfaces.' },
+    { id: 'testing', name: 'Testing patterns (unittest, pytest)', tier: 6,
+      concepts: ['unittest.TestCase basics (setUp, tearDown)', 'pytest functions and assertions', 'parametrize for multiple test cases', 'mocking with unittest.mock (patch, MagicMock)', 'fixtures and test organization', 'TDD workflow: red-green-refactor'],
+      progressionSignal: 'Write unit tests with pytest, mock external dependencies, and follow TDD rhythm.' },
+    { id: 'api_patterns', name: 'API design patterns', tier: 6,
+      concepts: ['REST concepts (endpoints, methods, status codes)', 'request/response pattern with error handling', 'pagination and rate limiting', 'retry with exponential backoff', 'data validation and serialization', 'API client class design'],
+      progressionSignal: 'Design API client code with proper error handling, retry logic, and pagination.' },
+    { id: 'data_pipelines', name: 'Data transformation pipelines', tier: 6,
+      concepts: ['ETL pattern (extract, transform, load)', 'generator-based streaming pipelines', 'data validation and cleaning steps', 'batch processing vs streaming', 'error handling in pipelines (skip, retry, dead-letter)', 'pipeline composition and reuse'],
+      progressionSignal: 'Build multi-stage data pipelines with generators, validation, and error recovery.' },
+    { id: 'design_patterns', name: 'Design patterns (strategy, observer)', tier: 6,
+      concepts: ['strategy pattern (interchangeable algorithms)', 'observer pattern (pub/sub, event-driven)', 'factory pattern (object creation)', 'singleton (module-level instance)', 'adapter pattern (interface compatibility)', 'when NOT to use patterns (simplicity first)'],
+      progressionSignal: 'Recognize when patterns apply, implement strategy/observer/factory, and know when YAGNI wins.' },
 
     // Tier 7 — Code Review & Architecture
-    { id: 'code_review_bugs',    name: 'Code review: finding bugs',              tier: 7 },
-    { id: 'code_review_perf',    name: 'Code review: performance issues',        tier: 7 },
-    { id: 'code_review_style',   name: 'Code review: style and best practices',  tier: 7 },
-    { id: 'refactoring',         name: 'Refactoring legacy code',                tier: 7 },
-    { id: 'architecture',        name: 'Architectural patterns',                 tier: 7 }
+    { id: 'code_review_bugs', name: 'Code review: finding bugs', tier: 7,
+      concepts: ['off-by-one errors', 'null/None reference bugs', 'mutable default argument trap', 'race conditions in shared state', 'logic errors in boolean expressions', 'boundary condition failures'],
+      progressionSignal: 'Spot logic errors, off-by-ones, and subtle Python gotchas in unfamiliar code.' },
+    { id: 'code_review_perf', name: 'Code review: performance issues', tier: 7,
+      concepts: ['O(n^2) hidden in nested loops', 'repeated work that should be cached', 'string concatenation in loops (use join)', 'unnecessary list copies', 'N+1 query patterns', 'choosing wrong data structure (list vs set for lookup)'],
+      progressionSignal: 'Identify performance anti-patterns and suggest concrete fixes with complexity analysis.' },
+    { id: 'code_review_style', name: 'Code review: style and best practices', tier: 7,
+      concepts: ['PEP 8 violations and naming conventions', 'dead code and unused imports', 'overly complex conditionals (simplify with early return)', 'magic numbers and missing constants', 'unpythonic patterns (C-style loops, manual index tracking)', 'missing error handling at boundaries'],
+      progressionSignal: 'Identify style issues, unpythonic code, and missing safeguards. Suggest idiomatic alternatives.' },
+    { id: 'refactoring', name: 'Refactoring legacy code', tier: 7,
+      concepts: ['extract method/function', 'replace magic numbers with named constants', 'simplify conditionals (guard clauses, early return)', 'remove duplication (DRY)', 'improve naming for clarity', 'break god functions into cohesive units'],
+      progressionSignal: 'Apply systematic refactoring techniques to messy code while preserving behavior.' },
+    { id: 'architecture', name: 'Architectural patterns', tier: 7,
+      concepts: ['separation of concerns (layers)', 'coupling vs cohesion', 'dependency inversion principle', 'repository pattern for data access', 'service layer pattern', 'SOLID principles overview'],
+      progressionSignal: 'Evaluate code architecture, identify coupling issues, and suggest structural improvements.' }
   ];
 
   // ── Default learning profile ────────────────────────────────────────────
@@ -109,6 +177,14 @@ const ChallengeProvider = (() => {
       ? SpacedRepetition.buildReviewContext(profile, CURRICULUM)
       : '';
 
+    // Sub-concept coverage for current topic
+    const topicConcepts = currentTopic.concepts || [];
+    const introduced = profile.conceptsIntroduced || [];
+    const nextConcept = topicConcepts.find(c => !introduced.includes(c));
+    const conceptProgress = topicConcepts.length > 0
+      ? topicConcepts.map(c => `  ${introduced.includes(c) ? '✓' : '○'} ${c}`).join('\n')
+      : '';
+
     return `You are a Python programming mentor embedded in a browser extension that blocks distracting websites. The user must solve your challenge to access a site they've blocked. Your job is to genuinely teach them Python — not just test them.
 
 ## Your Teaching Style
@@ -119,10 +195,14 @@ const ChallengeProvider = (() => {
 - When reinforcing, just give the problem.
 - Gradually increase complexity within a topic before moving to the next.
 
-## Current Curriculum Position
-Topic: ${currentTopic.name} (Tier ${tier}/7)
+## Current Topic: ${currentTopic.name} (Tier ${tier}/7)
 Curriculum position: ${profile.currentTopicIndex + 1}/${CURRICULUM.length}
 Total challenge attempts: ${profile.totalSessions}
+${conceptProgress ? `
+Sub-concepts to cover in order (introduce ONE per challenge):
+${conceptProgress}
+${nextConcept ? `Next to introduce: "${nextConcept}". Teach this with syntax + example, then build a challenge around it.` : 'All sub-concepts covered. Focus on mastery, edge cases, and harder variants.'}` : ''}
+${currentTopic.progressionSignal ? `Mastery signal — advance when the user can: ${currentTopic.progressionSignal}` : ''}
 
 ## What the User Knows
 ${topicSummary || '  (New user — no history yet)'}
@@ -160,7 +240,7 @@ Respond with ONLY valid JSON for code review:
   "id": "m-<unique-8-char-id>",
   "type": "code_review",
   "topic": "${currentTopic.id}",
-  "conceptIntroduced": "brief name of concept or null",
+  "conceptIntroduced": "EXACT string from sub-concepts list above, or null if reinforcing",
   "teachingNote": "explanation if new concept, null if reinforcing",
   "prompt": "What issues do you see in this code? Explain what's wrong and how to fix it.",
   "codeToReview": "def process(data):\\n    ...",
@@ -175,7 +255,7 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
 {
   "id": "m-<unique-8-char-id>",
   "topic": "${currentTopic.id}",
-  "conceptIntroduced": "brief name of new concept if any, or null",
+  "conceptIntroduced": "EXACT string from sub-concepts list above, or null if reinforcing",
   "teachingNote": "1-3 sentence explanation of a concept IF introducing something new. null if just reinforcing.",
   "prompt": "Clear problem statement. Use backticks for code references.",
   "functionName": "function_name",

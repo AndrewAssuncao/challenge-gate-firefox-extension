@@ -25,7 +25,7 @@ const KNOWLEDGE_GRAPH = {
     { from: 'py:dicts', to: 'term:environment', label: 'Key-value mappings' },
 
     // ── Terminal ↔ Python (Tier 2-3: Intermediate) ───────────────────
-    { from: 'term:redirection', to: 'py:file_patterns', label: 'I/O concepts' },
+    { from: 'term:redirection', to: 'py:file_io', label: 'I/O concepts' },
     { from: 'py:sorting', to: 'term:text_processing', label: 'Sort & filter' },
     { from: 'py:error_handling', to: 'term:environment', label: 'Debugging with env' },
     { from: 'py:recursion', to: 'term:remove_find', label: 'Recursive traversal' },
@@ -58,7 +58,10 @@ const KNOWLEDGE_GRAPH = {
 
     // ── Git ↔ Terminal (reverse direction for some) ──────────────────
     { from: 'git:git_log', to: 'term:grep_search', label: 'Searching history' },
-    { from: 'git:git_stash', to: 'term:aliases_history', label: 'Workflow shortcuts' }
+    { from: 'git:git_stash', to: 'term:aliases_history', label: 'Workflow shortcuts' },
+    { from: 'git:git_remote', to: 'term:ssh', label: 'Remote access' },
+    { from: 'git:git_remote', to: 'term:curl_networking', label: 'Network protocols' },
+    { from: 'git:git_diff', to: 'py:string_ops', label: 'Text comparison' }
   ]
 };
 
@@ -81,7 +84,7 @@ function buildKnowledgeNodes(pythonProfile, terminalProfile, gitProfile) {
     { id: 'functions', name: 'Functions', tier: 2 },
     { id: 'string_ops', name: 'String ops', tier: 3 },
     { id: 'error_handling', name: 'Error handling', tier: 3 },
-    { id: 'file_patterns', name: 'File I/O', tier: 3 },
+    { id: 'file_io', name: 'File I/O', tier: 3 },
     { id: 'sorting', name: 'Sorting', tier: 3 },
     { id: 'recursion', name: 'Recursion', tier: 3 },
     { id: 'classes', name: 'Classes & OOP', tier: 4 },
@@ -91,7 +94,7 @@ function buildKnowledgeNodes(pythonProfile, terminalProfile, gitProfile) {
     { id: 'algorithms', name: 'Algorithms', tier: 4 },
     { id: 'dp', name: 'Dynamic programming', tier: 5 },
     { id: 'graphs', name: 'Graph traversal', tier: 5 },
-    { id: 'advanced', name: 'Advanced patterns', tier: 5 },
+    { id: 'advanced_python', name: 'Advanced patterns', tier: 5 },
     { id: 'functional', name: 'Functional programming', tier: 5 },
     { id: 'concurrency', name: 'Concurrency', tier: 5 },
     { id: 'composition', name: 'Multi-function', tier: 6 },
@@ -107,10 +110,10 @@ function buildKnowledgeNodes(pythonProfile, terminalProfile, gitProfile) {
   ];
 
   const TERM_TOPICS = [
+    { id: 'paths', name: 'Paths', tier: 1 },
     { id: 'navigation', name: 'Navigation', tier: 1 },
     { id: 'file_creation', name: 'File creation', tier: 1 },
     { id: 'file_reading', name: 'File reading', tier: 1 },
-    { id: 'paths', name: 'Paths', tier: 1 },
     { id: 'help_man', name: 'Help & man', tier: 1 },
     { id: 'copy_move', name: 'Copy & move', tier: 2 },
     { id: 'remove_find', name: 'Remove & find', tier: 2 },
@@ -139,10 +142,13 @@ function buildKnowledgeNodes(pythonProfile, terminalProfile, gitProfile) {
     { id: 'git_staging', name: 'Staging', tier: 1 },
     { id: 'git_commit', name: 'Commits', tier: 1 },
     { id: 'git_log', name: 'Log & history', tier: 1 },
+    { id: 'git_remote', name: 'Remotes', tier: 2 },
     { id: 'git_branch_create', name: 'Branches', tier: 2 },
     { id: 'git_checkout', name: 'Checkout', tier: 2 },
     { id: 'git_merge_ff', name: 'FF merge', tier: 2 },
     { id: 'git_merge_3way', name: '3-way merge', tier: 2 },
+    { id: 'git_merge_conflicts', name: 'Conflicts', tier: 3 },
+    { id: 'git_diff', name: 'Diff', tier: 3 },
     { id: 'git_rebase', name: 'Rebase', tier: 3 },
     { id: 'git_cherry_pick', name: 'Cherry-pick', tier: 3 },
     { id: 'git_stash', name: 'Stash', tier: 3 },
@@ -151,7 +157,6 @@ function buildKnowledgeNodes(pythonProfile, terminalProfile, gitProfile) {
     { id: 'git_bisect', name: 'Bisect', tier: 4 },
     { id: 'git_reflog', name: 'Reflog', tier: 4 },
     { id: 'git_tags', name: 'Tags', tier: 4 },
-    { id: 'git_merge_conflicts', name: 'Conflicts', tier: 5 },
     { id: 'git_workflows', name: 'Workflows', tier: 5 },
     { id: 'git_advanced_rebase', name: 'Adv. rebase', tier: 5 },
     { id: 'git_submodules', name: 'Submodules', tier: 5 }
