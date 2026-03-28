@@ -2436,9 +2436,19 @@ const TerminalChallenge = (() => {
       appendOutput(`<span class="term-after-solve">${escapeHtml(challenge.afterSolve)}</span>`);
     }
 
-    // Update profile (with spaced repetition context)
+    // Build compact summary for Claude's context on next challenge
     const struggled = commandsExecuted.length > 10;
-    TerminalChallengeProvider.updateProfileAfterChallenge(profile, challenge, true, challengeSource, struggled, helpUsedThisChallenge);
+    const cmdCount = commandsExecuted.length;
+    const solveTimeSec = Math.round((Date.now() - challengeStartTime) / 1000);
+    const parts = [];
+    if (cmdCount <= 5 && !helpUsedThisChallenge) parts.push('clean');
+    if (struggled) parts.push('struggled');
+    if (helpUsedThisChallenge) parts.push('used help');
+    parts.push(`${solveTimeSec}s`);
+    const summary = `PASSED in ${cmdCount} commands (${parts.join(', ')})`;
+
+    // Update profile (with spaced repetition context)
+    TerminalChallengeProvider.updateProfileAfterChallenge(profile, challenge, true, challengeSource, struggled, helpUsedThisChallenge, summary);
     await browser.runtime.sendMessage({ type: 'saveTerminalLearningProfile', profile });
 
     // Log to daily challenge log

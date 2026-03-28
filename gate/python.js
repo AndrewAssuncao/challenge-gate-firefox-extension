@@ -500,9 +500,18 @@ Respond with ONLY valid JSON:
     if (challengeResolved) return;
     challengeResolved = true;
 
-    // Update learning profile (with spaced repetition context)
+    // Build compact summary for Claude's context on next challenge
     const struggled = failedBeforePass > 0;
-    profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, true, challengeSource, struggled, helpUsedThisChallenge);
+    const solveTimeSec = Math.round((Date.now() - challengeStartTime) / 1000);
+    const parts = [];
+    if (!struggled && !helpUsedThisChallenge) parts.push('clean');
+    if (failedBeforePass > 0) parts.push(`${failedBeforePass} failed runs`);
+    if (helpUsedThisChallenge) parts.push('used help');
+    parts.push(`${solveTimeSec}s`);
+    const summary = `PASSED (${parts.join(', ')})`;
+
+    // Update learning profile (with spaced repetition context)
+    profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, true, challengeSource, struggled, helpUsedThisChallenge, summary);
     await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
 
     // Log to daily challenge log
@@ -531,8 +540,14 @@ Respond with ONLY valid JSON:
     // Track failed runs for help-bypass gating
     failedRunsSinceHelp++;
 
+    // Build compact summary of what went wrong
+    const errorBrief = (lastErrorOutput || 'no output').split('\n')[0].slice(0, 120);
+    const parts = [`${failedBeforePass} failed runs`];
+    if (helpUsedThisChallenge) parts.push('used help');
+    const summary = `FAILED — ${errorBrief}. ${parts.join(', ')}`;
+
     // Record failure in learning profile (no gate unlock)
-    profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource, false, helpUsedThisChallenge);
+    profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource, false, helpUsedThisChallenge, summary);
     await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
 
     // Log failed attempt so heatmap shows engagement
@@ -640,7 +655,8 @@ ${formatDiagnosticsForHelp(lastRunDiagnostics)}
 
     // Record a skip (counts as a fail for progression)
     if (challenge) {
-      profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource, false, helpUsedThisChallenge);
+      const skipSummary = `SKIPPED after ${failedBeforePass} failed runs${helpUsedThisChallenge ? ', used help' : ''}`;
+      profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource, false, helpUsedThisChallenge, skipSummary);
       await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
     }
     // Re-init to get a new challenge

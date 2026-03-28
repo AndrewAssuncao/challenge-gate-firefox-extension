@@ -126,7 +126,7 @@ const GitChallengeProvider = (() => {
       }).join('\n');
 
     const recentSummary = profile.recentChallenges.slice(-5)
-      .map(c => `  - ${c.topic}: ${c.passed ? 'passed' : 'failed'}`)
+      .map(c => `  - ${c.topic}: ${c.summary || (c.passed ? 'passed' : 'failed')}`)
       .join('\n');
 
     const conceptsList = profile.conceptsIntroduced.slice(-20).join(', ');
@@ -415,7 +415,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
       });
   }
 
-  function updateProfileAfterChallenge(profile, challenge, passed, source, struggled, usedHelp) {
+  function updateProfileAfterChallenge(profile, challenge, passed, source, struggled, usedHelp, summary) {
     const topicId = challenge.topic || 'unknown';
 
     if (typeof SpacedRepetition !== 'undefined') SpacedRepetition.migrateProfile(profile);
@@ -442,6 +442,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
       topic: topicId,
       passed,
       source,
+      summary: summary || null,
       timestamp: Date.now()
     });
     if (profile.recentChallenges.length > 15) {
