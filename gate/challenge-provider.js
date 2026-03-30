@@ -149,7 +149,14 @@ const ChallengeProvider = (() => {
 
   // ── Build mentor prompt ─────────────────────────────────────────────────
 
-  function buildMentorPrompt(profile, isSettingsGate, crossDisciplineContext) {
+  const DIFFICULTY_INSTRUCTIONS = {
+    relaxed: 'Generate a quick, straightforward challenge. Single concept, minimal edge cases. The user wants a fast gate (~30 seconds).',
+    normal: 'Generate an appropriately challenging exercise for the current level (~1-2 minutes).',
+    hard: 'Generate a challenging exercise. Include edge cases and require deeper thinking (~3-5 minutes).',
+    intense: 'Generate a demanding challenge. Combine multiple concepts, include tricky edge cases, require demonstrated mastery (~5-10 minutes).'
+  };
+
+  function buildMentorPrompt(profile, isSettingsGate, crossDisciplineContext, scheduledDifficulty) {
     const currentTopic = CURRICULUM[profile.currentTopicIndex] || CURRICULUM[0];
     const tier = currentTopic.tier;
 
@@ -170,7 +177,9 @@ const ChallengeProvider = (() => {
     const conceptsList = profile.conceptsIntroduced.slice(-20).join(', ');
     const weakList = profile.weakAreas.join(', ');
 
-    const difficulty = isSettingsGate ? 'harder than usual (this is a settings-gate challenge)' : 'appropriate for the current level';
+    const difficulty = isSettingsGate
+      ? 'harder than usual (this is a settings-gate challenge)'
+      : (DIFFICULTY_INSTRUCTIONS[scheduledDifficulty] || DIFFICULTY_INSTRUCTIONS.normal);
 
     // Spaced repetition context
     const reviewContext = (typeof SpacedRepetition !== 'undefined')
@@ -487,7 +496,7 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
 
   // ── Generate via Claude API (called through background script) ──────────
 
-  async function generateFromClaude(profile, isSettingsGate) {
+  async function generateFromClaude(profile, isSettingsGate, scheduledDifficulty) {
     const currentTopic = CURRICULUM[profile.currentTopicIndex] || CURRICULUM[0];
 
     // Fetch cross-discipline context
@@ -504,7 +513,7 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
       } catch {}
     }
 
-    const prompt = buildMentorPrompt(profile, isSettingsGate, crossCtx);
+    const prompt = buildMentorPrompt(profile, isSettingsGate, crossCtx, scheduledDifficulty);
     const useOpus = currentTopic.tier >= 5;
 
     try {
@@ -699,9 +708,9 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
 
   // ── Public API ──────────────────────────────────────────────────────────
 
-  async function getChallenge(profile, isSettingsGate) {
+  async function getChallenge(profile, isSettingsGate, scheduledDifficulty) {
     // Try Claude first
-    const aiChallenge = await generateFromClaude(profile, isSettingsGate);
+    const aiChallenge = await generateFromClaude(profile, isSettingsGate, scheduledDifficulty);
     if (aiChallenge) {
       return { challenge: aiChallenge, source: 'claude' };
     }

@@ -83,8 +83,10 @@ const PythonChallenge = (() => {
     updateHighlight();
     updateLineNumbers();
 
-    // Get challenge from mentor
-    const result = await ChallengeProvider.getChallenge(profile, config.isSettingsGate);
+    // Get scheduled difficulty, then generate challenge
+    let scheduledDifficulty = 'normal';
+    try { scheduledDifficulty = (await browser.runtime.sendMessage({ type: 'getCurrentDifficulty' })).difficulty; } catch {}
+    const result = await ChallengeProvider.getChallenge(profile, config.isSettingsGate, scheduledDifficulty);
     challenge = result.challenge;
     challengeSource = result.source;
 

@@ -1048,10 +1048,77 @@ const Dashboard = (() => {
     els.settingSettingsWpm.value = s.settingsTypingWpm || 100;
     els.settingApiKey.value = s.anthropicApiKey || '';
 
-    // Difficulty schedule
+    // Difficulty schedule — sliders use numeric 0-3
     const schedule = s.difficultySchedule || {};
-    if (els.settingDifficultyWeekday) els.settingDifficultyWeekday.value = schedule.weekdayDefault || 'normal';
-    if (els.settingDifficultyWeekend) els.settingDifficultyWeekend.value = schedule.weekendDefault || 'hard';
+    const DIFF_LEVELS = ['relaxed', 'normal', 'hard', 'intense'];
+    const DIFF_TIMES = ['~30 sec', '~1-2 min', '~3-5 min', '~5-10 min'];
+
+    const weekdayIdx = Math.max(0, DIFF_LEVELS.indexOf(schedule.weekdayDefault || 'normal'));
+    const weekendIdx = Math.max(0, DIFF_LEVELS.indexOf(schedule.weekendDefault || 'hard'));
+
+    if (els.settingDifficultyWeekday) {
+      els.settingDifficultyWeekday.value = weekdayIdx;
+      const weekdayTimeEl = document.getElementById('weekday-time-est');
+      if (weekdayTimeEl) weekdayTimeEl.textContent = DIFF_TIMES[weekdayIdx];
+    }
+    if (els.settingDifficultyWeekend) {
+      els.settingDifficultyWeekend.value = weekendIdx;
+      const weekendTimeEl = document.getElementById('weekend-time-est');
+      if (weekendTimeEl) weekendTimeEl.textContent = DIFF_TIMES[weekendIdx];
+    }
+
+    // Render time overrides
+    renderTimeOverrides(schedule.timeRanges || []);
+  }
+
+  function renderTimeOverrides(ranges) {
+    const list = document.getElementById('time-overrides-list');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!ranges || ranges.length === 0) return;
+
+    const DIFF_LEVELS = ['relaxed', 'normal', 'hard', 'intense'];
+    for (let i = 0; i < ranges.length; i++) {
+      const r = ranges[i];
+      const row = document.createElement('div');
+      row.className = 'time-override-row';
+      row.innerHTML = `
+        <input type="time" value="${esc(r.start || '09:00')}" data-idx="${i}" data-field="start">
+        <span class="override-sep">–</span>
+        <input type="time" value="${esc(r.end || '17:00')}" data-idx="${i}" data-field="end">
+        <select data-idx="${i}" data-field="difficulty">
+          ${DIFF_LEVELS.map(l => `<option value="${l}"${l === r.difficulty ? ' selected' : ''}>${l.charAt(0).toUpperCase() + l.slice(1)}</option>`).join('')}
+        </select>
+        <button class="override-remove" data-idx="${i}">✕</button>
+      `;
+      list.appendChild(row);
+    }
+  }
+
+  function collectDifficultySchedule() {
+    const DIFF_LEVELS = ['relaxed', 'normal', 'hard', 'intense'];
+    const weekdayIdx = els.settingDifficultyWeekday ? parseInt(els.settingDifficultyWeekday.value) : 1;
+    const weekendIdx = els.settingDifficultyWeekend ? parseInt(els.settingDifficultyWeekend.value) : 2;
+
+    // Collect time overrides from DOM
+    const timeRanges = [];
+    const list = document.getElementById('time-overrides-list');
+    if (list) {
+      for (const row of list.querySelectorAll('.time-override-row')) {
+        const start = row.querySelector('input[data-field="start"]')?.value;
+        const end = row.querySelector('input[data-field="end"]')?.value;
+        const difficulty = row.querySelector('select[data-field="difficulty"]')?.value;
+        if (start && end && difficulty) {
+          timeRanges.push({ start, end, difficulty });
+        }
+      }
+    }
+
+    return {
+      weekdayDefault: DIFF_LEVELS[weekdayIdx] || 'normal',
+      weekendDefault: DIFF_LEVELS[weekendIdx] || 'hard',
+      timeRanges
+    };
   }
 
   function bindEvents() {
@@ -1111,6 +1178,44 @@ const Dashboard = (() => {
 
     // Save settings
     els.saveSettingsBtn.addEventListener('click', saveSettings);
+
+    // Difficulty slider time estimates
+    const DIFF_TIMES = ['~30 sec', '~1-2 min', '~3-5 min', '~5-10 min'];
+    if (els.settingDifficultyWeekday) {
+      els.settingDifficultyWeekday.addEventListener('input', () => {
+        const el = document.getElementById('weekday-time-est');
+        if (el) el.textContent = DIFF_TIMES[els.settingDifficultyWeekday.value] || '';
+      });
+    }
+    if (els.settingDifficultyWeekend) {
+      els.settingDifficultyWeekend.addEventListener('input', () => {
+        const el = document.getElementById('weekend-time-est');
+        if (el) el.textContent = DIFF_TIMES[els.settingDifficultyWeekend.value] || '';
+      });
+    }
+
+    // Time override: add
+    const addOverrideBtn = document.getElementById('add-time-override');
+    if (addOverrideBtn) {
+      addOverrideBtn.addEventListener('click', () => {
+        const schedule = collectDifficultySchedule();
+        schedule.timeRanges.push({ start: '09:00', end: '17:00', difficulty: 'hard' });
+        renderTimeOverrides(schedule.timeRanges);
+      });
+    }
+
+    // Time override: remove (delegated)
+    const overrideList = document.getElementById('time-overrides-list');
+    if (overrideList) {
+      overrideList.addEventListener('click', (e) => {
+        if (e.target.classList.contains('override-remove')) {
+          const idx = parseInt(e.target.dataset.idx);
+          const schedule = collectDifficultySchedule();
+          schedule.timeRanges.splice(idx, 1);
+          renderTimeOverrides(schedule.timeRanges);
+        }
+      });
+    }
 
     // Edit modal
     els.editCancelBtn.addEventListener('click', closeEditModal);
@@ -1236,11 +1341,7 @@ const Dashboard = (() => {
       typingAccuracyThreshold: parseInt(els.settingTypingAcc.value) || 95,
       settingsTypingWpm: parseInt(els.settingSettingsWpm.value) || 100,
       anthropicApiKey: els.settingApiKey.value.trim(),
-      difficultySchedule: {
-        weekdayDefault: els.settingDifficultyWeekday ? els.settingDifficultyWeekday.value : 'normal',
-        weekendDefault: els.settingDifficultyWeekend ? els.settingDifficultyWeekend.value : 'hard',
-        timeRanges: (state.settings.difficultySchedule || {}).timeRanges || []
-      }
+      difficultySchedule: collectDifficultySchedule()
     };
     await browser.runtime.sendMessage({ type: 'updateSettings', settings: s });
     await loadState();

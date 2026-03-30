@@ -612,6 +612,140 @@ button.toggle-btn.active {
   border-bottom: 1px solid var(--border);
 }
 
+/* ── Difficulty Sliders ─────────────────────────────────────────────── */
+
+.difficulty-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.difficulty-slider-row > label {
+  width: 80px;
+  font-size: 13px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.difficulty-slider-wrap {
+  flex: 1;
+  min-width: 180px;
+}
+
+.difficulty-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  outline: none;
+  margin-bottom: 4px;
+}
+
+.difficulty-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 4px rgba(74, 126, 255, 0.4);
+}
+
+.difficulty-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid var(--bg);
+}
+
+.difficulty-labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  padding: 0 2px;
+}
+
+.difficulty-time {
+  width: 72px;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.time-overrides-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+#time-overrides-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.time-override-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.time-override-row input[type="time"] {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 3px 6px;
+}
+
+.time-override-row select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 3px 6px;
+}
+
+.time-override-row .override-sep {
+  color: var(--text-muted);
+}
+
+.time-override-row .override-remove {
+  all: unset;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 0 4px;
+  margin-left: auto;
+}
+
+.time-override-row .override-remove:hover {
+  color: var(--error);
+}
+
 .setting-hint {
   font-size: 11px;
   color: var(--text-muted);

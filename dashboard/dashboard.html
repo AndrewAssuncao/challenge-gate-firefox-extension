@@ -223,25 +223,34 @@
 
           <div class="settings-group">
             <div class="settings-group-label">Difficulty Schedule</div>
-            <div class="setting-row">
-              <label for="setting-difficulty-weekday">Weekday default</label>
-              <select id="setting-difficulty-weekday">
-                <option value="easy">Easy</option>
-                <option value="normal" selected>Normal</option>
-                <option value="hard">Hard</option>
-                <option value="extreme">Extreme</option>
-              </select>
+
+            <div class="difficulty-slider-row">
+              <label>Weekdays</label>
+              <div class="difficulty-slider-wrap">
+                <input type="range" id="setting-difficulty-weekday" min="0" max="3" step="1" value="1" class="difficulty-slider">
+                <div class="difficulty-labels">
+                  <span>Relaxed</span><span>Normal</span><span>Hard</span><span>Intense</span>
+                </div>
+              </div>
+              <span class="difficulty-time" id="weekday-time-est">~1-2 min</span>
             </div>
-            <div class="setting-row">
-              <label for="setting-difficulty-weekend">Weekend default</label>
-              <select id="setting-difficulty-weekend">
-                <option value="easy">Easy</option>
-                <option value="normal">Normal</option>
-                <option value="hard" selected>Hard</option>
-                <option value="extreme">Extreme</option>
-              </select>
+
+            <div class="difficulty-slider-row">
+              <label>Weekends</label>
+              <div class="difficulty-slider-wrap">
+                <input type="range" id="setting-difficulty-weekend" min="0" max="3" step="1" value="2" class="difficulty-slider">
+                <div class="difficulty-labels">
+                  <span>Relaxed</span><span>Normal</span><span>Hard</span><span>Intense</span>
+                </div>
+              </div>
+              <span class="difficulty-time" id="weekend-time-est">~3-5 min</span>
             </div>
-            <div class="setting-hint">Harder difficulty generates tougher challenges. Weekends default to hard — you have more time then.</div>
+
+            <div class="time-overrides-header">
+              <span class="setting-hint">Time overrides take priority over day defaults</span>
+              <button id="add-time-override" class="dash-btn dash-btn-sm">+ Add</button>
+            </div>
+            <div id="time-overrides-list"></div>
           </div>
 
           <div class="settings-group">

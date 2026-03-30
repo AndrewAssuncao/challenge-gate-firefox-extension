@@ -109,7 +109,14 @@ const GitChallengeProvider = (() => {
 
   // ── Build mentor prompt ───────────────────────────────────────────────
 
-  function buildMentorPrompt(profile, isSettingsGate, crossDisciplineContext) {
+  const DIFFICULTY_INSTRUCTIONS = {
+    relaxed: 'Generate a quick, straightforward challenge. Single concept, minimal edge cases. The user wants a fast gate (~30 seconds).',
+    normal: 'Generate an appropriately challenging exercise for the current level (~1-2 minutes).',
+    hard: 'Generate a challenging exercise. Include edge cases and require deeper thinking (~3-5 minutes).',
+    intense: 'Generate a demanding challenge. Combine multiple concepts, include tricky edge cases, require demonstrated mastery (~5-10 minutes).'
+  };
+
+  function buildMentorPrompt(profile, isSettingsGate, crossDisciplineContext, scheduledDifficulty) {
     const currentTopic = GIT_CURRICULUM[profile.currentTopicIndex] || GIT_CURRICULUM[0];
     const tier = currentTopic.tier;
 
@@ -131,7 +138,9 @@ const GitChallengeProvider = (() => {
 
     const conceptsList = profile.conceptsIntroduced.slice(-20).join(', ');
     const weakList = profile.weakAreas.join(', ');
-    const difficulty = isSettingsGate ? 'harder than usual (this is a settings-gate challenge)' : 'appropriate for the current level';
+    const difficulty = isSettingsGate
+      ? 'harder than usual (this is a settings-gate challenge)'
+      : (DIFFICULTY_INSTRUCTIONS[scheduledDifficulty] || DIFFICULTY_INSTRUCTIONS.normal);
 
     // Sub-concept coverage for current topic
     const topicConcepts = currentTopic.concepts || [];
@@ -320,7 +329,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
 
   // ── Generate via Claude API ────────────────────────────────────────
 
-  async function generateFromClaude(profile, isSettingsGate) {
+  async function generateFromClaude(profile, isSettingsGate, scheduledDifficulty) {
     const currentTopic = GIT_CURRICULUM[profile.currentTopicIndex] || GIT_CURRICULUM[0];
     const useOpus = currentTopic.tier >= 5;
 
@@ -338,7 +347,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
       } catch {}
     }
 
-    const prompt = buildMentorPrompt(profile, isSettingsGate, crossCtx);
+    const prompt = buildMentorPrompt(profile, isSettingsGate, crossCtx, scheduledDifficulty);
 
     try {
       const response = await browser.runtime.sendMessage({
@@ -516,8 +525,8 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
 
   // ── Public API ────────────────────────────────────────────────────
 
-  async function getChallenge(profile, isSettingsGate) {
-    const aiChallenge = await generateFromClaude(profile, isSettingsGate);
+  async function getChallenge(profile, isSettingsGate, scheduledDifficulty) {
+    const aiChallenge = await generateFromClaude(profile, isSettingsGate, scheduledDifficulty);
     if (aiChallenge) {
       return { challenge: aiChallenge, source: 'claude' };
     }

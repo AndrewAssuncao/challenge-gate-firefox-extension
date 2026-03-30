@@ -1759,7 +1759,9 @@ Give a brief, helpful hint without giving away the exact answer. 2-3 sentences m
 
     appendOutput('<span class="term-dim">Loading challenge...</span>');
 
-    const { challenge: ch, source } = await GitChallengeProvider.getChallenge(profile, config.isSettingsGate);
+    let scheduledDifficulty = 'normal';
+    try { scheduledDifficulty = (await browser.runtime.sendMessage({ type: 'getCurrentDifficulty' })).difficulty; } catch {}
+    const { challenge: ch, source } = await GitChallengeProvider.getChallenge(profile, config.isSettingsGate, scheduledDifficulty);
 
     if (!ch) {
       appendOutput('<span class="term-error">Failed to load challenge. Falling back to typing.</span>');
