@@ -288,7 +288,15 @@
         <span id="arcade-time-est" class="difficulty-time">~3-5 min</span>
       </div>
       <div id="arcade-frame-wrap">
-        <iframe id="arcade-frame" src="" frameborder="0"></iframe>
+        <div id="arcade-start-screen">
+          <div class="arcade-start-text">Select challenge type and difficulty, then begin.</div>
+          <button id="arcade-start-btn" class="dash-btn">Start Challenge</button>
+        </div>
+        <div id="arcade-regen-bar" class="hidden">
+          <span>Settings changed.</span>
+          <button id="arcade-regen-btn" class="dash-btn dash-btn-sm">Regenerate</button>
+        </div>
+        <iframe id="arcade-frame" src="" frameborder="0" class="hidden"></iframe>
       </div>
     </div>
 

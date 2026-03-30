@@ -1103,16 +1103,27 @@ const Dashboard = (() => {
   const ARCADE_DIFF_TIMES = ['~30 sec', '~1-2 min', '~3-5 min', '~5-10 min', '~10-20 min', '~20-40 min'];
   let arcadeType = 'python';
   let arcadeDiffIdx = 2; // default: hard
+  let arcadeLoaded = false; // whether a challenge has been loaded
 
   function loadArcadeChallenge() {
     if (!els.arcadeFrame) return;
     const diff = ARCADE_DIFF_LEVELS[arcadeDiffIdx] || 'hard';
     const gateUrl = browser.runtime.getURL('gate/gate.html')
       + `?arcade=1&challenge=${encodeURIComponent(arcadeType)}&difficulty=${encodeURIComponent(diff)}&reinforce=1`;
-    // Only reload if URL actually changed
-    if (els.arcadeFrame.src !== gateUrl) {
-      els.arcadeFrame.src = gateUrl;
-    }
+    els.arcadeFrame.src = gateUrl;
+    els.arcadeFrame.classList.remove('hidden');
+    // Hide start screen, hide regen bar
+    const startScreen = document.getElementById('arcade-start-screen');
+    const regenBar = document.getElementById('arcade-regen-bar');
+    if (startScreen) startScreen.classList.add('hidden');
+    if (regenBar) regenBar.classList.add('hidden');
+    arcadeLoaded = true;
+  }
+
+  function showArcadeRegen() {
+    if (!arcadeLoaded) return;
+    const regenBar = document.getElementById('arcade-regen-bar');
+    if (regenBar) regenBar.classList.remove('hidden');
   }
 
   function collectDifficultySchedule() {
@@ -1158,8 +1169,8 @@ const Dashboard = (() => {
           renderKnowledgeTree();
         } else if (activeTab === 'settings') {
           renderSettings();
-        } else if (activeTab === 'arcade') {
-          loadArcadeChallenge();
+        } else if (activeTab === 'arcade' && arcadeLoaded) {
+          // Only reload if already loaded (don't auto-start)
         }
       });
     });
@@ -1241,15 +1252,29 @@ const Dashboard = (() => {
     }
 
     // ── Arcade controls ──────────────────────────────────────────────
+    // Start button
+    const arcadeStartBtn = document.getElementById('arcade-start-btn');
+    if (arcadeStartBtn) {
+      arcadeStartBtn.addEventListener('click', loadArcadeChallenge);
+    }
+
+    // Regenerate button
+    const arcadeRegenBtn = document.getElementById('arcade-regen-btn');
+    if (arcadeRegenBtn) {
+      arcadeRegenBtn.addEventListener('click', loadArcadeChallenge);
+    }
+
+    // Type buttons: show regen if already loaded, otherwise just update state
     document.querySelectorAll('.arcade-type-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.arcade-type-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         arcadeType = btn.dataset.type;
-        loadArcadeChallenge();
+        if (arcadeLoaded) showArcadeRegen();
       });
     });
 
+    // Difficulty slider: update time label live, show regen on release
     const arcadeDiffSlider = document.getElementById('arcade-difficulty');
     if (arcadeDiffSlider) {
       arcadeDiffSlider.addEventListener('input', () => {
@@ -1259,7 +1284,7 @@ const Dashboard = (() => {
       });
       arcadeDiffSlider.addEventListener('change', () => {
         arcadeDiffIdx = parseInt(arcadeDiffSlider.value);
-        loadArcadeChallenge();
+        if (arcadeLoaded) showArcadeRegen();
       });
     }
 
