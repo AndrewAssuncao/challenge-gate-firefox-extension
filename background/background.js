@@ -415,24 +415,33 @@ browser.windows.onFocusChanged.addListener((windowId) => {
   updateActiveTab();
 });
 
-browser.idle.setDetectionInterval(settings.idleTimeoutSeconds || 120);
+// Idle detection interval set after loadState (see init at bottom)
+// Default used until settings are loaded.
+browser.idle.setDetectionInterval(120);
 
 // ── Single idle listener (handles both tracking + flush) ────────────────────
-// Previously there were two separate idle listeners causing duplicate events
-// and race conditions. Now merged into one.
 
-browser.idle.onStateChanged.addListener((newState) => {
+browser.idle.onStateChanged.addListener(async (newState) => {
   isIdle = newState !== 'active';
   updateActiveTab();
 
-  // On sleep/lock, flush all state to storage
+  // On sleep/lock, flush all state to storage (awaited so writes complete
+  // before the browser suspends the background script)
   if (newState === 'locked' || newState === 'idle') {
-    flushAllState();
+    await flushAllState();
   }
 });
 
-// Safety-net flush every 30s
-let flushIntervalId = setInterval(() => flushActiveTrack(), 30000);
+// Safety-net flush every 30s — cleared and re-created on startup/reload
+// to prevent interval accumulation across script reloads.
+let flushIntervalId = null;
+
+function startFlushInterval() {
+  if (flushIntervalId) clearInterval(flushIntervalId);
+  flushIntervalId = setInterval(() => flushActiveTrack(), 30000);
+}
+
+startFlushInterval();
 
 // ── Message handling (from gate, popup, dashboard) ──────────────────────────
 
@@ -693,21 +702,27 @@ async function flushAllState() {
 // ── Startup handler ──────────────────────────────────────────────────────────
 // Re-initialize state cleanly on browser restart / extension reload.
 
+function onStateLoaded() {
+  // Apply user's idle timeout now that settings are loaded
+  browser.idle.setDetectionInterval(settings.idleTimeoutSeconds || 120);
+  // Reset flush interval to prevent accumulation
+  startFlushInterval();
+}
+
 browser.runtime.onStartup.addListener(() => {
-  loadState().then(() => {
-    console.log('[Challenge Gate] Startup reload complete.');
-  });
+  loadState()
+    .then(() => { onStateLoaded(); console.log('[Challenge Gate] Startup reload complete.'); })
+    .catch(err => console.error('[Challenge Gate] Startup load failed:', err));
 });
 
-// Also reload on install/update
 browser.runtime.onInstalled.addListener(() => {
-  loadState().then(() => {
-    console.log('[Challenge Gate] Install/update reload complete.');
-  });
+  loadState()
+    .then(() => { onStateLoaded(); console.log('[Challenge Gate] Install/update reload complete.'); })
+    .catch(err => console.error('[Challenge Gate] Install load failed:', err));
 });
 
 // ── Init ────────────────────────────────────────────────────────────────────
 
-loadState().then(() => {
-  console.log('[Challenge Gate] Loaded.', blockedSites.length, 'sites blocked.');
-});
+loadState()
+  .then(() => { onStateLoaded(); console.log('[Challenge Gate] Loaded.', blockedSites.length, 'sites blocked.'); })
+  .catch(err => console.error('[Challenge Gate] Init load failed:', err));
