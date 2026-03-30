@@ -22,6 +22,7 @@
     <div id="dash-tabs">
       <button class="dash-tab active" data-tab="overview">Overview</button>
       <button class="dash-tab" data-tab="learning">Learning</button>
+      <button class="dash-tab" data-tab="arcade">Arcade</button>
       <button class="dash-tab" data-tab="settings">Settings</button>
     </div>
 
@@ -269,6 +270,28 @@
       </section>
 
     </div><!-- /tab-settings -->
+
+    <!-- ═══ ARCADE TAB ═══ -->
+    <div id="tab-arcade" class="hidden">
+      <div id="arcade-controls">
+        <div id="arcade-type-btns">
+          <button class="arcade-type-btn active" data-type="python">Python</button>
+          <button class="arcade-type-btn" data-type="terminal">Terminal</button>
+          <button class="arcade-type-btn" data-type="git">Git</button>
+        </div>
+        <div id="arcade-difficulty-wrap">
+          <input type="range" id="arcade-difficulty" min="0" max="5" step="1" value="2" class="difficulty-slider arcade-slider">
+          <div class="arcade-diff-labels">
+            <span>Relaxed</span><span>Normal</span><span>Hard</span><span>Intense</span><span>Brutal</span><span>Marathon</span>
+          </div>
+        </div>
+        <span id="arcade-time-est" class="difficulty-time">~3-5 min</span>
+      </div>
+      <div id="arcade-frame-wrap">
+        <iframe id="arcade-frame" src="" frameborder="0"></iframe>
+      </div>
+    </div>
+
   </div>
 
   <!-- Edit modal -->

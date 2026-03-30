@@ -9,10 +9,25 @@ const Gate = (() => {
   const challengeType = params.get('challenge') || 'typing';
   const reason = params.get('reason') || '';
   const isSettingsGate = params.get('settingsGate') === '1';
+  const isArcade = params.get('arcade') === '1';
+  const arcadeDifficulty = params.get('difficulty') || null;
+  const reinforceOnly = params.get('reinforce') === '1';
   let activeChallenge = null;
   let continueListenerActive = false;
 
   function init() {
+    if (isArcade) {
+      // Arcade mode: hide domain/subtitle, show challenge directly
+      document.getElementById('gate-domain').textContent = '';
+      document.getElementById('gate-subtitle').classList.add('hidden');
+      document.getElementById('challenge-toggle').classList.add('hidden');
+      document.body.classList.add('arcade-mode');
+
+      const initial = ['python', 'terminal', 'git'].includes(challengeType) ? challengeType : 'python';
+      showChallenge(initial);
+      return;
+    }
+
     document.getElementById('gate-domain').textContent = domain;
 
     if (reason === 'cap') {
@@ -92,7 +107,14 @@ const Gate = (() => {
   }
 
   function getConfig() {
-    return { domain, originalUrl, isSettingsGate };
+    return {
+      domain: isArcade ? 'Arcade' : domain,
+      originalUrl,
+      isSettingsGate,
+      isArcade,
+      arcadeDifficulty,
+      reinforceOnly
+    };
   }
 
   // ── Continue prompt (post-solve) ──────────────────────────────────────
@@ -110,11 +132,17 @@ const Gate = (() => {
     const isMac = navigator.platform.toUpperCase().includes('MAC');
     const modKey = isMac ? '⌘' : 'Ctrl';
 
-    el.innerHTML = `<span class="continue-keys"><kbd>Enter</kbd> continue to <span class="continue-domain">${domain}</span></span><span class="continue-sep">·</span><span class="continue-keys"><kbd>${modKey}</kbd> + <kbd>Enter</kbd> next challenge</span>`;
-    el.classList.remove('hidden');
+    if (isArcade) {
+      // Arcade mode: no domain navigation, just next challenge
+      el.innerHTML = `<span class="continue-keys"><kbd>Enter</kbd> next challenge</span><span class="continue-sep">·</span><span class="continue-keys"><kbd>${modKey}</kbd> + <kbd>Enter</kbd> next challenge</span>`;
+      el.classList.remove('hidden');
+    } else {
+      el.innerHTML = `<span class="continue-keys"><kbd>Enter</kbd> continue to <span class="continue-domain">${domain}</span></span><span class="continue-sep">·</span><span class="continue-keys"><kbd>${modKey}</kbd> + <kbd>Enter</kbd> next challenge</span>`;
+      el.classList.remove('hidden');
 
-    // Unlock the domain immediately (so timer starts), but don't navigate
-    browser.runtime.sendMessage({ type: 'unlock', domain }).catch(() => {});
+      // Unlock the domain immediately (so timer starts), but don't navigate
+      browser.runtime.sendMessage({ type: 'unlock', domain }).catch(() => {});
+    }
 
     if (!continueListenerActive) {
       continueListenerActive = true;
@@ -140,7 +168,11 @@ const Gate = (() => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (e.metaKey || e.ctrlKey) {
+    if (isArcade) {
+      // In arcade mode, any Enter loads next challenge
+      hideContinuePrompt();
+      showChallenge(activeChallenge);
+    } else if (e.metaKey || e.ctrlKey) {
       // Cmd/Ctrl + Enter → new challenge of the same type
       hideContinuePrompt();
       showChallenge(activeChallenge);
@@ -174,5 +206,5 @@ const Gate = (() => {
 
   init();
 
-  return { onChallengeComplete, showContinuePrompt, hideContinuePrompt, domain, isSettingsGate };
+  return { onChallengeComplete, showContinuePrompt, hideContinuePrompt, domain, isSettingsGate, isArcade };
 })();

@@ -2150,9 +2150,11 @@ const TerminalChallenge = (() => {
     // Show loading
     appendOutput('<span class="term-dim">Loading challenge...</span>');
 
-    let scheduledDifficulty = 'normal';
-    try { scheduledDifficulty = (await browser.runtime.sendMessage({ type: 'getCurrentDifficulty' })).difficulty; } catch {}
-    const { challenge: ch, source } = await TerminalChallengeProvider.getChallenge(profile, config.isSettingsGate, scheduledDifficulty);
+    let scheduledDifficulty = config.arcadeDifficulty || 'normal';
+    if (!config.arcadeDifficulty) {
+      try { scheduledDifficulty = (await browser.runtime.sendMessage({ type: 'getCurrentDifficulty' })).difficulty; } catch {}
+    }
+    const { challenge: ch, source } = await TerminalChallengeProvider.getChallenge(profile, config.isSettingsGate, scheduledDifficulty, config.reinforceOnly);
 
     if (!ch) {
       appendOutput('<span class="term-error">Failed to load challenge. Falling back to typing.</span>');
@@ -2485,9 +2487,11 @@ const TerminalChallenge = (() => {
         hintsUsed = 0;
         els.hintBtn.disabled = false;
 
-        let nextDiff = 'normal';
-        try { nextDiff = (await browser.runtime.sendMessage({ type: 'getCurrentDifficulty' })).difficulty; } catch {}
-        const { challenge: nextCh, source } = await TerminalChallengeProvider.getChallenge(profile, config.isSettingsGate, nextDiff);
+        let nextDiff = config.arcadeDifficulty || 'normal';
+        if (!config.arcadeDifficulty) {
+          try { nextDiff = (await browser.runtime.sendMessage({ type: 'getCurrentDifficulty' })).difficulty; } catch {}
+        }
+        const { challenge: nextCh, source } = await TerminalChallengeProvider.getChallenge(profile, config.isSettingsGate, nextDiff, config.reinforceOnly);
         if (nextCh) {
           nextCh.chain = nextCh.chain || currentChain;
           nextCh.chainStep = (challenge.chainStep || 1) + 1;

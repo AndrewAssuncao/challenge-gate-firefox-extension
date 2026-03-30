@@ -15,6 +15,8 @@ const Dashboard = (() => {
     tabOverview: document.getElementById('tab-overview'),
     tabLearning: document.getElementById('tab-learning'),
     tabSettings: document.getElementById('tab-settings'),
+    tabArcade: document.getElementById('tab-arcade'),
+    arcadeFrame: document.getElementById('arcade-frame'),
     statChallenges: document.getElementById('stat-challenges'),
     statTier: document.getElementById('stat-tier'),
     sitesTbody: document.getElementById('sites-tbody'),
@@ -1095,6 +1097,24 @@ const Dashboard = (() => {
     }
   }
 
+  // ── Arcade ────────────────────────────────────────────────────────────
+
+  const ARCADE_DIFF_LEVELS = ['relaxed', 'normal', 'hard', 'intense', 'brutal', 'marathon'];
+  const ARCADE_DIFF_TIMES = ['~30 sec', '~1-2 min', '~3-5 min', '~5-10 min', '~10-20 min', '~20-40 min'];
+  let arcadeType = 'python';
+  let arcadeDiffIdx = 2; // default: hard
+
+  function loadArcadeChallenge() {
+    if (!els.arcadeFrame) return;
+    const diff = ARCADE_DIFF_LEVELS[arcadeDiffIdx] || 'hard';
+    const gateUrl = browser.runtime.getURL('gate/gate.html')
+      + `?arcade=1&challenge=${encodeURIComponent(arcadeType)}&difficulty=${encodeURIComponent(diff)}&reinforce=1`;
+    // Only reload if URL actually changed
+    if (els.arcadeFrame.src !== gateUrl) {
+      els.arcadeFrame.src = gateUrl;
+    }
+  }
+
   function collectDifficultySchedule() {
     const DIFF_LEVELS = ['relaxed', 'normal', 'hard', 'intense'];
     const weekdayIdx = els.settingDifficultyWeekday ? parseInt(els.settingDifficultyWeekday.value) : 1;
@@ -1131,12 +1151,15 @@ const Dashboard = (() => {
         els.tabOverview.classList.toggle('hidden', activeTab !== 'overview');
         els.tabLearning.classList.toggle('hidden', activeTab !== 'learning');
         els.tabSettings.classList.toggle('hidden', activeTab !== 'settings');
+        if (els.tabArcade) els.tabArcade.classList.toggle('hidden', activeTab !== 'arcade');
         // Re-render the active tab's content (canvases need redraw)
         if (activeTab === 'learning') {
           renderProgress();
           renderKnowledgeTree();
         } else if (activeTab === 'settings') {
           renderSettings();
+        } else if (activeTab === 'arcade') {
+          loadArcadeChallenge();
         }
       });
     });
@@ -1214,6 +1237,29 @@ const Dashboard = (() => {
           schedule.timeRanges.splice(idx, 1);
           renderTimeOverrides(schedule.timeRanges);
         }
+      });
+    }
+
+    // ── Arcade controls ──────────────────────────────────────────────
+    document.querySelectorAll('.arcade-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.arcade-type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        arcadeType = btn.dataset.type;
+        loadArcadeChallenge();
+      });
+    });
+
+    const arcadeDiffSlider = document.getElementById('arcade-difficulty');
+    if (arcadeDiffSlider) {
+      arcadeDiffSlider.addEventListener('input', () => {
+        arcadeDiffIdx = parseInt(arcadeDiffSlider.value);
+        const timeEl = document.getElementById('arcade-time-est');
+        if (timeEl) timeEl.textContent = ARCADE_DIFF_TIMES[arcadeDiffIdx] || '';
+      });
+      arcadeDiffSlider.addEventListener('change', () => {
+        arcadeDiffIdx = parseInt(arcadeDiffSlider.value);
+        loadArcadeChallenge();
       });
     }
 

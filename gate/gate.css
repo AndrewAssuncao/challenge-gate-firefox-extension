@@ -215,6 +215,17 @@ html, body {
   line-height: 1.4;
 }
 
+/* ── Arcade mode (embedded in dashboard iframe) ──────────────────── */
+body.arcade-mode #gate-container {
+  padding: 16px 24px 24px;
+  min-height: auto;
+}
+
+body.arcade-mode #gate-header {
+  margin-bottom: 0;
+  display: none;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

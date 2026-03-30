@@ -122,10 +122,12 @@ const TerminalChallengeProvider = (() => {
     relaxed: 'Generate a quick, straightforward challenge. Single concept, minimal edge cases. The user wants a fast gate (~30 seconds).',
     normal: 'Generate an appropriately challenging exercise for the current level (~1-2 minutes).',
     hard: 'Generate a challenging exercise. Include edge cases and require deeper thinking (~3-5 minutes).',
-    intense: 'Generate a demanding challenge. Combine multiple concepts, include tricky edge cases, require demonstrated mastery (~5-10 minutes).'
+    intense: 'Generate a demanding challenge. Combine multiple concepts, include tricky edge cases, require demonstrated mastery (~5-10 minutes).',
+    brutal: 'Generate a very demanding challenge requiring multiple advanced commands combined in a pipeline. Include subtle edge cases and realistic production debugging scenarios (~10-20 minutes).',
+    marathon: 'Generate an extensive, multi-step scenario that tests deep terminal mastery. Require sustained focus, complex pipelines, multi-tool integration, and thorough problem solving (~20-40 minutes).'
   };
 
-  function buildMentorPrompt(profile, isSettingsGate, crossDisciplineContext, scheduledDifficulty) {
+  function buildMentorPrompt(profile, isSettingsGate, crossDisciplineContext, scheduledDifficulty, reinforceOnly) {
     const currentTopic = TERMINAL_CURRICULUM[profile.currentTopicIndex] || TERMINAL_CURRICULUM[0];
     const tier = currentTopic.tier;
 
@@ -196,11 +198,11 @@ ${recentSummary || '  (None yet)'}
 ${reviewContext}${crossDisciplineContext || ''}
 ## Instructions
 Generate a challenge that is ${difficulty}. Focus on the current topic: "${currentTopic.name}".
-
+${reinforceOnly ? '\nREINFORCE MODE: Do NOT introduce new concepts. Focus exclusively on reinforcing known commands and techniques. Combine familiar tools in novel pipelines, test edge cases, and require more sophisticated solutions using only concepts from the "Concepts Already Introduced" list.\n' : ''}
 ${profile.totalSessions === 0 ? 'This is the user\'s FIRST terminal challenge ever. Start simple and welcoming (but not cheery). Briefly explain what the terminal is and what they\'re about to do.' : ''}
 ${profile.weakAreas.length > 0 ? `Consider revisiting: ${weakList}` : ''}
 
-If the user has been passing consistently on this topic (3+ passes), introduce a harder variant or transition to the next concept.
+${!reinforceOnly ? 'If the user has been passing consistently on this topic (3+ passes), introduce a harder variant or transition to the next concept.' : ''}
 
 The challenge runs in a simulated shell environment with a virtual filesystem. The user types real commands and sees output. You define the filesystem state and objectives.
 
@@ -303,7 +305,7 @@ IMPORTANT: The "filesystem" field must be a flat object mapping path strings to 
 
   // ── Generate via Claude API ────────────────────────────────────────────
 
-  async function generateFromClaude(profile, isSettingsGate, scheduledDifficulty) {
+  async function generateFromClaude(profile, isSettingsGate, scheduledDifficulty, reinforceOnly) {
     const currentTopic = TERMINAL_CURRICULUM[profile.currentTopicIndex] || TERMINAL_CURRICULUM[0];
     const useOpus = currentTopic.tier >= 5;
 
@@ -321,7 +323,7 @@ IMPORTANT: The "filesystem" field must be a flat object mapping path strings to 
       } catch {}
     }
 
-    const prompt = buildMentorPrompt(profile, isSettingsGate, crossCtx, scheduledDifficulty);
+    const prompt = buildMentorPrompt(profile, isSettingsGate, crossCtx, scheduledDifficulty, reinforceOnly);
 
     try {
       const response = await browser.runtime.sendMessage({
@@ -499,8 +501,8 @@ IMPORTANT: The "filesystem" field must be a flat object mapping path strings to 
 
   // ── Public API ────────────────────────────────────────────────────────
 
-  async function getChallenge(profile, isSettingsGate, scheduledDifficulty) {
-    const aiChallenge = await generateFromClaude(profile, isSettingsGate, scheduledDifficulty);
+  async function getChallenge(profile, isSettingsGate, scheduledDifficulty, reinforceOnly) {
+    const aiChallenge = await generateFromClaude(profile, isSettingsGate, scheduledDifficulty, reinforceOnly);
     if (aiChallenge) {
       return { challenge: aiChallenge, source: 'claude' };
     }

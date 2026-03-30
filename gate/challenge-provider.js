@@ -153,10 +153,12 @@ const ChallengeProvider = (() => {
     relaxed: 'Generate a quick, straightforward challenge. Single concept, minimal edge cases. The user wants a fast gate (~30 seconds).',
     normal: 'Generate an appropriately challenging exercise for the current level (~1-2 minutes).',
     hard: 'Generate a challenging exercise. Include edge cases and require deeper thinking (~3-5 minutes).',
-    intense: 'Generate a demanding challenge. Combine multiple concepts, include tricky edge cases, require demonstrated mastery (~5-10 minutes).'
+    intense: 'Generate a demanding challenge. Combine multiple concepts, include tricky edge cases, require demonstrated mastery (~5-10 minutes).',
+    brutal: 'Generate a very demanding challenge requiring multiple advanced techniques combined. Include subtle edge cases, require production-quality code with proper error handling and optimization (~10-20 minutes).',
+    marathon: 'Generate an extensive, multi-part challenge that tests deep mastery. Require sustained focus, architectural thinking, thorough edge case handling, and clean code organization. This should feel like a real interview problem or production task (~20-40 minutes).'
   };
 
-  function buildMentorPrompt(profile, isSettingsGate, crossDisciplineContext, scheduledDifficulty) {
+  function buildMentorPrompt(profile, isSettingsGate, crossDisciplineContext, scheduledDifficulty, reinforceOnly) {
     const currentTopic = CURRICULUM[profile.currentTopicIndex] || CURRICULUM[0];
     const tier = currentTopic.tier;
 
@@ -227,11 +229,11 @@ ${recentSummary || '  (None yet)'}
 ${reviewContext}${crossDisciplineContext || ''}
 ## Instructions
 Generate a challenge that is ${difficulty}. Focus on the current topic: "${currentTopic.name}".
-
+${reinforceOnly ? '\nREINFORCE MODE: Do NOT introduce new concepts. Focus exclusively on reinforcing and deepening understanding of concepts the user has already been introduced to. Pick from the "Concepts Already Introduced" list. Make the challenge harder by combining known concepts in novel ways, testing edge cases, and requiring more sophisticated solutions.\n' : ''}
 ${profile.totalSessions === 0 ? 'This is the user\'s FIRST challenge ever. Start simple and welcoming (but not cheery). Briefly explain what they\'re about to do.' : ''}
 ${profile.weakAreas.length > 0 ? `Consider revisiting: ${weakList}` : ''}
 
-If the user has been passing consistently on this topic (3+ passes), introduce a slightly harder variant or begin transitioning to the next concept.
+${!reinforceOnly ? 'If the user has been passing consistently on this topic (3+ passes), introduce a slightly harder variant or begin transitioning to the next concept.' : ''}
 
 ${tier <= 5 ? `Every test case input must be a valid Python argument list fragment that can be inserted directly into \`function_name(<input>)\`.
 If a test case uses a string, the string MUST be quoted inside the JSON string.
@@ -496,7 +498,7 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
 
   // ── Generate via Claude API (called through background script) ──────────
 
-  async function generateFromClaude(profile, isSettingsGate, scheduledDifficulty) {
+  async function generateFromClaude(profile, isSettingsGate, scheduledDifficulty, reinforceOnly) {
     const currentTopic = CURRICULUM[profile.currentTopicIndex] || CURRICULUM[0];
 
     // Fetch cross-discipline context
@@ -513,7 +515,7 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
       } catch {}
     }
 
-    const prompt = buildMentorPrompt(profile, isSettingsGate, crossCtx, scheduledDifficulty);
+    const prompt = buildMentorPrompt(profile, isSettingsGate, crossCtx, scheduledDifficulty, reinforceOnly);
     const useOpus = currentTopic.tier >= 5;
 
     try {
@@ -708,9 +710,9 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
 
   // ── Public API ──────────────────────────────────────────────────────────
 
-  async function getChallenge(profile, isSettingsGate, scheduledDifficulty) {
+  async function getChallenge(profile, isSettingsGate, scheduledDifficulty, reinforceOnly) {
     // Try Claude first
-    const aiChallenge = await generateFromClaude(profile, isSettingsGate, scheduledDifficulty);
+    const aiChallenge = await generateFromClaude(profile, isSettingsGate, scheduledDifficulty, reinforceOnly);
     if (aiChallenge) {
       return { challenge: aiChallenge, source: 'claude' };
     }

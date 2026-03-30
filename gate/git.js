@@ -1759,9 +1759,11 @@ Give a brief, helpful hint without giving away the exact answer. 2-3 sentences m
 
     appendOutput('<span class="term-dim">Loading challenge...</span>');
 
-    let scheduledDifficulty = 'normal';
-    try { scheduledDifficulty = (await browser.runtime.sendMessage({ type: 'getCurrentDifficulty' })).difficulty; } catch {}
-    const { challenge: ch, source } = await GitChallengeProvider.getChallenge(profile, config.isSettingsGate, scheduledDifficulty);
+    let scheduledDifficulty = config.arcadeDifficulty || 'normal';
+    if (!config.arcadeDifficulty) {
+      try { scheduledDifficulty = (await browser.runtime.sendMessage({ type: 'getCurrentDifficulty' })).difficulty; } catch {}
+    }
+    const { challenge: ch, source } = await GitChallengeProvider.getChallenge(profile, config.isSettingsGate, scheduledDifficulty, config.reinforceOnly);
 
     if (!ch) {
       appendOutput('<span class="term-error">Failed to load challenge. Falling back to typing.</span>');
