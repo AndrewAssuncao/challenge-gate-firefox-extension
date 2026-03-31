@@ -21,6 +21,7 @@ const TerminalChallenge = (() => {
   let challengeStartTime = 0;
   let helpUsedThisChallenge = false;
   let helpRequestCount = 0;
+  let helpConversation = [];
   let helpMetAtFirstRequest = 0;
   let currentChain = null;
   let chainStep = 0;
@@ -2428,8 +2429,25 @@ const TerminalChallenge = (() => {
     els.input.addEventListener('click', handleCursorUpdate);
     els.input.addEventListener('paste', handlePaste);
     els.hintBtn.addEventListener('click', showHint);
-    els.helpBtn.addEventListener('click', askForHelp);
+    els.helpBtn.addEventListener('click', () => askForHelp());
     els.skipBtn.addEventListener('click', skipChallenge);
+
+    // Help chat follow-up input
+    const termHelpInput = document.getElementById('terminal-help-input');
+    const termHelpSend = document.getElementById('terminal-help-send');
+    if (termHelpInput && termHelpSend) {
+      termHelpSend.addEventListener('click', () => {
+        const q = termHelpInput.value.trim();
+        if (q) { termHelpInput.value = ''; askForHelp(q); }
+      });
+      termHelpInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          const q = termHelpInput.value.trim();
+          if (q) { termHelpInput.value = ''; askForHelp(q); }
+        }
+      });
+    }
 
     // Focus management
     els._containerClick = () => els.input.focus();
@@ -2478,6 +2496,11 @@ const TerminalChallenge = (() => {
     helpUsedThisChallenge = false;
     helpRequestCount = 0;
     helpMetAtFirstRequest = 0;
+    helpConversation = [];
+    const termHelpChat = document.getElementById('terminal-help-chat');
+    if (termHelpChat) termHelpChat.classList.add('hidden');
+    const termHelpMsgs = document.getElementById('terminal-help-messages');
+    if (termHelpMsgs) termHelpMsgs.innerHTML = '';
 
     // Update meta
     const topic = TerminalChallengeProvider.TERMINAL_CURRICULUM[profile.currentTopicIndex] || TerminalChallengeProvider.TERMINAL_CURRICULUM[0];
@@ -2828,9 +2851,25 @@ const TerminalChallenge = (() => {
     els.input.focus();
   }
 
-  async function askForHelp() {
+  async function askForHelp(userQuestion) {
     helpUsedThisChallenge = true;
     helpRequestCount++;
+
+    // Show help chat panel
+    const chatEl = document.getElementById('terminal-help-chat');
+    const messagesEl = document.getElementById('terminal-help-messages');
+    if (chatEl) chatEl.classList.remove('hidden');
+
+    if (userQuestion) {
+      helpConversation.push({ role: 'user', content: userQuestion });
+      if (messagesEl) {
+        const userDiv = document.createElement('div');
+        userDiv.className = 'help-msg user-msg';
+        userDiv.textContent = userQuestion;
+        messagesEl.appendChild(userDiv);
+      }
+    }
+
     appendOutput('<span class="term-dim">Asking for help...</span>');
 
     // After 3+ help requests with no progress, check if the challenge is broken
@@ -2875,7 +2914,7 @@ Respond with ONLY valid JSON:
     if (helpRequestCount === 1) helpMetAtFirstRequest = metCount;
 
     try {
-      const helpPrompt = `You are a terminal/shell tutor helping a student in a simulated shell environment. Your job is to TEACH, not just hint.
+      const baseContext = `You are a terminal/shell tutor helping a student in a simulated shell environment. Your job is to TEACH, not just hint.
 
 RULES:
 - Do NOT give the exact command to type. Guide them to figure it out.
@@ -2888,13 +2927,27 @@ Scenario: ${challenge.scenario}
 ${challenge.teachingNote ? `Teaching note: ${challenge.teachingNote}` : ''}
 Objectives: ${challenge.objectives.map(o => o.description + (o._met ? ' (DONE)' : ' (NOT DONE)')).join(', ')}
 Commands tried: ${commandsExecuted.slice(-8).join(', ') || '(none yet)'}
-${lastOutput ? `Last output: ${lastOutput.slice(0, 300)}` : ''}
+${lastOutput ? `Last output: ${lastOutput.slice(0, 300)}` : ''}`;
 
-Help the student. Show the relevant syntax pattern with an example, then guide them to apply it to their specific scenario.`;
+      let helpPrompt;
+      if (helpConversation.length > 0) {
+        const history = helpConversation.map(m => `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.content}`).join('\n\n');
+        helpPrompt = baseContext + `\n\nConversation so far:\n${history}\n\nContinue helping. Address the student's latest question directly. Show syntax/examples when relevant.`;
+      } else {
+        helpPrompt = baseContext + '\n\nHelp the student. Show the relevant syntax pattern with an example, then guide them to apply it to their specific scenario.';
+      }
 
       const response = await browser.runtime.sendMessage({ type: 'claudeGenerate', prompt: helpPrompt, maxTokens: 1024 });
       if (response.content) {
+        helpConversation.push({ role: 'assistant', content: response.content });
         appendOutput(`<span class="term-help">${escapeHtml(response.content)}</span>`);
+        if (messagesEl) {
+          const aiDiv = document.createElement('div');
+          aiDiv.className = 'help-msg ai-msg';
+          aiDiv.textContent = response.content;
+          messagesEl.appendChild(aiDiv);
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
       } else {
         showLocalHelp();
       }
