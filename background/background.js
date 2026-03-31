@@ -3,6 +3,12 @@
 
 'use strict';
 
+// Global unhandled rejection handler — prevents silent crashes
+self.addEventListener('unhandledrejection', (event) => {
+  console.error('[Challenge Gate] Unhandled promise rejection:', event.reason);
+  event.preventDefault(); // Prevent Firefox from killing the script
+});
+
 // ── In-memory state (synced from storage) ──────────────────────────────────
 
 let blockedSites = [];
@@ -309,27 +315,32 @@ function isDailyCapExceeded(site) {
 
 browser.webRequest.onBeforeRequest.addListener(
   (details) => {
-    const site = findBlockedSite(details.url);
-    if (!site) return {};
+    try {
+      const site = findBlockedSite(details.url);
+      if (!site) return {};
 
-    // Check daily cap first
-    if (isDailyCapExceeded(site)) {
+      // Check daily cap first
+      if (isDailyCapExceeded(site)) {
+        return {
+          redirectUrl: browser.runtime.getURL('gate/gate.html')
+            + '?domain=' + encodeURIComponent(site.domain)
+            + '&url=' + encodeURIComponent(details.url)
+            + '&reason=cap'
+        };
+      }
+
+      if (isUnlocked(site.domain)) return {};
+
       return {
         redirectUrl: browser.runtime.getURL('gate/gate.html')
           + '?domain=' + encodeURIComponent(site.domain)
           + '&url=' + encodeURIComponent(details.url)
-          + '&reason=cap'
+          + '&challenge=' + encodeURIComponent(site.challengeType)
       };
+    } catch (err) {
+      console.error('[Challenge Gate] webRequest handler error:', err);
+      return {}; // Don't block on error — let the request through
     }
-
-    if (isUnlocked(site.domain)) return {};
-
-    return {
-      redirectUrl: browser.runtime.getURL('gate/gate.html')
-        + '?domain=' + encodeURIComponent(site.domain)
-        + '&url=' + encodeURIComponent(details.url)
-        + '&challenge=' + encodeURIComponent(site.challengeType)
-    };
   },
   { urls: ['<all_urls>'], types: ['main_frame'] },
   ['blocking']
@@ -420,15 +431,18 @@ browser.windows.onFocusChanged.addListener((windowId) => {
 browser.idle.setDetectionInterval(120);
 
 // ── Single idle listener (handles both tracking + flush) ────────────────────
+// IMPORTANT: This must be synchronous. Firefox MV2 kills async idle listeners
+// that take too long. We fire-and-forget the flush with error catching.
 
-browser.idle.onStateChanged.addListener(async (newState) => {
+browser.idle.onStateChanged.addListener((newState) => {
   isIdle = newState !== 'active';
   updateActiveTab();
 
-  // On sleep/lock, flush all state to storage (awaited so writes complete
-  // before the browser suspends the background script)
+  // On sleep/lock, flush all state to storage
+  // Fire-and-forget: we can't await here (Firefox kills long-running idle listeners)
+  // but Promise.allSettled inside flushAllState ensures partial failures don't cascade
   if (newState === 'locked' || newState === 'idle') {
-    await flushAllState();
+    flushAllState().catch(err => console.error('[Challenge Gate] Flush on idle failed:', err));
   }
 });
 
