@@ -206,6 +206,20 @@ ${!reinforceOnly ? 'If the user has been passing consistently on this topic (3+ 
 
 The challenge runs in a simulated shell environment with a virtual filesystem. The user types real commands and sees output. You define the filesystem state and objectives.
 
+CRITICAL — Only use commands from this list. The shell does NOT support commands outside this list:
+  Navigation: pwd, cd, ls (-l/-a/-R/-h)
+  Files: cat, touch, mkdir (-p), rm (-r/-f), cp (-r), mv, head (-n), tail (-n), less, more, wc (-l/-w/-c), tee (-a)
+  Search: grep (-r/-i/-n/-l/-v/-E/-c), find (-name/-type/-mtime/-exec)
+  Text: sort (-n/-r/-k/-u), uniq (-c/-d), cut (-d/-f), tr, sed (s/old/new/g, -n 'N,Mp', -i), awk (field splitting, patterns, BEGIN/END), rev, nl
+  System: echo, date, whoami, hostname, which, man, history, clear, export, env, alias, unalias, source, test/[, xargs, basename, dirname, realpath, seq, sleep
+  Permissions: chmod (octal + symbolic), chown
+  Processes: ps (aux), kill (-9), jobs, bg, fg, top, lsof (-i), netstat
+  Dev tools: git (basic sim), docker (basic sim), npm, node, pip, python3, curl (-X/-H/-d/-v/-o), wget, brew, ssh, ssh-keygen, scp, dig, nslookup, host, jq
+  Scripting: for/do/done, if/then/else/fi, while loops, shell functions
+  Pipes & redirects: |, >, >>, <, 2>&1, &&, ||, ;, tee
+
+Do NOT generate challenges requiring: rsync, tar, zip/unzip, vim/nano/emacs, screen/tmux, nc/netcat, make, gcc, apt/yum, systemctl, crontab, diff (standalone), patch, column, paste, nmap, strace, dtruss, or any other command not in the list above.
+
 Validation types you can use in objectives:
 - "cwd": check the user's current working directory matches "expected" path
 - "outputContains": check the last command's output contains "expected" string

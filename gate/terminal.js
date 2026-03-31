@@ -1742,6 +1742,47 @@ const TerminalChallenge = (() => {
     eval(args) {
       if (args.length === 0) return { stdout: '', exitCode: 0 };
       return execute(args.join(' '));
+    },
+
+    jq(args, ctx) {
+      // Simplified jq: parse JSON from stdin or file, extract fields
+      const filter = args.find(a => !a.startsWith('-')) || '.';
+      const files = args.filter(a => !a.startsWith('-') && a !== filter);
+      let input = files.length > 0 ? VFS.readFile(files[0]) : (ctx.stdin || '');
+      if (input === null) return { stderr: `jq: ${files[0]}: No such file or directory`, exitCode: 1 };
+      input = input.trim();
+      if (!input) return { stderr: 'jq: null input', exitCode: 1 };
+
+      try {
+        const data = JSON.parse(input);
+        if (filter === '.') return { stdout: JSON.stringify(data, null, 2), exitCode: 0 };
+        // Simple key extraction: .key, .key.subkey, .key[]
+        const parts = filter.replace(/^\./,'').split('.');
+        let result = data;
+        for (const part of parts) {
+          if (!part) continue;
+          const arrMatch = part.match(/^(\w+)\[\]$/);
+          if (arrMatch) {
+            result = result[arrMatch[1]];
+            if (Array.isArray(result)) {
+              return { stdout: result.map(item => typeof item === 'object' ? JSON.stringify(item, null, 2) : String(item)).join('\n'), exitCode: 0 };
+            }
+          } else {
+            result = result?.[part];
+          }
+        }
+        if (result === undefined) return { stdout: 'null', exitCode: 0 };
+        return { stdout: typeof result === 'object' ? JSON.stringify(result, null, 2) : String(result), exitCode: 0 };
+      } catch (e) {
+        return { stderr: `jq: parse error: ${e.message}`, exitCode: 1 };
+      }
+    },
+
+    scp(args) {
+      if (args.length < 2) return { stderr: 'usage: scp source destination', exitCode: 1 };
+      const src = args[args.length - 2];
+      const dst = args[args.length - 1];
+      return { stdout: `${src}  100%  4.2KB  512KB/s   00:00`, exitCode: 0 };
     }
   };
 
@@ -2536,7 +2577,7 @@ const TerminalChallenge = (() => {
     const metCount = challenge.objectives.filter(o => o._met).length;
     if (helpRequestCount >= 3 && metCount === helpMetAtFirstRequest) {
       try {
-        const diagPrompt = `Analyze if this terminal challenge is solvable in our simulated shell. The shell supports: ls, cd, pwd, cat, echo, touch, mkdir, rm, cp, mv, grep, find, head, tail, wc, sort, uniq, cut, sed (s/old/new/g and line ranges like -n '5,10p'), chmod, chown, ps, kill, export, env, alias, git, docker, npm, pip, curl, ssh, and basic for/if scripting.
+        const diagPrompt = `Analyze if this terminal challenge is solvable in our simulated shell. The shell supports: ls, cd, pwd, cat, echo, touch, mkdir, rm, cp, mv, grep, find, head, tail, less, wc, sort, uniq, cut, tr, sed, awk, chmod, chown, ps, kill, jobs, bg, fg, top, lsof, netstat, export, env, alias, tee, jq, xargs, basename, dirname, seq, rev, nl, git, docker, npm, pip, python3, curl, wget, brew, ssh, ssh-keygen, scp, dig, nslookup, host, and basic for/if/while scripting. It does NOT support: rsync, tar, zip, vim, nano, screen, tmux, nc, make, gcc, apt, systemctl, crontab, diff, or strace.
 
 Scenario: ${challenge.scenario}
 Remaining objectives: ${challenge.objectives.filter(o => !o._met).map(o => `${o.description} (validation: ${o.validation.type}=${JSON.stringify(o.validation.expected)})`).join('; ')}
