@@ -513,6 +513,25 @@ const TerminalChallenge = (() => {
         if (current) { tokens.push(current); current = ''; }
         continue;
       }
+      // Handle 2>&1, 2>, 2>>
+      if (ch === '2' && cmdStr[i + 1] === '>' && cmdStr[i + 2] === '&' && cmdStr[i + 3] === '1') {
+        if (current) { tokens.push(current); current = ''; }
+        tokens.push('2>&1');
+        i += 3;
+        continue;
+      }
+      if (ch === '2' && cmdStr[i + 1] === '>' && cmdStr[i + 2] === '>') {
+        if (current) { tokens.push(current); current = ''; }
+        tokens.push('2>>');
+        i += 2;
+        continue;
+      }
+      if (ch === '2' && cmdStr[i + 1] === '>') {
+        if (current) { tokens.push(current); current = ''; }
+        tokens.push('2>');
+        i++;
+        continue;
+      }
       if (ch === '>' && cmdStr[i + 1] === '>') {
         if (current) { tokens.push(current); current = ''; }
         tokens.push('>>');
@@ -535,7 +554,9 @@ const TerminalChallenge = (() => {
 
     // Separate redirects from args
     for (let i = 0; i < tokens.length; i++) {
-      if (tokens[i] === '>' || tokens[i] === '>>' || tokens[i] === '<') {
+      if (tokens[i] === '2>&1') {
+        redirects.push({ type: '2>&1', target: '' });
+      } else if (tokens[i] === '>' || tokens[i] === '>>' || tokens[i] === '<' || tokens[i] === '2>' || tokens[i] === '2>>') {
         redirects.push({ type: tokens[i], target: tokens[i + 1] || '' });
         i++;
       } else {
@@ -554,11 +575,17 @@ const TerminalChallenge = (() => {
     },
 
     cd(args, ctx) {
-      const target = args[0] || '~';
+      let target = args[0] || '~';
+      // cd - goes to previous directory
+      if (target === '-') {
+        if (!env.OLDPWD) return { stderr: 'cd: OLDPWD not set', exitCode: 1 };
+        target = env.OLDPWD;
+      }
       const abs = VFS.resolvePath(target);
       const node = VFS.getNode(abs);
       if (!node) return { stderr: `cd: no such file or directory: ${target}`, exitCode: 1 };
       if (node.type !== 'dir') return { stderr: `cd: not a directory: ${target}`, exitCode: 1 };
+      env.OLDPWD = VFS.getCwd();
       VFS.setCwd(abs);
       env.PWD = abs;
       return { stdout: '', exitCode: 0 };
@@ -850,20 +877,56 @@ const TerminalChallenge = (() => {
       let path = '.';
       let namePattern = null;
       let type = null;
+      let execCmd = null;
+      let iname = false;
 
       for (let i = 0; i < args.length; i++) {
         if (args[i] === '-name' && args[i + 1]) { namePattern = args[++i]; }
+        else if (args[i] === '-iname' && args[i + 1]) { namePattern = args[++i]; iname = true; }
         else if (args[i] === '-type' && args[i + 1]) { type = args[++i]; }
+        else if (args[i] === '-mtime') { i++; /* accept but skip — all files match */ }
+        else if (args[i] === '-newer') { i++; /* accept but skip */ }
+        else if (args[i] === '-exec') {
+          // Collect everything until ; or +
+          const execParts = [];
+          i++;
+          while (i < args.length && args[i] !== ';' && args[i] !== '+') {
+            execParts.push(args[i]);
+            i++;
+          }
+          execCmd = execParts.join(' ');
+        }
         else if (!args[i].startsWith('-')) { path = args[i]; }
       }
 
-      const results = VFS.findFiles(path, namePattern, type);
-      // Convert absolute paths to relative
+      // If -iname, make pattern case-insensitive in VFS.findFiles
+      let results;
+      if (iname && namePattern) {
+        // findFiles uses globToRegex which is case-sensitive; do manual filter
+        const allFiles = VFS.findFiles(path, null, type);
+        const regex = new RegExp('^' + namePattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 'i');
+        results = allFiles.filter(f => regex.test(f.split('/').pop()));
+      } else {
+        results = VFS.findFiles(path, namePattern, type);
+      }
+
       const cwdPrefix = VFS.getCwd();
       const display = results.map(r => {
         if (path === '.' && r.startsWith(cwdPrefix)) return '.' + r.slice(cwdPrefix.length);
         return r;
       });
+
+      // Handle -exec: run command for each result (replace {} with filename)
+      if (execCmd) {
+        const outputs = [];
+        for (const file of display) {
+          const cmd = execCmd.replace(/\{\}/g, file);
+          const res = execute(cmd);
+          if (res.stdout) outputs.push(res.stdout);
+        }
+        return { stdout: outputs.join('\n'), exitCode: 0 };
+      }
+
       return { stdout: display.join('\n'), exitCode: 0 };
     },
 
@@ -897,19 +960,41 @@ const TerminalChallenge = (() => {
     sort(args, ctx) {
       let unique = false;
       let reverse = false;
+      let numeric = false;
+      let keyField = null;
+      let delimiter = null;
       const files = [];
 
-      for (const a of args) {
-        if (a.startsWith('-')) {
-          if (a.includes('u')) unique = true;
-          if (a.includes('r')) reverse = true;
-        } else files.push(a);
+      for (let i = 0; i < args.length; i++) {
+        if (args[i] === '-k' && args[i + 1]) { keyField = parseInt(args[++i], 10); }
+        else if (args[i] === '-t' && args[i + 1]) { delimiter = args[++i]; }
+        else if (args[i].startsWith('-') && !args[i].startsWith('--')) {
+          if (args[i].includes('u')) unique = true;
+          if (args[i].includes('r')) reverse = true;
+          if (args[i].includes('n')) numeric = true;
+        } else files.push(args[i]);
       }
 
       const content = files.length > 0 ? VFS.readFile(files[0]) : (ctx.stdin || '');
       if (content === null) return { stderr: `sort: ${files[0]}: No such file or directory`, exitCode: 1 };
 
-      let lines = content.split('\n').sort();
+      let lines = content.split('\n');
+
+      if (keyField && keyField > 0) {
+        // Sort by field
+        const sep = delimiter || /\s+/;
+        lines.sort((a, b) => {
+          const fa = a.split(sep)[keyField - 1] || '';
+          const fb = b.split(sep)[keyField - 1] || '';
+          if (numeric) return parseFloat(fa) - parseFloat(fb);
+          return fa.localeCompare(fb);
+        });
+      } else if (numeric) {
+        lines.sort((a, b) => parseFloat(a) - parseFloat(b));
+      } else {
+        lines.sort();
+      }
+
       if (unique) lines = [...new Set(lines)];
       if (reverse) lines.reverse();
       return { stdout: lines.join('\n'), exitCode: 0 };
@@ -917,10 +1002,14 @@ const TerminalChallenge = (() => {
 
     uniq(args, ctx) {
       let countFlag = false;
+      let dupsOnly = false;
       const files = [];
       for (const a of args) {
-        if (a === '-c') countFlag = true;
-        else if (!a.startsWith('-')) files.push(a);
+        if (a.startsWith('-')) {
+          if (a.includes('c')) countFlag = true;
+          if (a.includes('d')) dupsOnly = true;
+        }
+        else files.push(a);
       }
 
       const content = files.length > 0 ? VFS.readFile(files[0]) : (ctx.stdin || '');
@@ -934,12 +1023,16 @@ const TerminalChallenge = (() => {
       for (const line of lines) {
         if (line === prev) { count++; }
         else {
-          if (prev !== null) result.push(countFlag ? `   ${count} ${prev}` : prev);
+          if (prev !== null) {
+            if (!dupsOnly || count > 1) result.push(countFlag ? `   ${count} ${prev}` : prev);
+          }
           prev = line;
           count = 1;
         }
       }
-      if (prev !== null) result.push(countFlag ? `   ${count} ${prev}` : prev);
+      if (prev !== null) {
+        if (!dupsOnly || count > 1) result.push(countFlag ? `   ${count} ${prev}` : prev);
+      }
 
       return { stdout: result.join('\n'), exitCode: 0 };
     },
@@ -1313,10 +1406,13 @@ const TerminalChallenge = (() => {
         images: 'REPOSITORY   TAG       IMAGE ID       CREATED        SIZE\nwebapp       latest    sha256:abc123  2 hours ago    945MB\npostgres     14        sha256:def456  3 weeks ago    379MB\nnode         18        sha256:ghi789  4 weeks ago    991MB',
         run: 'Unable to find image locally. Pulling...\nStatus: Downloaded newer image\nContainer started.',
         build: 'Step 1/5 : FROM node:18\n ---> Using cache\nStep 2/5 : WORKDIR /app\n ---> Using cache\nStep 3/5 : COPY . .\nStep 4/5 : RUN npm install\nStep 5/5 : CMD ["node", "server.js"]\nSuccessfully built abc123def456',
+        pull: `Using default tag: latest\nlatest: Pulling from library/${args[1] || 'image'}\nDigest: sha256:abc123def456\nStatus: Downloaded newer image for ${args[1] || 'image'}:latest`,
+        exec: `(attached to container ${args[1] || 'container'})`,
         compose: dockerCompose(args.slice(1)),
         stop: 'Container stopped.',
         rm: 'Container removed.',
-        logs: '[webapp-web-1] Server started on port 3000\n[webapp-web-1] GET / 200 12ms\n[webapp-db-1] database system is ready to accept connections'
+        logs: '[webapp-web-1] Server started on port 3000\n[webapp-web-1] GET / 200 12ms\n[webapp-db-1] database system is ready to accept connections',
+        inspect: `[{"Id": "a1b2c3d4e5f6", "Image": "webapp:latest", "State": {"Status": "running"}}]`
       };
       const out = responses[sub];
       if (out === undefined) return { stderr: `docker: '${sub}' is not a docker command`, exitCode: 1 };
@@ -1401,11 +1497,17 @@ const TerminalChallenge = (() => {
 
     brew(args) {
       const sub = args[0] || '';
+      const pkg = args[1] || 'package';
       const responses = {
-        install: `==> Installing ${args[1] || 'package'}\n==> Pouring...\n==> Summary\n  /opt/homebrew/Cellar/${args[1] || 'package'}/1.0.0: 42 files, 3.2MB`,
+        install: `==> Installing ${pkg}\n==> Pouring...\n==> Summary\n  /opt/homebrew/Cellar/${pkg}/1.0.0: 42 files, 3.2MB`,
+        uninstall: `Uninstalling /opt/homebrew/Cellar/${pkg}/1.0.0...`,
+        remove: `Uninstalling /opt/homebrew/Cellar/${pkg}/1.0.0...`,
+        upgrade: `==> Upgrading ${pkg}\n==> Pouring ${pkg}-1.1.0.arm64_monterey.bottle.tar.gz\n==> Summary\n  /opt/homebrew/Cellar/${pkg}/1.1.0: 42 files, 3.4MB`,
         list: 'git\nnode\npython@3.11\nwget\ntree\njq',
         update: '==> Updated Homebrew!\n==> Updated 3 taps',
-        search: `==> Formulae\n${args[1] || 'package'}`
+        search: `==> Formulae\n${pkg}`,
+        info: `${pkg}: stable 1.0.0\nhttps://example.com\n/opt/homebrew/Cellar/${pkg}/1.0.0 (42 files, 3.2MB)`,
+        cleanup: '==> Pruning files...\n==> Removed 12 files'
       };
       return { stdout: responses[sub] || `brew: unknown command '${sub}'`, exitCode: responses[sub] ? 0 : 1 };
     },
@@ -1685,34 +1787,81 @@ const TerminalChallenge = (() => {
 
     awk(args, ctx) {
       if (args.length === 0) return { stderr: 'awk: missing program', exitCode: 1 };
-      const program = args[0];
-      const files = args.slice(1).filter(a => !a.startsWith('-'));
+
+      // Parse -F flag for field separator
+      let fieldSep = /\s+/;
+      let programIdx = 0;
+      for (let i = 0; i < args.length; i++) {
+        if (args[i] === '-F' && args[i + 1]) { fieldSep = args[++i]; programIdx = i + 1; }
+        else if (args[i].startsWith('-F')) { fieldSep = args[i].slice(2); programIdx = i + 1; }
+      }
+      const program = args[programIdx] || args[0];
+      const files = args.slice(programIdx + 1).filter(a => !a.startsWith('-'));
       const content = files.length > 0 ? VFS.readFile(files[0]) : (ctx.stdin || '');
       if (content === null) return { stderr: `awk: ${files[0]}: No such file or directory`, exitCode: 1 };
 
-      // Basic {print $N} support
-      const printMatch = program.match(/\{\s*print\s+\$(\d+)\s*\}/);
-      if (printMatch) {
-        const fieldNum = parseInt(printMatch[1], 10);
-        const lines = content.split('\n').map(line => {
-          const fields = line.split(/\s+/);
-          return fields[fieldNum - 1] || '';
-        });
-        return { stdout: lines.join('\n'), exitCode: 0 };
+      const lines = content.split('\n');
+      const results = [];
+
+      // Parse BEGIN { ... } main { ... } END { ... } structure
+      const beginMatch = program.match(/BEGIN\s*\{([^}]*)\}/);
+      const endMatch = program.match(/END\s*\{([^}]*)\}/);
+      // Strip BEGIN/END to get the main program
+      let mainProg = program
+        .replace(/BEGIN\s*\{[^}]*\}/, '')
+        .replace(/END\s*\{[^}]*\}/, '')
+        .trim();
+
+      // Helper to process a print statement for a given line
+      function processPrint(printExpr, fields, line) {
+        // Handle $0 (whole line), $N, $NF, NR, string literals
+        return printExpr.replace(/\$NF/g, fields[fields.length - 1] || '')
+          .replace(/\$0/g, line)
+          .replace(/\$(\d+)/g, (_, n) => fields[parseInt(n, 10) - 1] || '')
+          .replace(/NR/g, String(results.length + 1))
+          .replace(/"([^"]*)"/g, '$1')
+          .replace(/,\s*/g, ' '); // comma = OFS (default space)
       }
 
-      // {print} — print whole line
-      if (/\{\s*print\s*\}/.test(program)) return { stdout: content, exitCode: 0 };
-
-      // /pattern/ — filter lines
-      const filterMatch = program.match(/^\/(.+)\/$/);
-      if (filterMatch) {
-        const regex = new RegExp(filterMatch[1]);
-        const lines = content.split('\n').filter(l => regex.test(l));
-        return { stdout: lines.join('\n'), exitCode: 0 };
+      // BEGIN block
+      if (beginMatch) {
+        const beginPrint = beginMatch[1].match(/print\s+(.*)/);
+        if (beginPrint) results.push(processPrint(beginPrint[1], [], ''));
       }
 
-      return { stdout: content, exitCode: 0 };
+      // Main block: /pattern/ { action } or just { action }
+      const patternAction = mainProg.match(/(?:\/([^/]+)\/\s*)?\{\s*print\s+(.*?)\s*\}/);
+      const patternFilter = mainProg.match(/^\/([^/]+)\/$/);
+      const simplePrint = mainProg.match(/^\{\s*print\s+(.*?)\s*\}$/);
+
+      for (const line of lines) {
+        const fields = typeof fieldSep === 'string' ? line.split(fieldSep) : line.split(fieldSep);
+
+        if (patternAction) {
+          const pattern = patternAction[1];
+          if (pattern && !new RegExp(pattern).test(line)) continue;
+          results.push(processPrint(patternAction[2], fields, line));
+        } else if (patternFilter) {
+          if (new RegExp(patternFilter[1]).test(line)) results.push(line);
+        } else if (simplePrint) {
+          results.push(processPrint(simplePrint[1], fields, line));
+        } else if (mainProg === '' || /^\{\s*print\s*\}$/.test(mainProg)) {
+          results.push(line);
+        } else {
+          // Fallback: try to extract print $N
+          const m = mainProg.match(/\$(\d+)/);
+          if (m) results.push(fields[parseInt(m[1], 10) - 1] || '');
+          else results.push(line);
+        }
+      }
+
+      // END block
+      if (endMatch) {
+        const endPrint = endMatch[1].match(/print\s+(.*)/);
+        if (endPrint) results.push(processPrint(endPrint[1], [], ''));
+      }
+
+      return { stdout: results.join('\n'), exitCode: 0 };
     },
 
     tac(args, ctx) {
@@ -1783,6 +1932,90 @@ const TerminalChallenge = (() => {
       const src = args[args.length - 2];
       const dst = args[args.length - 1];
       return { stdout: `${src}  100%  4.2KB  512KB/s   00:00`, exitCode: 0 };
+    },
+
+    // ── Commands added for curriculum coverage ──────────────────────
+
+    printenv(args) {
+      if (args.length === 0) return { stdout: Object.entries(env).map(([k, v]) => `${k}=${v}`).join('\n'), exitCode: 0 };
+      const val = env[args[0]];
+      return val !== undefined ? { stdout: val, exitCode: 0 } : { stderr: '', exitCode: 1 };
+    },
+
+    umask(args) {
+      if (args.length === 0) return { stdout: '0022', exitCode: 0 };
+      return { stdout: '', exitCode: 0 }; // Accept but no-op
+    },
+
+    ping(args) {
+      const host = args.find(a => !a.startsWith('-')) || 'localhost';
+      return { stdout: `PING ${host} (127.0.0.1): 56 data bytes\n64 bytes from 127.0.0.1: icmp_seq=0 ttl=64 time=0.042 ms\n64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.038 ms\n64 bytes from 127.0.0.1: icmp_seq=2 ttl=64 time=0.041 ms\n\n--- ${host} ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss`, exitCode: 0 };
+    },
+
+    traceroute(args) {
+      const host = args.find(a => !a.startsWith('-')) || 'localhost';
+      return { stdout: `traceroute to ${host} (140.82.121.3), 30 hops max, 60 byte packets\n 1  gateway (192.168.1.1)  1.234 ms  1.123 ms  1.089 ms\n 2  isp-router (10.0.0.1)  5.678 ms  5.543 ms  5.432 ms\n 3  ${host} (140.82.121.3)  12.345 ms  12.234 ms  12.123 ms`, exitCode: 0 };
+    },
+
+    nohup(args, ctx) {
+      if (args.length === 0) return { stderr: 'nohup: missing operand', exitCode: 1 };
+      return { stdout: 'nohup: ignoring input and appending output to nohup.out', exitCode: 0 };
+    },
+
+    disown() {
+      return { stdout: '', exitCode: 0 };
+    },
+
+    'ssh-add'(args) {
+      if (args.length === 0) return { stdout: 'Identity added: /home/user/.ssh/id_ed25519 (dev@startup.com)', exitCode: 0 };
+      if (args[0] === '-l') return { stdout: '256 SHA256:xR4g7KqP2mN8vL5jF1hT9wY3aB6cD0eU dev@startup.com (ED25519)', exitCode: 0 };
+      return { stdout: `Identity added: ${args[0]}`, exitCode: 0 };
+    },
+
+    htop() {
+      return COMMANDS.top();
+    },
+
+    ss(args) {
+      return COMMANDS.netstat(args);
+    },
+
+    dmesg() {
+      return { stdout: '[    0.000000] Linux version 5.15.0-generic\n[    0.123456] Command line: BOOT_IMAGE=/vmlinuz-5.15.0\n[    1.234567] Memory: 16384MB available\n[    2.345678] CPU: 8 cores detected\n[    3.456789] Network: eth0 link up, 1000 Mbps\n[    5.678901] Filesystem: ext4 mounted on /', exitCode: 0 };
+    },
+
+    column(args, ctx) {
+      let delimiter = null;
+      for (let i = 0; i < args.length; i++) {
+        if (args[i] === '-t') continue; // table mode, handled below
+        if (args[i] === '-s' && args[i + 1]) { delimiter = args[++i]; }
+      }
+      const files = args.filter(a => !a.startsWith('-') && a !== delimiter);
+      const content = files.length > 0 ? VFS.readFile(files[0]) : (ctx.stdin || '');
+      if (content === null) return { stderr: `column: ${files[0]}: No such file or directory`, exitCode: 1 };
+      // Simple columnation: split by whitespace and align
+      const rows = content.split('\n').map(l => l.trim().split(delimiter || /\s+/));
+      const cols = rows.reduce((max, r) => Math.max(max, r.length), 0);
+      const widths = Array(cols).fill(0);
+      for (const row of rows) { for (let i = 0; i < row.length; i++) widths[i] = Math.max(widths[i], (row[i] || '').length); }
+      return { stdout: rows.map(r => r.map((c, i) => (c || '').padEnd(widths[i] + 2)).join('')).join('\n'), exitCode: 0 };
+    },
+
+    paste(args, ctx) {
+      let delimiter = '\t';
+      const files = [];
+      for (let i = 0; i < args.length; i++) {
+        if (args[i] === '-d' && args[i + 1]) { delimiter = args[++i]; }
+        else if (!args[i].startsWith('-')) files.push(args[i]);
+      }
+      if (files.length === 0) return { stdout: ctx.stdin || '', exitCode: 0 };
+      const contents = files.map(f => { const c = VFS.readFile(f); return c ? c.split('\n') : []; });
+      const maxLines = contents.reduce((m, c) => Math.max(m, c.length), 0);
+      const result = [];
+      for (let i = 0; i < maxLines; i++) {
+        result.push(contents.map(c => c[i] || '').join(delimiter));
+      }
+      return { stdout: result.join('\n'), exitCode: 0 };
     }
   };
 
@@ -1885,12 +2118,22 @@ const TerminalChallenge = (() => {
 
       // Handle redirects
       for (const redirect of parsed.redirects) {
-        if (redirect.type === '>') {
+        if (redirect.type === '2>&1') {
+          // Merge stderr into stdout
+          if (result.stderr) { result.stdout = (result.stdout || '') + result.stderr; result.stderr = ''; }
+        } else if (redirect.target === '/dev/null') {
+          // Discard output
+          result.stdout = '';
+          result.stderr = '';
+        } else if (redirect.type === '>') {
           VFS.writeFile(redirect.target, result.stdout);
           result.stdout = '';
         } else if (redirect.type === '>>') {
           VFS.appendFile(redirect.target, result.stdout);
           result.stdout = '';
+        } else if (redirect.type === '2>') {
+          if (redirect.target === '/dev/null') result.stderr = '';
+          else { VFS.writeFile(redirect.target, result.stderr || ''); result.stderr = ''; }
         }
       }
 
@@ -1932,6 +2175,23 @@ const TerminalChallenge = (() => {
         const expanded = body.replace(new RegExp(`\\$${varName}\\b`, 'g'), item).replace(new RegExp(`\\$\\{${varName}\\}`, 'g'), item);
         const result = execute(expanded);
         if (result.stdout) outputs.push(result.stdout);
+      }
+      return { stdout: outputs.join('\n'), exitCode: 0 };
+    }
+
+    // Simple while: while cmd; do body; done
+    const whileMatch = input.match(/^while\s+(.+?);\s*do\s+(.+?);\s*done$/);
+    if (whileMatch) {
+      const [, condition, body] = whileMatch;
+      const outputs = [];
+      let iterations = 0;
+      const maxIter = 100; // safety limit
+      while (iterations < maxIter) {
+        const condResult = execute(condition);
+        if (condResult.exitCode !== 0) break;
+        const bodyResult = execute(body);
+        if (bodyResult.stdout) outputs.push(bodyResult.stdout);
+        iterations++;
       }
       return { stdout: outputs.join('\n'), exitCode: 0 };
     }

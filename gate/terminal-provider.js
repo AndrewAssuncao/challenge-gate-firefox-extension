@@ -34,10 +34,10 @@ const TerminalChallengeProvider = (() => {
 
     // Tier 2 — File Operations
     { id: 'copy_move', name: 'Copying and moving (cp, mv)', tier: 2,
-      concepts: ['cp file to new location', 'cp -r for directories', 'mv for moving and renaming', 'overwrite behavior and -i flag', 'copying multiple files to a directory', 'preserving permissions with cp -p'],
+      concepts: ['cp file to new location', 'cp -r for directories', 'mv for moving and renaming', 'mv for renaming files and directories', 'copying multiple files to a directory', 'ln for creating symbolic links'],
       progressionSignal: 'Copy and move files/directories confidently, including recursive operations.' },
     { id: 'remove_find', name: 'Removing and finding (rm, find)', tier: 2,
-      concepts: ['rm for files, rm -r for directories', 'rm -i for safe deletion', 'find by name (-name, -iname)', 'find by type (-type f, -type d)', 'find by time (-mtime, -newer)', 'find with -exec for actions on results'],
+      concepts: ['rm for files, rm -r for directories', 'rm -rf and understanding the danger', 'find by name (-name, -iname)', 'find by type (-type f, -type d)', 'find by time (-mtime)', 'find with -exec for actions on results'],
       progressionSignal: 'Remove files safely and construct find commands with multiple criteria and actions.' },
     { id: 'grep_search', name: 'Searching text (grep)', tier: 2,
       concepts: ['grep for pattern in file', 'grep -r for recursive search', 'grep -i for case-insensitive', 'grep -n for line numbers, -l for filenames only', 'grep -E for extended regex', 'grep -v for inverted matches'],
@@ -54,7 +54,7 @@ const TerminalChallengeProvider = (() => {
       concepts: ['sort (-n, -r, -k, -t for field sorting)', 'uniq (-c for counts, -d for duplicates)', 'cut (-d delimiter, -f fields)', 'tr for character translation and deletion', 'paste and column for formatting', 'chaining text tools with pipes'],
       progressionSignal: 'Extract, transform, and analyze text data by chaining sort/uniq/cut/tr in pipelines.' },
     { id: 'processes', name: 'Process management (ps, kill, jobs, bg, fg)', tier: 3,
-      concepts: ['ps aux and reading process listings', 'kill with signal numbers (SIGTERM, SIGKILL)', 'running commands in background (&)', 'jobs, fg, bg for job control', 'Ctrl+C (SIGINT) and Ctrl+Z (SIGTSTP)', 'nohup and disown for persistent processes'],
+      concepts: ['ps aux and reading process listings', 'kill with signal numbers (SIGTERM, SIGKILL)', 'running commands in background (&)', 'jobs, fg, bg for job control', 'nohup for persistent background processes', 'signals and exit codes ($?)'],
       progressionSignal: 'Find and manage processes, use job control, and keep processes running after logout.' },
     { id: 'environment', name: 'Environment variables (export, PATH, env)', tier: 3,
       concepts: ['viewing env variables (echo $VAR, env, printenv)', 'setting variables (VAR=value, export VAR=value)', 'PATH variable and how commands are found', 'modifying PATH safely', '.env files and source command', 'variable expansion and quoting ("$VAR" vs \'$VAR\')'],
@@ -97,7 +97,7 @@ const TerminalChallengeProvider = (() => {
       concepts: ['sed s/old/new/g substitution', 'sed with address ranges (line numbers, patterns)', 'sed -i for in-place editing', 'awk field splitting ($1, $2, $NF)', 'awk patterns and actions {print ...}', 'awk with BEGIN/END blocks and variables'],
       progressionSignal: 'Transform text files with sed substitutions and awk field processing.' },
     { id: 'system_debug', name: 'System debugging (lsof, netstat, dig, dmesg)', tier: 5,
-      concepts: ['lsof for open file and port inspection', 'netstat/ss for network connections', 'top/htop for system resource monitoring', 'dig for DNS queries', 'strace/dtruss for system call tracing', 'dmesg for kernel messages'],
+      concepts: ['lsof for open file and port inspection (-i :PORT)', 'netstat/ss for network connections', 'top/htop for system resource monitoring', 'dig for DNS queries (+short)', 'ping and traceroute for connectivity testing', 'combining lsof | grep | kill for port cleanup'],
       progressionSignal: 'Diagnose port conflicts, network issues, resource usage, and DNS problems from the terminal.' }
   ];
 
@@ -207,18 +207,19 @@ ${!reinforceOnly ? 'If the user has been passing consistently on this topic (3+ 
 The challenge runs in a simulated shell environment with a virtual filesystem. The user types real commands and sees output. You define the filesystem state and objectives.
 
 CRITICAL — Only use commands from this list. The shell does NOT support commands outside this list:
-  Navigation: pwd, cd, ls (-l/-a/-R/-h)
-  Files: cat, touch, mkdir (-p), rm (-r/-f), cp (-r), mv, head (-n), tail (-n), less, more, wc (-l/-w/-c), tee (-a)
-  Search: grep (-r/-i/-n/-l/-v/-E/-c), find (-name/-type/-mtime/-exec)
-  Text: sort (-n/-r/-k/-u), uniq (-c/-d), cut (-d/-f), tr, sed (s/old/new/g, -n 'N,Mp', -i), awk (field splitting, patterns, BEGIN/END), rev, nl
-  System: echo, date, whoami, hostname, which, man, history, clear, export, env, alias, unalias, source, test/[, xargs, basename, dirname, realpath, seq, sleep
+  Navigation: pwd, cd (-, ~), ls (-l/-a/-R/-h)
+  Files: cat, touch, mkdir (-p), rm (-r/-f), cp (-r), mv, head (-n), tail (-n), less, more, wc (-l/-w/-c), tee (-a), file, ln
+  Search: grep (-r/-i/-n/-l/-v/-E/-c), find (-name/-iname/-type/-mtime/-exec)
+  Text: sort (-n/-r/-k/-t/-u), uniq (-c/-d), cut (-d/-f), tr, sed (s/old/new/g, -n 'N,Mp', -i), awk (-F, $N, $NF, BEGIN/END, /pattern/), rev, nl, tac, column, paste (-d)
+  System: echo, printf, date, whoami, hostname, which, type, man, history, clear, export, env, printenv, umask, alias, unalias, source, test/[, xargs, basename, dirname, realpath, seq, sleep
   Permissions: chmod (octal + symbolic), chown
-  Processes: ps (aux), kill (-9), jobs, bg, fg, top, lsof (-i), netstat
-  Dev tools: git (basic sim), docker (basic sim), npm, node, pip, python3, curl (-X/-H/-d/-v/-o), wget, brew, ssh, ssh-keygen, scp, dig, nslookup, host, jq
-  Scripting: for/do/done, if/then/else/fi, while loops, shell functions
-  Pipes & redirects: |, >, >>, <, 2>&1, &&, ||, ;, tee
+  Processes: ps (aux), kill (-9), jobs, bg, fg, top, htop, lsof (-i), netstat, ss, nohup, disown
+  Network: ping, traceroute, dig, nslookup, host, curl (-X/-H/-d/-v/-o/-s), wget, jq
+  Dev tools: git (basic sim), docker (ps/images/run/build/pull/exec/compose), npm, node, pip, python3, brew (install/uninstall/upgrade/list/update/search), ssh, ssh-keygen, ssh-add, scp
+  Scripting: for/do/done, if/then/else/fi, while/do/done, $VAR expansion
+  Pipes & redirects: |, >, >>, <, 2>, 2>&1, /dev/null, &&, ||, ;
 
-Do NOT generate challenges requiring: rsync, tar, zip/unzip, vim/nano/emacs, screen/tmux, nc/netcat, make, gcc, apt/yum, systemctl, crontab, diff (standalone), patch, column, paste, nmap, strace, dtruss, or any other command not in the list above.
+Do NOT generate challenges requiring: rsync, vim/nano/emacs, screen/tmux, nc/netcat, make, gcc, apt/yum, systemctl, crontab, patch, nmap, strace, dtruss, dmesg (available but limited), zip/unzip, or any other command not in the list above.
 
 Validation types you can use in objectives:
 - "cwd": check the user's current working directory matches "expected" path
