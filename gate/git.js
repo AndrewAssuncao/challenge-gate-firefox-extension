@@ -1692,16 +1692,24 @@ Respond with ONLY valid JSON:
     if (helpRequestCount === 1) helpMetAtFirstRequest = metCount;
 
     try {
-      const helpPrompt = `The user is stuck on a git challenge in a simulated git environment. The environment supports common git commands but not all features of real git.
+      const helpPrompt = `You are a Git tutor helping a student in a simulated git environment. Your job is to TEACH, not just hint.
+
+RULES:
+- Do NOT give the exact command to type. Guide them to figure it out.
+- DO show the relevant git command syntax with a DIFFERENT example than the challenge.
+- DO explain what each command/flag does and the underlying git concept.
+- When the student's command is close but wrong, explain what it actually does vs what they need.
+- Be warm but concise. 4-8 sentences. Use backticks for command references.
 
 Scenario: ${challenge.scenario}
+${challenge.teachingNote ? `Teaching note: ${challenge.teachingNote}` : ''}
 Objectives: ${challenge.objectives.map(o => o.description + (o._met ? ' (DONE)' : ' (NOT DONE)')).join(', ')}
 Commands tried: ${commandsExecuted.slice(-8).join(', ') || '(none yet)'}
-${lastOutput ? `Last output: ${lastOutput.slice(0, 200)}` : ''}
+${lastOutput ? `Last output: ${lastOutput.slice(0, 300)}` : ''}
 
-Give a brief, helpful hint without giving away the exact answer. 2-3 sentences max. If the command looks correct but isn't working, consider that this is a simulated environment with limited support.`;
+Help the student. Show the relevant git syntax with an example, explain the concept, then guide them to apply it.`;
 
-      const response = await browser.runtime.sendMessage({ type: 'claudeGenerate', prompt: helpPrompt });
+      const response = await browser.runtime.sendMessage({ type: 'claudeGenerate', prompt: helpPrompt, maxTokens: 1024 });
       if (response.content) {
         appendOutput(`<span class="term-help">${escapeHtml(response.content)}</span>`);
       } else {

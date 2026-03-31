@@ -60,7 +60,12 @@ const PythonChallenge = (() => {
     helpUsedThisChallenge = false;
     helpRequestCount = 0;
     failedRunsSinceHelp = 0;
+    helpConversation = [];
     outputEl.classList.add('hidden');
+    const helpChat = document.getElementById('python-help-chat');
+    if (helpChat) { helpChat.classList.add('hidden'); }
+    const helpMsgs = document.getElementById('python-help-messages');
+    if (helpMsgs) { helpMsgs.innerHTML = ''; }
     hintBtn.disabled = false;
     helpBtn.disabled = false;
     helpBtn.textContent = 'Help';
@@ -159,8 +164,25 @@ const PythonChallenge = (() => {
   function bindEvents() {
     runBtn.onclick = runCode;
     hintBtn.onclick = showHint;
-    helpBtn.onclick = askForHelp;
+    helpBtn.onclick = () => askForHelp();
     skipBtn.onclick = skipChallenge;
+
+    // Help chat follow-up input
+    const helpInput = document.getElementById('python-help-input');
+    const helpSend = document.getElementById('python-help-send');
+    if (helpInput && helpSend) {
+      helpSend.onclick = () => {
+        const q = helpInput.value.trim();
+        if (q) { helpInput.value = ''; askForHelp(q); }
+      };
+      helpInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          const q = helpInput.value.trim();
+          if (q) { helpInput.value = ''; askForHelp(q); }
+        }
+      });
+    }
 
     editorEl.oninput = () => {
       updateHighlight();
@@ -579,7 +601,37 @@ Respond with ONLY valid JSON:
     }
   }
 
-  async function askForHelp() {
+  // ── Help chat system ───────────────────────────────────────────────
+  let helpConversation = []; // array of { role: 'user'|'assistant', content }
+
+  function buildHelpSystemPrompt() {
+    const userCode = editorEl.value;
+    return `You are a Python tutor helping a student who is stuck on a coding challenge in a browser extension. Your job is to TEACH, not just diagnose.
+
+RULES:
+- Do NOT give the complete solution. Guide the student to figure it out.
+- DO show relevant syntax with examples when the student doesn't know how to write something.
+- DO explain WHY something works, not just WHAT to change.
+- When the student has a syntax error, show the correct syntax pattern with a DIFFERENT example, then let them apply it.
+- When the student has a logic error, walk through what their code does step by step.
+- Be warm but concise. Use code blocks for syntax examples.
+- Each response should be 4-8 sentences. Enough to actually teach, not so long it's a wall of text.
+
+CONTEXT:
+Problem: ${challenge.prompt}
+Starter code: ${challenge.starterCode}
+Test cases: ${formatTestCasesForHelp()}
+${challenge.teachingNote ? `Teaching note: ${challenge.teachingNote}` : ''}
+
+Student's current code:
+\`\`\`python
+${userCode}
+\`\`\`
+
+${lastErrorOutput ? `Latest errors/failures:\n${lastErrorOutput}` : 'No run output yet.'}`;
+  }
+
+  async function askForHelp(userQuestion) {
     if (!challenge || challengeResolved) return;
     helpUsedThisChallenge = true;
     helpRequestCount++;
@@ -587,66 +639,79 @@ Respond with ONLY valid JSON:
     helpBtn.disabled = true;
     helpBtn.textContent = 'Thinking…';
 
-    const userCode = editorEl.value;
+    // Show help chat area
+    const chatEl = document.getElementById('python-help-chat');
+    const messagesEl = document.getElementById('python-help-messages');
+    if (chatEl) chatEl.classList.remove('hidden');
+
+    // If this is a follow-up question, show it
+    if (userQuestion) {
+      helpConversation.push({ role: 'user', content: userQuestion });
+      const userDiv = document.createElement('div');
+      userDiv.className = 'help-msg user-msg';
+      userDiv.textContent = userQuestion;
+      messagesEl.appendChild(userDiv);
+    }
 
     // Only check for challenge issues after 3+ help requests with failed runs
-    // (prevents false bypass on first help click)
     const shouldCheckChallengeIssue = helpRequestCount >= 3 && failedRunsSinceHelp >= 2;
 
-    const prompt = `You are reviewing a Python challenge in a browser extension.
-${shouldCheckChallengeIssue ? 'Decide whether the problem is in the student\'s code or in the challenge itself.' : 'Help the student understand their mistake. Do NOT suggest the challenge is broken.'}
-Return ONLY valid JSON:
-{
-  "kind": "student_issue"${shouldCheckChallengeIssue ? ' | "challenge_issue"' : ''},
-  "message": "2-4 sentence response",
-  "suggestedAction": "none"${shouldCheckChallengeIssue ? ' | "bypass"' : ''}
-}
-
-${shouldCheckChallengeIssue ? 'Use "challenge_issue" only if the prompt/tests are flawed or the test harness is calling the function incorrectly.\nIf it is a challenge issue, say that plainly and do not blame the student\'s logic.' : ''}
-Do not provide the full solution.
-
-The student is working on this problem:
-
-Problem: ${challenge.prompt}
-Function signature: ${challenge.starterCode}
-Test cases:
-${formatTestCasesForHelp()}
-
-Their current code:
-\`\`\`python
-${userCode}
-\`\`\`
-
-${lastErrorOutput ? `Their latest run produced these errors/failures:\n${lastErrorOutput}` : 'They have not run the code yet, or it produced no output.'}
-
-Runtime diagnostics:
-${formatDiagnosticsForHelp(lastRunDiagnostics)}
-`;
+    // Build the prompt with conversation history
+    const systemPrompt = buildHelpSystemPrompt();
+    let fullPrompt;
+    if (helpConversation.length === 0) {
+      // First help request — just ask for help
+      fullPrompt = systemPrompt + '\n\nThe student clicked "Help". Analyze their code and teach them what they need to know to fix it. Show the relevant syntax with an example.';
+      if (shouldCheckChallengeIssue) {
+        fullPrompt += '\n\nNOTE: If the challenge itself is broken (bad tests, impossible requirements), respond with ONLY: {"kind":"challenge_issue","message":"explanation"}';
+      }
+    } else {
+      // Follow-up — include conversation context
+      const history = helpConversation.map(m => `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.content}`).join('\n\n');
+      fullPrompt = systemPrompt + `\n\nConversation so far:\n${history}\n\nContinue helping. Address the student's latest question directly. Show syntax/examples when relevant.`;
+    }
 
     try {
       const response = await browser.runtime.sendMessage({
         type: 'claudeGenerate',
-        prompt
+        prompt: fullPrompt,
+        maxTokens: 1024
       });
 
-      const parsed = parseHelpResponse(response.content || '');
-      const helpText = parsed?.message || response.content || response.error || 'Could not get help right now.';
+      let helpText = response.content || response.error || 'Could not get help right now.';
 
-      // Show help in output area
-      const existing = outputEl.querySelector('.python-help');
-      if (existing) existing.remove();
-
-      const div = document.createElement('div');
-      div.className = 'python-help';
-      div.textContent = helpText;
-      outputEl.classList.remove('hidden');
-      outputEl.appendChild(div);
-
-      if (shouldCheckChallengeIssue && parsed?.kind === 'challenge_issue') {
-        await bypassChallengeForIssue(parsed.message);
+      // Check for challenge issue JSON response
+      if (shouldCheckChallengeIssue) {
+        try {
+          const parsed = JSON.parse(helpText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
+          if (parsed.kind === 'challenge_issue') {
+            await bypassChallengeForIssue(parsed.message);
+            return;
+          }
+          if (parsed.message) helpText = parsed.message;
+        } catch { /* not JSON, use as plain text */ }
       }
+
+      // Strip JSON wrapper if Claude returned one anyway
+      try {
+        const parsed = JSON.parse(helpText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
+        if (parsed.message) helpText = parsed.message;
+      } catch { /* not JSON, use as-is */ }
+
+      helpConversation.push({ role: 'assistant', content: helpText });
+
+      const aiDiv = document.createElement('div');
+      aiDiv.className = 'help-msg ai-msg';
+      aiDiv.textContent = helpText;
+      messagesEl.appendChild(aiDiv);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+
     } catch (err) {
       console.error('[Challenge Gate] Help request failed:', err);
+      const errDiv = document.createElement('div');
+      errDiv.className = 'help-msg ai-msg';
+      errDiv.textContent = 'Help unavailable right now.';
+      messagesEl.appendChild(errDiv);
     }
 
     if (!challengeResolved) {
