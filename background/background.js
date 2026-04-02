@@ -417,13 +417,19 @@ async function updateActiveTab() {
   }
 }
 
-browser.tabs.onActivated.addListener(() => updateActiveTab());
+// All tab/window listeners call async updateActiveTab — must catch errors
+// to prevent unhandled rejections from crashing the background script on sleep/wake.
+browser.tabs.onActivated.addListener(() => {
+  updateActiveTab().catch(() => {});
+});
 browser.tabs.onUpdated.addListener((_, changeInfo) => {
-  if (changeInfo.url || changeInfo.status === 'complete') updateActiveTab();
+  if (changeInfo.url || changeInfo.status === 'complete') {
+    updateActiveTab().catch(() => {});
+  }
 });
 browser.windows.onFocusChanged.addListener((windowId) => {
   windowFocused = windowId !== browser.windows.WINDOW_ID_NONE;
-  updateActiveTab();
+  updateActiveTab().catch(() => {});
 });
 
 // Idle detection interval set after loadState (see init at bottom)
@@ -452,7 +458,9 @@ let flushIntervalId = null;
 
 function startFlushInterval() {
   if (flushIntervalId) clearInterval(flushIntervalId);
-  flushIntervalId = setInterval(() => flushActiveTrack(), 30000);
+  flushIntervalId = setInterval(() => {
+    flushActiveTrack().catch(() => {});
+  }, 30000);
 }
 
 startFlushInterval();
@@ -460,9 +468,22 @@ startFlushInterval();
 // ── Message handling (from gate, popup, dashboard) ──────────────────────────
 
 browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  const handler = messageHandlers[msg.type];
-  if (handler) {
-    return handler(msg, sender);
+  try {
+    const handler = messageHandlers[msg.type];
+    if (handler) {
+      const result = handler(msg, sender);
+      // Catch promise rejections from async handlers
+      if (result && typeof result.catch === 'function') {
+        return result.catch(err => {
+          console.error(`[Challenge Gate] Message handler '${msg.type}' failed:`, err);
+          return { error: String(err) };
+        });
+      }
+      return result;
+    }
+  } catch (err) {
+    console.error(`[Challenge Gate] Message handler '${msg.type}' threw:`, err);
+    return Promise.resolve({ error: String(err) });
   }
 });
 
