@@ -64,11 +64,12 @@
     "id": "g-commit-01",
     "topic": "git_commit",
     "tier": 1,
-    "scenario": "Make three sequential commits to build up a project history. Add files and commit after each change.",
+    "scenario": "Three new files are ready: one.txt, two.txt and three.txt. Stage and commit each file separately to build three sequential commits.",
     "initialState": {
       "commits": [{ "sha": "a1b2c3d", "message": "Initial commit", "parents": [] }],
       "branches": { "main": "a1b2c3d" },
-      "HEAD": { "type": "branch", "ref": "main" }
+      "HEAD": { "type": "branch", "ref": "main" },
+      "workingTree": { "one.txt": "new", "two.txt": "new", "three.txt": "new" }
     },
     "targetState": {
       "commits": [
@@ -90,7 +91,7 @@
         "validation": { "type": "headOnBranch", "expected": "main" }
       }
     ],
-    "hints": ["Add a file then commit: git add file.txt && git commit -m \"message\"", "Repeat for each commit — you need 3 new ones"],
+    "hints": ["Stage one file then commit: git add one.txt followed by git commit -m \"message\"", "Repeat for each commit — you need 3 new ones"],
     "afterSolve": "Each commit is a snapshot of your project at a point in time. Good commit messages explain WHY a change was made, not just what changed."
   },
   {

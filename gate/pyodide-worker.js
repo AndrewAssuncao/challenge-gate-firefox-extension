@@ -31,9 +31,11 @@ self.onmessage = async (e) => {
     unrecoverableChallengeIssue: false
   };
 
+  const namespace = pyodide.runPython('dict()');
+  const runPython = source => pyodide.runPython(source, { globals: namespace });
   try {
     // Reset namespace for each run
-    pyodide.runPython(`
+    runPython(`
 import sys
 import io
 import ast
@@ -42,17 +44,18 @@ import inspect
 
     // Load user code into the namespace
     try {
-      pyodide.runPython(code);
+      runPython(code);
     } catch (err) {
       self.postMessage({
         type: 'result',
+        errorKind: 'user-code',
         error: cleanError(err.message)
       });
       return;
     }
 
-    pyodide.globals.set('__function_name', functionName);
-    pyodide.runPython(`
+    namespace.set('__function_name', functionName);
+    runPython(`
 def __split_top_level_args(src):
     text = '' if src is None else str(src)
     if not text.strip():
@@ -206,9 +209,9 @@ def __execute_call(callable_fn=None, call_expr=None, args=None):
 
 def __run_single_test(fn_name, raw_input):
     fn = globals().get(fn_name)
-    if fn is None:
+    if not callable(fn):
         return {
-            'challenge_issue': True,
+            'challenge_issue': False,
             'error': f'Function "{fn_name}" is not defined.',
             'actual': None,
             'repaired': False,
@@ -265,8 +268,8 @@ def __run_single_test(fn_name, raw_input):
     // Run each test case
     for (const tc of testCases) {
       try {
-        pyodide.globals.set('__raw_input', String(tc.input ?? ''));
-        const payloadJson = pyodide.runPython(`
+        namespace.set('__raw_input', String(tc.input ?? ''));
+        const payloadJson = runPython(`
 import json
 json.dumps(__run_single_test(__function_name, __raw_input))
 `);
@@ -293,7 +296,11 @@ json.dumps(__run_single_test(__function_name, __raw_input))
         // Compare: use return value primarily, fallback to stdout
         const actual = payload.actual;
         const expected = String(tc.expected);
-        const passed = normalizeOutput(actual) === normalizeOutput(expected);
+        const numeric = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?$/i;
+        const a = normalizeOutput(actual), b = normalizeOutput(expected);
+        const passed = Number.isFinite(tc.tolerance) && tc.tolerance >= 0 && numeric.test(a) && numeric.test(b)
+          ? Math.abs(Number(a) - Number(b)) <= tc.tolerance
+          : a === b;
 
         if (payload.repaired) {
           diagnostics.repairedTests.push({
@@ -327,8 +334,11 @@ json.dumps(__run_single_test(__function_name, __raw_input))
   } catch (err) {
     self.postMessage({
       type: 'result',
+      errorKind: 'infrastructure',
       error: cleanError(err.message)
     });
+  } finally {
+    namespace.destroy();
   }
 };
 

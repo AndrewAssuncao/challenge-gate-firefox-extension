@@ -1,0 +1,316 @@
+'use strict';
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const E=require('../learning/engine'), C=require('../learning/curriculum'), Store=require('../learning/store');
+const DAY=86400000;
+function session(mode='math',track='arithmetic') {
+  let state=E.empty(), lesson, time=1000, serial=0;
+  const run=cmd=>{const r=E.apply(state,{lessonId:lesson?.id,revision:lesson?.revision,...cmd},time);state=r.state;lesson=r.lesson;return r;};
+  return {run,begin:(fresh=true)=>run({op:'begin',mode,track,fresh}),answer:(correct=true)=>run({op:'attempt',eventId:'e'+(++serial),answer:correct?E.question(lesson).answer:123456,reason:E.question(lesson).correctReason,construction:E.question(lesson).construction?.answer,correct}),get state(){return state;},get lesson(){return lesson;},set time(n){time=n;}};
+}
+test('diagnostic → explanation → guided practice → independent check survives reload',()=>{
+ const h=session();h.begin();assert.equal(h.lesson.stage,'diagnostic');h.answer(false);assert.equal(h.lesson.stage,'teach');
+ h.run({op:'continue'});assert.equal(h.lesson.stage,'guided');h.answer();assert.equal(h.lesson.stage,'check');
+ assert.equal(E.evidence(h.state,'arith-percent').independent,0);
+ const resumed=E.apply(JSON.parse(JSON.stringify(h.state)),{op:'begin',mode:'math',track:'arithmetic'});
+ assert.equal(resumed.lesson.id,h.lesson.id);assert.equal(resumed.lesson.stage,'check');
+ h.answer();assert.equal(h.lesson.stage,'done');assert.equal(E.evidence(h.state,'arith-percent').independent,1);
+});
+test('five varied assessments unlock prerequisite, only seven-day review establishes retention',()=>{
+ const h=session();for(let i=0;i<5;i++){h.begin();h.answer();}
+ assert.equal(E.evidence(h.state,'arith-percent').status,'practiced');assert.equal(E.select(h.state,'math','arithmetic',1000).skill.id,'arith-fraction');
+ h.time=7*DAY+2000;h.begin();assert.equal(h.lesson.stage,'review');assert.equal(h.lesson.skillId,'arith-percent');h.answer();
+ assert.equal(E.evidence(h.state,'arith-percent').status,'retained');
+});
+test('hints and custom teaching never count as independent mastery',()=>{
+ const h=session();h.begin();h.run({op:'assist'});h.answer();assert.equal(h.lesson.stage,'check');assert.equal(E.evidence(h.state,'arith-percent').independent,0);
+});
+test('independent math tracks do not inherit mastery',()=>{
+ const h=session();h.begin();h.answer();h.begin();h.answer();
+ const r=E.apply(h.state,{op:'begin',mode:'math',track:'probability'});assert.equal(r.lesson.skillId,'prob-complement');assert.equal(E.evidence(r.state,'prob-complement').attempts,0);
+});
+test('invalidated evidence reopens prerequisites without inventing replacements',()=>{
+ const h=session();for(let i=0;i<5;i++){h.begin();h.answer();}assert.equal(E.evidence(h.state,'arith-percent').practiced,true);
+ h.run({op:'invalidate',target:h.state.events.at(-1).id});assert.equal(E.evidence(h.state,'arith-percent').practiced,false);
+ assert.equal(E.select(h.state,'math','arithmetic',2000).skill.id,'arith-percent');
+});
+test('settings gate requires two independent checks',()=>{
+ const h=session();h.run({op:'begin',mode:'math',track:'arithmetic',settingsGate:true});h.answer();assert.equal(h.lesson.stage,'check');h.answer();assert.equal(h.lesson.stage,'done');
+});
+test('numeric input accepts fractions but rejects coercion and nonfinite input',()=>{
+ assert.equal(E.parseNumber(' 3/8 '),.375);for(const x of ['', 'Infinity','NaN','0/0','0x10','1+1','1e999'])assert.equal(E.parseNumber(x),null);
+});
+test('attempt retries are idempotent and stale tabs cannot replace evidence',()=>{
+ const h=session();h.begin();const before=h.lesson;
+ const cmd={op:'attempt',lessonId:before.id,revision:before.revision,eventId:'retry',answer:E.question(before).answer};
+ const a=E.apply(h.state,cmd);const b=E.apply(a.state,cmd);assert.equal(b.state.events.length,1);assert.equal(b.duplicate,true);
+ assert.throws(()=>E.apply(a.state,{...cmd,eventId:'other'}),/another tab/);
+});
+test('serialized store retains independent tabs and rejects failed writes before ack',async()=>{
+ let saved={},fail=false;const storage={get:async()=>structuredClone(saved),set:async value=>{if(fail)throw Error('disk full');saved=structuredClone({...saved,...value});}};
+ const store=Store.create(storage);
+ const [a,b]=await Promise.all([store.command({op:'begin',mode:'math',track:'arithmetic'}),store.command({op:'begin',mode:'brainteasers'})]);
+ assert.equal(Object.keys(saved.quantLearner.lessons).length,2);
+ fail=true;await assert.rejects(store.command({op:'assist',lessonId:a.lesson.id,revision:a.lesson.revision}),/disk full/);assert.equal(saved.quantLearner.lessons[a.lesson.key].assisted,false);
+ fail=false;await store.command({op:'assist',lessonId:b.lesson.id,revision:b.lesson.revision});
+ const reopened=Store.create(storage);assert.equal((await reopened.command({op:'read'})).state.lessons[b.lesson.key].assisted,true);
+});
+test('unknown schema is not silently reset',async()=>{
+ let writes=0;const store=Store.create({get:async()=>({quantLearner:{version:99}}),set:async()=>writes++});
+ await assert.rejects(store.command({op:'begin',mode:'math'}),/Unsupported/);assert.equal(writes,0);
+});
+test('generated teaching must match selected skill and phase and contain complete prose',()=>{
+ const h=session();h.begin();const valid={skillId:h.lesson.skillId,stage:h.lesson.stage,explanation:'Explain',workedExample:'Example',connection:'Foundation',nextStep:'Practice'};
+ assert.deepEqual(E.validateTeaching(JSON.stringify(valid),h.lesson),valid);
+ for(const x of ['not json',{}, {...valid,skillId:'other'}, {...valid,stage:'done'}, {...valid,workedExample:''}, {...valid,explanation:'<script>bad</script>'}]) assert.throws(()=>E.validateTeaching(x,h.lesson));
+});
+test('AI context includes actual mistakes, assistance, prerequisites and fixed assessment',()=>{
+ const h=session();h.begin();h.answer(false);const p=E.prompt(h.state,h.lesson);assert.match(p,/answer mismatch/);assert.match(p,/prerequisites/);assert.match(p,/answer key/);
+});
+test('all curriculum IDs, dependencies and generated questions are valid',()=>{
+ assert.equal(new Set(C.skills.map(s=>s.id)).size,C.skills.length);
+ for(const s of C.skills){for(const id of s.prerequisites)assert.ok(C.get(id));for(let seed=1;seed<20;seed++){const q=C.question(s.id,seed);assert.ok(q.solution);if(q.kind==='number')assert.ok(Number.isFinite(q.answer));else assert.ok(q.testCases.length>=3);}}
+});
+function legacy(){const c=vm.createContext({console,Date});for(const f of ['spaced-repetition.js','challenge-provider.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../gate',f),'utf8'),c);return vm.runInContext('ChallengeProvider',c);}
+test('legacy local bank has valid topics; assisted passes do not advance',()=>{
+ const P=legacy(),bank=require('../gate/challenges/python-problems.json');for(const q of bank)assert.ok(P.CURRICULUM.some(t=>t.id===q.topic));
+ const p=P.defaultProfile();for(let i=0;i<2;i++)P.updateProfileAfterChallenge(p,{id:'help'+i,topic:'basics'},true,'local',true,true);
+ assert.equal(p.currentTopicIndex,0);
+});
+test('legacy invalidation reopens topic and resets confidence',()=>{
+ const P=legacy(),p=P.defaultProfile(),q={id:'bad',topic:'basics'};
+ for(let i=0;i<4;i++)P.updateProfileAfterChallenge(p,q,true,'local',false,false);
+ assert.ok(p.currentTopicIndex>0);P.removeChallengeAttempts(p,q);assert.equal(p.currentTopicIndex,0);
+});
+test('ten hinted answers never produce readiness',()=>{
+ const h=session();h.begin();for(let i=0;i<10;i++){h.run({op:'assist'});h.answer();}
+ assert.equal(E.evidence(h.state,'arith-percent').independent,0);assert.equal(E.evidence(h.state,'arith-percent').practiced,false);
+});
+test('five same-template answers cannot substitute for transfer',()=>{
+ const h=session();h.begin();h.answer();const s=structuredClone(h.state),e=s.events[0];
+ s.events=Array.from({length:5},(_,i)=>({...e,id:'clone'+i,lessonId:'other'+i,variant:'v'+i,familyId:'foundation',isTransfer:false}));
+ assert.equal(E.evidence(s,'arith-percent').practiced,false);
+});
+test('cross-track prerequisites select honest diagnostics instead of crediting math',()=>{
+ const h=session('python','');for(let i=0;i<5;i++){h.begin();h.answer();}
+ h.begin();assert.equal(h.lesson.skillId,'prob-complement');assert.match(h.lesson.reason,/Prerequisite/);assert.equal(E.evidence(h.state,'prob-ev').attempts,0);
+});
+test('brainteaser number without a correct reason cannot pass',()=>{
+ const h=session('brainteasers','');h.begin();const q=E.question(h.lesson);
+ h.run({op:'attempt',eventId:'bad-reason',answer:q.answer,reason:'unsupported'});
+ assert.equal(h.lesson.stage,'teach');assert.equal(h.state.events[0].error,'reason mismatch');
+});
+test('transfer questions change the task structure and include oracles',()=>{
+ for(const skill of C.skills){const a=C.question(skill.id,2,false,0),b=C.question(skill.id,2,false,1);assert.notEqual(a.prompt,b.prompt);assert.notEqual(a.familyId,b.familyId);assert.equal(b.transfer,true);}
+ assert.equal(C.question('prob-conditional',2,false,1).answer,4/5);
+ assert.equal(C.question('prob-bayes',2,false,1).answer,8/17);
+ assert.equal(C.question('brain-invariant',2,false,1).answer,2);
+});
+test('raw export preserves unsupported schema for recovery',async()=>{
+ const raw={version:99,important:'keep me'};const store=Store.create({get:async()=>({quantLearner:raw}),set:async()=>{throw Error('must not write');}});
+ assert.deepEqual((await store.command({op:'export'})).state,raw);
+});
+test('repeated content across lessons cannot invent independent evidence',()=>{
+ const h=session('brainteasers','');for(let i=0;i<15;i++){h.begin();h.answer();}
+ const independent=h.state.events.filter(e=>e.kind==='attempt' && e.firstTry && !e.assisted);
+ assert.equal(new Set(independent.map(e=>e.semanticKey)).size,independent.length);
+ const q=C.question('code-simulation',1,false,1),same=C.question('code-simulation',1,false,1);
+ assert.equal(q.semanticKey,same.semanticKey);
+ const old=structuredClone(h.state);old.events.forEach(e=>{e.contentVersion=1;});
+ for(const s of C.skills)assert.equal(E.evidence(old,s.id).practiced,false);
+});
+test('durable evidence can be invalidated after its lesson is replaced',()=>{
+ const h=session();h.begin();h.answer();const target=h.state.events[0].id;h.begin();
+ const active=structuredClone(h.lesson);const r=E.apply(h.state,{op:'invalidate',target});
+ assert.deepEqual(r.state.lessons[active.key],active);assert.equal(E.evidence(r.state,'arith-percent').independent,0);
+ assert.equal(E.apply(r.state,{op:'invalidate',target}).state.events.length,r.state.events.length);
+});
+test('activity derives completed quant lessons and time without mutating legacy logs',()=>{
+ const h=session('python','');h.begin();h.time=6000;h.answer();
+ const d=new Date(6000),day=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+ const legacy={[day]:{typing:2,totalTime:10}};
+ const a=E.activity(h.state,legacy);assert.equal(a[day].python,1);assert.equal(a[day].totalTime,15);
+ assert.deepEqual(E.activity(h.state,legacy),a);assert.deepEqual(legacy,{[day]:{typing:2,totalTime:10}});
+ const duplicate=structuredClone(h.state);duplicate.events.push(duplicate.events[0]);assert.deepEqual(E.activity(duplicate,legacy),a);
+});
+test('construction objectives require a correct intermediate check',()=>{
+ for(const id of ['brain-pigeon','brain-balance','brain-invariant','brain-bounds'])for(const level of [0,1]){
+  const q=C.question(id,3,false,level);assert.ok(q.construction);
+  const h=session('brainteasers','');h.begin();const state=structuredClone(h.state),lesson=state.lessons[h.lesson.key];lesson.skillId=id;lesson.level=level;
+  const item=E.question(lesson);const r=E.apply(state,{op:'attempt',lessonId:lesson.id,revision:lesson.revision,eventId:'construction',answer:item.answer,reason:item.correctReason,construction:item.construction.answer+1});
+  assert.equal(r.state.events.at(-1).correct,false);assert.equal(r.state.events.at(-1).error,'construction mismatch');
+ }
+});
+test('transfer hints describe the transfer task rather than the foundation',()=>{
+ assert.match(C.question('brain-invariant',1,false,1).hints.join(' '),/modulo 4/i);
+ assert.match(C.question('brain-pigeon',1,false,1).hints.join(' '),/three|triple|2/i);
+ assert.match(C.question('arith-percent',1,false,1).hints.join(' '),/divid|original/i);
+});
+test('perfect learner reaches every foundation skill without repeated-content credit',()=>{
+ const reached=new Set();
+ for(const [mode,track] of [['math','arithmetic'],['math','probability'],['python',''],['brainteasers','']]){
+  const h=session(mode,track);const targets=C.skills.filter(s=>s.mode===mode && (!track || s.track===track) && s.track!=='applied');
+  for(let i=0;i<160 && !targets.every(s=>E.evidence(h.state,s.id).practiced);i++){
+   h.begin();h.answer();
+  }
+  for(const skill of targets){assert.equal(E.evidence(h.state,skill.id).practiced,true,`${mode}: ${skill.id} stalled`);reached.add(skill.id);}
+  const novel=h.state.events.filter(e=>e.kind==='attempt' && e.firstTry);
+  assert.equal(new Set(novel.map(e=>e.semanticKey)).size,novel.length);
+  for(const skill of targets)assert.equal(E.evidence(h.state,skill.id).retained,false,'readiness is not retention');
+ }
+ assert.equal(reached.size,21);
+});
+test('failed or hinted first transfer recovers and continued perfect practice preserves readiness',()=>{
+ for(const intervention of ['fail','hint']){
+  const h=session('math','probability');let intervened=false;
+  for(let i=0;i<160;i++){
+   h.begin();if(h.lesson.stage==='teach')h.run({op:'continue'});
+   const q=E.question(h.lesson);
+   if(!intervened && q.transfer){intervened=true;if(intervention==='hint')h.run({op:'assist'});h.answer(intervention!=='fail');}
+   else h.answer();
+  }
+  assert.ok(intervened);
+  for(const skill of C.skills.filter(s=>s.track==='probability'))assert.equal(E.evidence(h.state,skill.id).practiced,true,intervention+': '+skill.id);
+ }
+});
+test('durable transfer qualification is removed by invalidation',()=>{
+ const h=session();for(let i=0;i<5;i++){h.begin();h.answer();}
+ const transfers=h.state.events.filter(e=>e.isTransfer&&e.correct);assert.ok(transfers.length);
+ let state=h.state;for(const e of transfers)state=E.apply(state,{op:'invalidate',target:e.id}).state;
+ assert.equal(E.evidence(state,'arith-percent').practiced,false);
+});
+test('skill tree is acyclic, uses real prerequisite edges and matches evidence',()=>{
+ const h=session();h.begin();h.answer();const graph=E.graph(h.state,2000);
+ assert.equal(graph.nodes.length,C.skills.length);
+ for(const node of graph.nodes){assert.deepEqual(node.evidence,E.evidence(h.state,node.id));assert.equal(node.eligible,node.prerequisites.every(id=>E.evidence(h.state,id).practiced));}
+ for(const edge of graph.edges){assert.ok(C.get(edge.to).prerequisites.includes(edge.from));assert.ok(graph.nodes.find(n=>n.id===edge.from).rank<graph.nodes.find(n=>n.id===edge.to).rank);}
+ assert.equal(graph.nodes.find(n=>n.id==='code-ev').eligible,false);
+});
+test('review failure repairs without erasing unrelated skills or crediting assistance',()=>{
+ const h=session();for(let i=0;i<10;i++){h.begin();h.answer();}
+ assert.ok(E.evidence(h.state,'arith-fraction').practiced);
+ h.time=8*DAY;h.begin();assert.equal(h.lesson.stage,'review');const skill=h.lesson.skillId;h.answer(false);
+ assert.equal(E.evidence(h.state,skill).status,'needs practice');assert.ok(E.evidence(h.state,'arith-fraction').practiced);
+ h.run({op:'continue'});h.answer();assert.equal(E.evidence(h.state,skill).practiced,false);
+ h.answer();assert.equal(E.evidence(h.state,skill).practiced,true);assert.equal(E.evidence(h.state,skill).retained,false);
+});
+test('every skill recovers after exhausted failures/hints using delayed reassessment across reloads',()=>{
+ for(const skill of C.skills)for(const intervention of ['fail','hint']){
+  let state=E.empty(),lesson,now=1000,serial=0;
+  const apply=cmd=>{const r=E.apply(JSON.parse(JSON.stringify(state)),{lessonId:lesson?.id,revision:lesson?.revision,...cmd},now);state=JSON.parse(JSON.stringify(r.state));lesson=r.lesson;};
+  const fresh=()=>{
+   const id='test-'+(++serial);lesson={id,key:'test',mode:skill.mode,track:skill.track,skillId:skill.id,stage:'check',seed:serial,level:serial%2,revision:0,assisted:false,checks:0,required:1,stepStartedAt:now};state.lessons.test=lesson;
+  };
+  // Expose every local item without any independent pass.
+  for(let seed=1;seed<=18;seed++)for(const level of [0,1]){
+   fresh();lesson.seed=seed;lesson.level=level;state.lessons.test=lesson;
+   if(intervention==='hint')apply({op:'assist'});
+   const q=E.question(lesson);apply({op:'attempt',eventId:'bad-'+serial,answer:intervention==='fail'?99999:q.answer,reason:q.correctReason,construction:q.construction?.answer,correct:intervention!=='fail'});
+  }
+  assert.equal(E.evidence(state,skill.id).independent,0);
+  fresh();let q=E.question(lesson);apply({op:'attempt',eventId:'early',answer:q.answer,reason:q.correctReason,construction:q.construction?.answer,correct:true});
+  assert.equal(E.evidence(state,skill.id).independent,0,'immediate repetition is not reassessment');
+  now+=7*DAY+1;
+  for(let i=0;i<30;i++){
+   fresh();lesson.seed=1+i%18;lesson.level=i%2;state.lessons.test=lesson;q=E.question(lesson);apply({op:'attempt',eventId:'repair-'+serial,answer:q.answer,reason:q.correctReason,construction:q.construction?.answer,correct:true});
+  }
+  assert.equal(E.evidence(state,skill.id).practiced,true,skill.id+' '+intervention);
+  assert.equal(E.evidence(state,skill.id).novelIndependent,0);assert.equal(E.evidence(state,skill.id).recovered,true);assert.equal(E.evidence(state,skill.id).status,'practiced (reassessed)');
+  const accepted=state.events.filter(e=>e.retest&&!e.assisted&&e.correct);
+  assert.ok(accepted.length>=5);assert.ok(accepted.every(e=>!e.firstTry));
+  assert.equal(E.evidence(state,skill.id).independent,new Set(accepted.map(e=>e.semanticKey)).size);
+ }
+});
+test('conditional and Bayes transfer hints derive from the same parameters as answers',()=>{
+ for(const harder of [false,true])for(let seed=1;seed<=18;seed++){
+  const n=seed%9+2+(harder?5:0),conditional=C.question('prob-conditional',seed,harder,1),bayes=C.question('prob-bayes',seed,harder,1);
+  assert.equal(conditional.answer,n/(n+1));assert.ok(conditional.hints.join(' ').includes(`${n} of those ${n+1}`));
+  const prior=(n+6)/100,expected=prior*.8/(prior*.8+(1-prior)*.1);assert.ok(Math.abs(bayes.answer-expected)<1e-12);assert.ok(bayes.hints.join(' ').includes(`${8*(n+6)} true flags and ${100-(n+6)} false flags`));
+ }
+});
+test('natural brainteaser selector recovers ordinary balance mistakes without a week-long wait',()=>{
+ for(const mode of ['fail','hint']){
+  const h=session('brainteasers','');let interventions=0;
+  const step=()=>{h.begin();if(h.lesson.stage==='teach')h.run({op:'continue'});
+   const intervene=h.lesson.skillId==='brain-balance' && !h.lesson.assisted && interventions<(mode==='fail'?2:3);
+   if(intervene){interventions++;if(mode==='hint')h.run({op:'assist'});}
+   h.answer(!(intervene&&mode==='fail'));
+  };
+  for(let i=0;i<150;i++)step();
+  assert.equal(interventions,mode==='fail'?2:3);
+  const after=E.evidence(h.state,'brain-balance');assert.equal(after.practiced,true);assert.ok(after.novelIndependent>=4);assert.equal(after.reassessed,0);
+  assert.equal(E.evidence(h.state,'brain-invariant').practiced,true);
+ }
+});
+test('retention uses earliest valid qualifying baseline, not latest per-item retests',()=>{
+ let state=E.empty(),serial=0;
+ function attempt(seed,level,now,stage){const id='retention-'+(++serial),lesson={id,key:'test',mode:'brainteasers',track:'',skillId:'brain-balance',stage,seed,level,revision:0,assisted:false,checks:0,required:1,stepStartedAt:now};state.lessons.test=lesson;const q=E.question(lesson);state=E.apply(state,{op:'attempt',lessonId:id,revision:0,eventId:id,answer:q.answer,reason:q.correctReason,construction:q.construction.answer},now).state;}
+ for(const level of [0,1])for(let seed=1;seed<=3;seed++)attempt(seed,level,1000,'check');
+ const originals=state.events.filter(e=>e.kind==='attempt').map(e=>e.id);
+ attempt(1,0,8*DAY,'review');assert.equal(E.evidence(state,'brain-balance').retained,true);
+ for(const level of [0,1])for(let seed=1;seed<=3;seed++)attempt(seed,level,16*DAY,'review');
+ assert.equal(E.evidence(state,'brain-balance').retained,true);
+ // Removing all evidence before day16 removes the elapsed valid baseline.
+ for(const e of state.events.filter(e=>e.kind==='attempt'&&e.at<16*DAY))state=E.apply(state,{op:'invalidate',target:e.id},16*DAY).state;
+ assert.equal(E.evidence(state,'brain-balance').retained,false);
+});
+test('daily routine practice cannot postpone scheduled retention reviews forever',()=>{
+ const h=session();for(let i=0;i<15;i++){h.begin();h.answer();}
+ const initialDue=E.evidence(h.state,'arith-percent').dueAt;
+ for(let day=1;day<=30;day++){h.time=day*DAY+1000;h.begin();if(h.lesson.stage==='teach')h.run({op:'continue'});h.answer();}
+ for(const skill of C.skills.filter(s=>s.track==='arithmetic'))assert.equal(E.evidence(h.state,skill.id).retained,true,skill.id);
+ assert.ok(initialDue<8*DAY);
+});
+test('recently exposed known-item review cannot award retention',()=>{
+ const h=session();for(let i=0;i<5;i++){h.begin();h.answer();}
+ const state=structuredClone(h.state),q=C.question('arith-percent',1,false,0),now=8*DAY;
+ state.events.push({id:'recent-help',kind:'exposure',semanticKey:q.semanticKey,skillId:q.skillId,at:now-1000});
+ const lesson={id:'review',key:'review',mode:'math',skillId:q.skillId,seed:1,level:0,stage:'review',revision:0,assisted:false,checks:0,required:1,stepStartedAt:now};state.lessons.review=lesson;
+ const result=E.apply(state,{op:'attempt',lessonId:lesson.id,revision:0,eventId:'not-delayed',answer:q.answer},now);
+ assert.equal(result.state.events.at(-1).retest,false);assert.equal(E.evidence(result.state,q.skillId).retained,false);
+});
+test('four-decimal responses satisfy stated numeric precision',()=>{
+ const q=C.question('arith-return',1,false,1);assert.ok(Math.abs(17.6471-q.answer)<=q.tolerance);
+});
+test('resuming an old attempt does not log an hour of inactive time',()=>{
+ const h=session();h.begin();h.time=2*DAY;h.answer();assert.equal(h.state.events.at(-1).elapsedMs,null);
+});
+test('reasoning variants require reading changing invariants, capacities and relative orders',()=>{
+ for(const [skill,level] of [['brain-invariant',0],['brain-invariant',1],['brain-bounds',1],['brain-symmetry',1],['prob-variance',0],['prob-variance',1]]){
+  const questions=Array.from({length:18},(_,i)=>C.question(skill,i+1,false,level));
+  assert.ok(new Set(questions.map(q=>q.answer)).size>=2,skill+' has a constant answer');
+ }
+ for(let seed=1;seed<=18;seed++){
+  for(const level of [0,1]){const q=C.question('brain-invariant',seed,false,level),step=level?3+seed%3:2;assert.equal(q.answer,seed%step);assert.equal(q.construction.answer,(Number(q.prompt.match(/^Start with (\d+)/)[1])-q.answer)/step);assert.match(q.hints.join(' '),new RegExp('modulo '+step));}
+ }
+});
+
+test('table construction remainder matches each seating problem',()=>{
+ for(let seed=0;seed<36;seed++){
+  const q=C.question('brain-bounds',seed,false,0);
+  const [,total,capacity]=q.prompt.match(/^(\d+) people.*at most (\d+) people/).map(Number);
+  const remaining=total-q.construction.answer*capacity;
+  assert.ok(remaining>0 && remaining<capacity);
+  assert.ok(q.construction.prompt.includes(`with ${remaining} people at the last table`));
+  assert.ok(q.solution.includes(`remaining ${remaining} people`));
+  assert.equal(q.answer,q.construction.answer+1);
+ }
+});
+
+test('balance bounds include non-powers and an attaining balanced split',()=>{
+ const items=Array.from({length:9},(_,seed)=>C.question('brain-balance',seed));
+ assert.equal(new Set(items.map(q=>q.semanticKey)).size,9);
+ assert.ok(items.some(q=>q.prompt.startsWith('Among 10 ')));
+ for(const q of items){
+  const coins=Number(q.prompt.match(/^Among (\d+)/)[1]),k=q.answer;
+  assert.ok(3**(k-1)<coins && coins<=3**k);
+  assert.equal(q.construction.answer,Math.ceil(coins/3));
+  const pan=Math.round(coins/3),groups=[pan,pan,coins-2*pan];
+  assert.ok(groups.every(n=>n>=0 && n<=3**(k-1)));
+  assert.equal(Math.max(...groups),q.construction.answer);
+ }
+});
+test('numeric precision is visible in the actual answer form',()=>{
+ assert.match(fs.readFileSync(path.join(__dirname,'../gate/gate.html'),'utf8'),/exact fraction or rounded to 4 decimal places/);
+});

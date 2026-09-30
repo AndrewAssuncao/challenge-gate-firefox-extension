@@ -1,6 +1,7 @@
 [
   {
     "id": "p1-01",
+    "topic": "basics",
     "tier": 1,
     "prompt": "Write a function `double(n)` that returns n multiplied by 2.",
     "functionName": "double",
@@ -14,6 +15,7 @@
   },
   {
     "id": "p1-02",
+    "topic": "conditionals",
     "tier": 1,
     "prompt": "Write a function `is_even(n)` that returns True if n is even, False otherwise.",
     "functionName": "is_even",
@@ -27,6 +29,7 @@
   },
   {
     "id": "p1-03",
+    "topic": "conditionals",
     "tier": 1,
     "prompt": "Write a function `absolute(n)` that returns the absolute value of n without using the built-in `abs()`.",
     "functionName": "absolute",
@@ -40,6 +43,7 @@
   },
   {
     "id": "p1-04",
+    "topic": "conditionals",
     "tier": 1,
     "prompt": "Write a function `max_of_three(a, b, c)` that returns the largest of three numbers.",
     "functionName": "max_of_three",
@@ -54,6 +58,7 @@
   },
   {
     "id": "p1-05",
+    "topic": "basics",
     "tier": 1,
     "prompt": "Write a function `celsius_to_fahrenheit(c)` that converts Celsius to Fahrenheit. Formula: F = C * 9/5 + 32.",
     "functionName": "celsius_to_fahrenheit",
@@ -67,6 +72,7 @@
   },
   {
     "id": "p1-06",
+    "topic": "loops",
     "tier": 1,
     "prompt": "Write a function `string_length(s)` that returns the length of a string without using `len()`.",
     "functionName": "string_length",
@@ -80,6 +86,7 @@
   },
   {
     "id": "p1-07",
+    "topic": "loops",
     "tier": 1,
     "prompt": "Write a function `count_vowels(s)` that returns the number of vowels (a, e, i, o, u) in a string. Case-insensitive.",
     "functionName": "count_vowels",
@@ -94,6 +101,7 @@
   },
   {
     "id": "p1-08",
+    "topic": "strings",
     "tier": 1,
     "prompt": "Write a function `reverse_string(s)` that returns the reversed string without using slicing or reversed().",
     "functionName": "reverse_string",
@@ -108,6 +116,7 @@
   },
   {
     "id": "p1-09",
+    "topic": "loops",
     "tier": 1,
     "prompt": "Write a function `sum_list(nums)` that returns the sum of all numbers in a list without using `sum()`.",
     "functionName": "sum_list",
@@ -122,6 +131,7 @@
   },
   {
     "id": "p1-10",
+    "topic": "loops",
     "tier": 1,
     "prompt": "Write a function `factorial(n)` that returns n! (n factorial). Assume n >= 0.",
     "functionName": "factorial",
@@ -136,6 +146,7 @@
   },
   {
     "id": "p2-01",
+    "topic": "lists",
     "tier": 2,
     "prompt": "Write a function `fizzbuzz(n)` that returns a list of strings from 1 to n. For multiples of 3 use 'Fizz', for multiples of 5 use 'Buzz', for multiples of both use 'FizzBuzz', otherwise the number as a string.",
     "functionName": "fizzbuzz",
@@ -149,6 +160,7 @@
   },
   {
     "id": "p2-02",
+    "topic": "strings",
     "tier": 2,
     "prompt": "Write a function `is_palindrome(s)` that returns True if s is a palindrome (ignoring case and spaces).",
     "functionName": "is_palindrome",
@@ -163,6 +175,7 @@
   },
   {
     "id": "p2-03",
+    "topic": "dicts",
     "tier": 2,
     "prompt": "Write a function `two_sum(nums, target)` that returns a list of two indices whose values sum to target. Assume exactly one solution exists.",
     "functionName": "two_sum",
@@ -176,6 +189,7 @@
   },
   {
     "id": "p2-04",
+    "topic": "recursion",
     "tier": 2,
     "prompt": "Write a function `flatten(lst)` that flattens a nested list into a single list. Example: `[1, [2, [3]], 4]` → `[1, 2, 3, 4]`.",
     "functionName": "flatten",
@@ -190,6 +204,7 @@
   },
   {
     "id": "p2-05",
+    "topic": "sets_tuples",
     "tier": 2,
     "prompt": "Write a function `unique_chars(s)` that returns True if all characters in the string are unique (no repeats).",
     "functionName": "unique_chars",
@@ -204,6 +219,7 @@
   },
   {
     "id": "p2-06",
+    "topic": "dicts",
     "tier": 2,
     "prompt": "Write a function `word_count(s)` that returns a dictionary mapping each word (lowercased) to its count in the string.",
     "functionName": "word_count",
@@ -217,6 +233,7 @@
   },
   {
     "id": "p2-07",
+    "topic": "lists",
     "tier": 2,
     "prompt": "Write a function `fibonacci(n)` that returns the first n Fibonacci numbers as a list. fib(1)=[0], fib(2)=[0,1], etc.",
     "functionName": "fibonacci",
@@ -230,6 +247,7 @@
   },
   {
     "id": "p2-08",
+    "topic": "sets_tuples",
     "tier": 2,
     "prompt": "Write a function `remove_duplicates(lst)` that returns a new list with duplicates removed, preserving original order.",
     "functionName": "remove_duplicates",
@@ -243,6 +261,7 @@
   },
   {
     "id": "p2-09",
+    "topic": "lists",
     "tier": 2,
     "prompt": "Write a function `rotate_list(lst, k)` that rotates a list to the right by k positions. Example: `rotate_list([1,2,3,4,5], 2)` → `[4,5,1,2,3]`.",
     "functionName": "rotate_list",
@@ -257,6 +276,7 @@
   },
   {
     "id": "p2-10",
+    "topic": "strings",
     "tier": 2,
     "prompt": "Write a function `title_case(s)` that capitalizes the first letter of each word. Do not use the built-in `.title()` method.",
     "functionName": "title_case",
@@ -271,6 +291,7 @@
   },
   {
     "id": "p3-01",
+    "topic": "dicts",
     "tier": 3,
     "prompt": "Write a function `group_anagrams(words)` that groups a list of words into lists of anagrams. Return a list of groups (order doesn't matter within groups).",
     "functionName": "group_anagrams",
@@ -284,6 +305,7 @@
   },
   {
     "id": "p3-02",
+    "topic": "lists",
     "tier": 3,
     "prompt": "Write a function `matrix_transpose(matrix)` that returns the transpose of a 2D matrix (list of lists).",
     "functionName": "matrix_transpose",
@@ -297,6 +319,7 @@
   },
   {
     "id": "p3-03",
+    "topic": "string_ops",
     "tier": 3,
     "prompt": "Write a function `longest_common_prefix(strs)` that returns the longest common prefix among a list of strings.",
     "functionName": "longest_common_prefix",
@@ -311,6 +334,7 @@
   },
   {
     "id": "p3-04",
+    "topic": "sorting",
     "tier": 3,
     "prompt": "Write a function `merge_sorted(a, b)` that merges two sorted lists into a single sorted list without using `sorted()` or `.sort()`.",
     "functionName": "merge_sorted",
@@ -324,6 +348,7 @@
   },
   {
     "id": "p3-05",
+    "topic": "data_structs",
     "tier": 3,
     "prompt": "Write a function `valid_parentheses(s)` that returns True if the string of brackets `()[]{}` is valid (properly opened and closed in order).",
     "functionName": "valid_parentheses",
@@ -339,6 +364,7 @@
   },
   {
     "id": "p3-06",
+    "topic": "string_ops",
     "tier": 3,
     "prompt": "Write a function `run_length_encode(s)` that returns a run-length encoded string. Example: `\"aaabbc\"` → `\"3a2b1c\"`.",
     "functionName": "run_length_encode",
@@ -353,6 +379,7 @@
   },
   {
     "id": "p3-07",
+    "topic": "algorithms",
     "tier": 3,
     "prompt": "Write a function `spiral_order(matrix)` that returns elements of a 2D matrix in spiral order (clockwise from top-left).",
     "functionName": "spiral_order",
@@ -366,6 +393,7 @@
   },
   {
     "id": "p3-08",
+    "topic": "algorithms",
     "tier": 3,
     "prompt": "Write a function `binary_search(lst, target)` that returns the index of target in a sorted list, or -1 if not found. Do not use built-ins.",
     "functionName": "binary_search",
@@ -380,6 +408,7 @@
   },
   {
     "id": "p3-09",
+    "topic": "lists",
     "tier": 3,
     "prompt": "Write a function `normalize(data)` that normalizes a list of numbers to the range [0, 1]. Return a list of floats rounded to 4 decimal places. If all values are equal, return a list of 0.0.",
     "functionName": "normalize",
@@ -393,6 +422,7 @@
   },
   {
     "id": "p3-10",
+    "topic": "string_ops",
     "tier": 3,
     "prompt": "Write a function `compress(s)` that performs basic string compression. `\"aabcccccaaa\"` → `\"a2b1c5a3\"`. If compressed isn't shorter, return original.",
     "functionName": "compress",
@@ -407,6 +437,7 @@
   },
   {
     "id": "p4-01",
+    "topic": "data_structs",
     "tier": 4,
     "prompt": "Write a function `lru_cache(capacity)` that returns two functions: `get(key)` and `put(key, value)`. `get` returns the value or -1. `put` inserts or updates. Evict least recently used when over capacity. Return as a dict: `{'get': get_fn, 'put': put_fn}`.",
     "functionName": "lru_cache",
@@ -418,6 +449,7 @@
   },
   {
     "id": "p4-02",
+    "topic": "algorithms",
     "tier": 4,
     "prompt": "Write a function `max_subarray_sum(nums)` that returns the maximum sum of any contiguous subarray (Kadane's algorithm).",
     "functionName": "max_subarray_sum",
@@ -432,6 +464,7 @@
   },
   {
     "id": "p4-03",
+    "topic": "recursion",
     "tier": 4,
     "prompt": "Write a function `deep_flatten(obj)` that recursively flattens nested dicts into a single dict with dot-separated keys. Example: `{'a': {'b': 1}}` → `{'a.b': 1}`.",
     "functionName": "deep_flatten",
@@ -445,6 +478,7 @@
   },
   {
     "id": "p4-04",
+    "topic": "recursion",
     "tier": 4,
     "prompt": "Write a function `permutations(lst)` that returns all permutations of a list as a list of lists.",
     "functionName": "permutations",
@@ -458,6 +492,7 @@
   },
   {
     "id": "p4-05",
+    "topic": "data_structs",
     "tier": 4,
     "prompt": "Write a function `eval_rpn(tokens)` that evaluates a Reverse Polish Notation expression. Tokens are strings: numbers or operators (+, -, *, /). Division truncates toward zero.",
     "functionName": "eval_rpn",
@@ -471,6 +506,7 @@
   },
   {
     "id": "p4-06",
+    "topic": "algorithms",
     "tier": 4,
     "prompt": "Write a function `longest_unique_substring(s)` that returns the length of the longest substring without repeating characters.",
     "functionName": "longest_unique_substring",
@@ -485,6 +521,7 @@
   },
   {
     "id": "p4-07",
+    "topic": "graphs",
     "tier": 4,
     "prompt": "Write a function `topological_sort(graph)` that takes an adjacency list (dict of node → list of dependencies) and returns a valid topological order. Assume the graph is a DAG.",
     "functionName": "topological_sort",
@@ -497,6 +534,7 @@
   },
   {
     "id": "p5-01",
+    "topic": "algorithms",
     "tier": 5,
     "prompt": "Write a function `solve_sudoku(board)` that solves a 9x9 Sudoku puzzle in-place. Empty cells are 0. Return the solved board.",
     "functionName": "solve_sudoku",
@@ -508,6 +546,7 @@
   },
   {
     "id": "p5-02",
+    "topic": "dp",
     "tier": 5,
     "prompt": "Write a function `knapsack(weights, values, capacity)` that returns the maximum value achievable with the given capacity (0/1 knapsack).",
     "functionName": "knapsack",
@@ -521,6 +560,7 @@
   },
   {
     "id": "p5-03",
+    "topic": "dp",
     "tier": 5,
     "prompt": "Write a function `min_edit_distance(s1, s2)` that returns the minimum number of single-character edits (insert, delete, replace) to transform s1 into s2.",
     "functionName": "min_edit_distance",
@@ -535,6 +575,7 @@
   },
   {
     "id": "p5-04",
+    "topic": "data_structs",
     "tier": 5,
     "prompt": "Write a function `trie_search(words, queries)` that builds a trie from `words` and returns a list of booleans indicating whether each query has a prefix match in the trie.",
     "functionName": "trie_search",
@@ -547,6 +588,7 @@
   },
   {
     "id": "p5-05",
+    "topic": "dp",
     "tier": 5,
     "prompt": "Write a function `longest_increasing_subsequence(nums)` that returns the length of the longest strictly increasing subsequence.",
     "functionName": "longest_increasing_subsequence",

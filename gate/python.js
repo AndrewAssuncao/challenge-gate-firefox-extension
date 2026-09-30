@@ -5,6 +5,15 @@
 'use strict';
 
 const PythonChallenge = (() => {
+  async function saveAttempt(passed, struggled, usedHelp, summary, invalidate = false) {
+    const result = await browser.runtime.sendMessage({type:'recordLearningAttempt',discipline:'python',eventId:crypto.randomUUID(),challenge,passed,source:challengeSource,struggled,usedHelp:usedHelp || hintsUsed > 0,summary,invalidate});
+    if(result.error) {
+      challengeResolved = false;
+      window.alert('Learning progress could not be saved: ' + result.error + '. Please retry.');
+      throw Error(result.error);
+    }
+    return result.profile;
+  }
   let config = {};
   let challenge = null;
   let challengeSource = 'local';
@@ -35,8 +44,10 @@ const PythonChallenge = (() => {
   const helpBtn = document.getElementById('python-help');
   let lastErrorOutput = '';
   let fallbackTimeout = null;
+  let runTimeout = null;
 
   function destroyWorker() {
+    clearTimeout(runTimeout);runTimeout=null;
     if (worker) {
       worker.terminate();
       worker = null;
@@ -70,6 +81,22 @@ const PythonChallenge = (() => {
     helpBtn.disabled = false;
     helpBtn.textContent = 'Help';
 
+    runBtn.disabled = false;
+    [hintBtn, helpBtn, skipBtn].forEach(b => b.hidden = !!cfg.quantChallenge);
+    if (cfg.quantChallenge) {
+      challenge = cfg.quantChallenge;
+      challengeSource = 'local';
+      profile = null;
+      tierEl.textContent = 'Quant Coding';
+      progressEl.textContent = '';
+      renderChallenge();
+      if (cfg.quantDraft) { editorEl.value = cfg.quantDraft; updateHighlight(); updateLineNumbers(); }
+      editorEl.onchange = () => cfg.onQuantDraft(editorEl.value);
+      bindEvents();
+      initPyodide();
+      return;
+    }
+    editorEl.onchange = null;
     // Load learning profile
     profile = await browser.runtime.sendMessage({ type: 'getLearningProfile' });
     if (!profile) {
@@ -334,11 +361,16 @@ const PythonChallenge = (() => {
     loadingEl.classList.remove('hidden');
 
     worker = new Worker(browser.runtime.getURL('gate/pyodide-worker.js'));
+    const currentWorker = worker;
     worker.onmessage = (e) => {
+      if (worker !== currentWorker) return;
       if (e.data.type === 'ready') {
         pyodideReady = true;
         loadingEl.classList.add('hidden');
+      } else if (e.data.type === 'error') {
+        loadingEl.classList.add('hidden');outputEl.classList.remove('hidden');resultsEl.textContent=e.data.error;destroyWorker();
       } else if (e.data.type === 'result') {
+        clearTimeout(runTimeout);runTimeout=null;
         handleResult(e.data);
       }
     };
@@ -359,13 +391,18 @@ const PythonChallenge = (() => {
       return;
     }
 
-    if (!pyodideReady || !challenge) return;
+    if (!challenge) return;
+    if (!pyodideReady) { initPyodide(); return; }
 
     runBtn.disabled = true;
     runBtn.textContent = 'Running…';
     outputEl.classList.add('hidden');
     lastRunDiagnostics = null;
 
+    if (config.quantChallenge) runTimeout=setTimeout(()=>{
+      destroyWorker();runBtn.disabled=false;runBtn.textContent='Run';outputEl.classList.remove('hidden');
+      resultsEl.textContent='Run stopped after 15 seconds. Check for an infinite loop, then retry. No mastery was awarded.';
+    },15000);
     worker.postMessage({
       type: 'run',
       code: editorEl.value,
@@ -446,7 +483,8 @@ Respond with ONLY valid JSON:
           html += `<div class="test-detail" style="margin-top: 6px;">Missing: ${result.missingPoints.map(p => escapeHtml(p)).join(', ')}</div>`;
         }
         resultsEl.innerHTML = html;
-        failedBeforePass++;
+        if (config.quantChallenge) { await config.onQuantResult(false); return; }
+    failedBeforePass++;
       }
     } catch (err) {
       runBtn.disabled = false;
@@ -469,6 +507,7 @@ Respond with ONLY valid JSON:
         <div class="test-label">Error</div>
         <div class="test-error">${escapeHtml(data.error)}</div>
       </div>`;
+      if (data.errorKind === 'user-code') void onFailed();
       return;
     }
 
@@ -537,9 +576,10 @@ Respond with ONLY valid JSON:
     parts.push(`${solveTimeSec}s`);
     const summary = `PASSED (${parts.join(', ')})`;
 
+    if (config.quantChallenge) { await config.onQuantResult(true); challengeResolved = false; return; }
+
     // Update learning profile (with spaced repetition context)
-    profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, true, challengeSource, struggled, helpUsedThisChallenge, summary);
-    await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
+    profile = await saveAttempt(true, struggled, helpUsedThisChallenge || hintsUsed > 0, summary);
 
     // Log to daily challenge log
     const solveTime = Math.round((Date.now() - challengeStartTime) / 1000);
@@ -562,6 +602,7 @@ Respond with ONLY valid JSON:
 
   async function onFailed() {
     if (challengeResolved) return;
+    if (config.quantChallenge) { await config.onQuantResult(false); return; }
     failedBeforePass++;
 
     // Track failed runs for help-bypass gating
@@ -574,8 +615,7 @@ Respond with ONLY valid JSON:
     const summary = `FAILED — ${errorBrief}. ${parts.join(', ')}`;
 
     // Record failure in learning profile (no gate unlock)
-    profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource, false, helpUsedThisChallenge, summary);
-    await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
+    profile = await saveAttempt(false, false, helpUsedThisChallenge || hintsUsed > 0, summary);
 
     // Log failed attempt so heatmap shows engagement
     const solveTime = challengeStartTime ? Math.round((Date.now() - challengeStartTime) / 1000) : 0;
@@ -726,8 +766,7 @@ ${lastErrorOutput ? `Latest errors/failures:\n${lastErrorOutput}` : 'No run outp
     // Record a skip (counts as a fail for progression)
     if (challenge) {
       const skipSummary = `SKIPPED after ${failedBeforePass} failed runs${helpUsedThisChallenge ? ', used help' : ''}`;
-      profile = ChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource, false, helpUsedThisChallenge, skipSummary);
-      await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
+      profile = await saveAttempt(false, false, helpUsedThisChallenge, skipSummary);
     }
     // Re-init to get a new challenge
     init(config);
@@ -824,10 +863,13 @@ ${lastErrorOutput ? `Latest errors/failures:\n${lastErrorOutput}` : 'No run outp
     `;
 
     if (challenge && profile) {
-      profile = ChallengeProvider.removeChallengeAttempts(profile, challenge);
-      await browser.runtime.sendMessage({ type: 'saveLearningProfile', profile });
+      profile = await saveAttempt(false, false, false, null, true);
     }
 
+    if (config.quantChallenge) {
+      resultsEl.textContent = 'This question could not be tested. Reload or switch modes; no mastery was awarded.';
+      return;
+    }
     Gate.showContinuePrompt();
   }
 

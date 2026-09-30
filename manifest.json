@@ -2,15 +2,13 @@
   "manifest_version": 2,
   "name": "Challenge Gate",
   "version": "1.0.0",
-  "description": "Block distracting websites with typing, coding, and terminal challenges.",
-
+  "description": "Practice typing, Git, quant coding, brainteasers and quant mathematics before browsing.",
   "browser_specific_settings": {
     "gecko": {
       "id": "challenge-gate@extension",
       "strict_min_version": "102.0"
     }
   },
-
   "permissions": [
     "webRequest",
     "webRequestBlocking",
@@ -19,11 +17,19 @@
     "idle",
     "<all_urls>"
   ],
-
   "background": {
-    "scripts": ["background/background.js"]
+    "scripts": [
+      "gate/spaced-repetition.js",
+      "gate/challenge-provider.js",
+      "gate/git-provider.js",
+      "gate/terminal-provider.js",
+      "learning/applied.js",
+    "learning/curriculum.js",
+      "learning/engine.js",
+      "learning/store.js",
+      "background/background.js"
+    ]
   },
-
   "browser_action": {
     "default_icon": {
       "48": "icons/icon-48.svg",
@@ -32,7 +38,6 @@
     "default_title": "Challenge Gate",
     "default_popup": "popup/popup.html"
   },
-
   "web_accessible_resources": [
     "gate/gate.html",
     "gate/gate.js",
@@ -51,11 +56,14 @@
     "gate/git.css",
     "gate/git-provider.js",
     "gate/pyodide-worker.js",
-    "gate/challenges/*"
+    "gate/challenges/*",
+    "learning/applied.js",
+    "learning/curriculum.js",
+    "learning/engine.js",
+    "gate/quant.js",
+    "gate/quant.css"
   ],
-
   "content_security_policy": "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; object-src 'self';",
-
   "icons": {
     "48": "icons/icon-48.svg",
     "96": "icons/icon-96.svg"

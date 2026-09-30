@@ -4,6 +4,8 @@
 
 const Dashboard = (() => {
   let state = null;
+  let quantState = QuantLearning.empty();
+  let quantError = '';
   let settingsUnlocked = false;
   let editingDomain = null;
   let refreshTimer = null;
@@ -99,6 +101,10 @@ const Dashboard = (() => {
 
   async function loadState() {
     state = await browser.runtime.sendMessage({ type: 'getState' });
+    const result = await browser.runtime.sendMessage({type:'quantCommand',command:{op:'read'}});
+    quantError = result.error || '';
+    if (result.state) quantState = result.state;
+    state.dailyChallengeLog=QuantLearning.activity(quantState,state.dailyChallengeLog || {});
   }
 
   function render() {
@@ -114,8 +120,9 @@ const Dashboard = (() => {
 
   function renderHeader() {
     const p = state.progression;
-    els.statChallenges.textContent = `${p.totalChallengesCompleted || 0} challenges`;
-    els.statTier.textContent = `Tier ${p.pythonTier || 1}`;
+    const invalid=new Set(quantState.events.filter(e=>e.kind==='invalidate').map(e=>e.target));
+    els.statChallenges.textContent = `${(p.totalChallengesCompleted || 0) + quantState.events.filter(e=>e.completed && !invalid.has(e.id)).length} challenges`;
+    els.statTier.textContent = quantError || `${QuantCurriculum.skills.filter(s=>QuantLearning.evidence(quantState,s.id).practiced).length} / ${QuantCurriculum.skills.length} quant skills practiced`;
   }
 
   function renderSites() {
@@ -162,7 +169,7 @@ const Dashboard = (() => {
       const remainText = remainMin !== null ? `${remainMin}m` : '—';
       const remainClass = remainMin !== null && remainMin <= 5 ? 'cell-warn' : 'cell-dim';
 
-      const challengeLabel = { typing: 'Typing', python: 'Python', terminal: 'Terminal', git: 'Git', both: 'Both' }[site.challengeType] || 'Typing';
+      const challengeLabel = { typing: 'Typing', python: 'Quant Coding', terminal: 'Terminal (legacy)', git: 'Git', brainteasers:'Brainteasers', math:'Quant Math', both: 'Both (legacy)' }[site.challengeType] || 'Typing';
 
       return `<tr data-domain="${esc(site.domain)}">
         <td>${esc(site.domain)}</td>
@@ -237,6 +244,10 @@ const Dashboard = (() => {
     els.terminalProgressView.classList.add('hidden');
     if (els.gitProgressView) els.gitProgressView.classList.add('hidden');
 
+    document.getElementById('quant-progress-view').classList.add('hidden');
+    if (['python','math','brainteasers'].includes(activeProgressView)) {
+      renderQuantProgress(); return;
+    }
     if (activeProgressView === 'typing') {
       els.typingSpeedView.classList.remove('hidden');
       renderTypingChart();
@@ -249,6 +260,21 @@ const Dashboard = (() => {
     } else if (activeProgressView === 'git') {
       if (els.gitProgressView) els.gitProgressView.classList.remove('hidden');
       renderGitLearning();
+    }
+  }
+
+  function renderQuantProgress() {
+    const box=document.getElementById('quant-progress-view');
+    box.classList.remove('hidden'); box.replaceChildren();
+    if (quantError) {box.textContent=quantError;return;}
+    for (const skill of QuantCurriculum.skills.filter(s=>s.mode===activeProgressView)) {
+      const e=QuantLearning.evidence(quantState,skill.id);
+      const row=document.createElement('p');
+      row.textContent=`${skill.name} · ${skill.track} · ${e.status} · ${e.novelIndependent} novel checks · ${e.reassessed} known-item reassessments${e.dueAt ? ' · review '+new Date(e.dueAt).toLocaleDateString() : ''}`;
+      row.style.margin='12px 0';box.appendChild(row);
+    }
+    for (const lesson of Object.values(quantState.lessons).filter(l=>l.mode===activeProgressView && l.stage!=='done')) {
+      const row=document.createElement('p');row.textContent=`Resume ${QuantCurriculum.get(lesson.skillId).name}: ${lesson.stage}. ${lesson.reason}`;box.appendChild(row);
     }
   }
 
@@ -664,7 +690,7 @@ const Dashboard = (() => {
       for (let dow = 0; dow < days; dow++) {
         const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const entry = log[dateKey] || {};
-        const total = (entry.typing || 0) + (entry.python || 0) + (entry.terminal || 0) + (entry.git || 0);
+        const total = (entry.typing || 0) + (entry.python || 0) + (entry.terminal || 0) + (entry.git || 0) + (entry.math || 0) + (entry.brainteasers || 0);
 
         const x = padLeft + w * step;
         const y = padTop + dow * step;
@@ -700,6 +726,8 @@ const Dashboard = (() => {
         if (cell.entry.python) parts.push(`${cell.entry.python} python`);
         if (cell.entry.terminal) parts.push(`${cell.entry.terminal} terminal`);
         if (cell.entry.git) parts.push(`${cell.entry.git} git`);
+        if(cell.entry.math)parts.push(`${cell.entry.math} quant math`);
+        if(cell.entry.brainteasers)parts.push(`${cell.entry.brainteasers} brainteasers`);
         tooltip.textContent = `${cell.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${parts.join(', ')}`;
         tooltip.classList.remove('hidden');
         const tw = tooltip.offsetWidth;
@@ -724,12 +752,12 @@ const Dashboard = (() => {
     weekStart.setDate(weekStart.getDate() - dayOfWeek + 1);
     weekStart.setHours(0, 0, 0, 0);
 
-    let weekCounts = { typing: 0, python: 0, terminal: 0, git: 0, time: 0 };
-    let totalCounts = { typing: 0, python: 0, terminal: 0, git: 0, time: 0 };
+    let weekCounts = { typing: 0, python: 0, terminal: 0, git: 0, math:0, brainteasers:0, time: 0 };
+    let totalCounts = { typing: 0, python: 0, terminal: 0, git: 0, math:0, brainteasers:0, time: 0 };
 
     for (const [dateKey, entry] of Object.entries(log)) {
       const d = new Date(dateKey + 'T00:00:00');
-      for (const type of ['typing', 'python', 'terminal', 'git']) {
+      for (const type of ['typing', 'python', 'terminal', 'git', 'math', 'brainteasers']) {
         totalCounts[type] += entry[type] || 0;
         if (d >= weekStart) weekCounts[type] += entry[type] || 0;
       }
@@ -743,6 +771,8 @@ const Dashboard = (() => {
       if (counts.python) parts.push(`${counts.python} python`);
       if (counts.terminal) parts.push(`${counts.terminal} terminal`);
       if (counts.git) parts.push(`${counts.git} git`);
+      if(counts.math)parts.push(`${counts.math} quant math`);
+      if(counts.brainteasers)parts.push(`${counts.brainteasers} brainteasers`);
       const time = counts.time > 0 ? ` · ${Math.floor(counts.time / 60)}m` : '';
       return (parts.join(', ') || 'none') + time;
     }
@@ -759,7 +789,29 @@ const Dashboard = (() => {
     git: { 1: 'Basics', 2: 'Branching', 3: 'History', 4: 'Advanced', 5: 'Workflows' }
   };
 
+  function renderQuantTree() {
+    const box=document.getElementById('quant-knowledge-tree');if(!box)return;
+    box.replaceChildren();if(quantError){box.textContent=quantError;return;}
+    const graph=QuantLearning.graph(quantState),tracks=['arithmetic','probability','reasoning','coding','applied'];
+    box.style.display='grid';box.style.gridTemplateColumns='repeat(5, minmax(230px, 1fr))';box.style.gap='16px';
+    for(const track of tracks){
+      const column=document.createElement('div'),heading=document.createElement('h3');heading.textContent=track==='applied'?'Trading & Options':track;column.appendChild(heading);
+      for(const node of graph.nodes.filter(n=>n.track===track)){
+        const e=node.evidence,card=document.createElement('article');card.id='skill-'+node.id;card.dataset.skillId=node.id;card.dataset.status=e.status;card.dataset.eligible=String(node.eligible);
+        card.style.cssText='border:1px solid #64748b;border-radius:8px;padding:12px;margin-bottom:12px;scroll-margin:20px';
+        const name=document.createElement('h4');name.textContent=node.name;card.appendChild(name);
+        const status=document.createElement('p');status.textContent=`${e.status} · ${e.novelIndependent} novel checks · ${e.reassessed} known-item reassessments`;card.appendChild(status);
+        const review=document.createElement('p');review.textContent=node.reviewDue?'Review due':e.dueAt?'Review '+new Date(e.dueAt).toLocaleDateString():'No review scheduled';card.appendChild(review);
+        const label=document.createElement('p');label.textContent=node.prerequisites.length?'Requires all:':'Prerequisites: none';card.appendChild(label);
+        if(node.prerequisites.length){const list=document.createElement('ul');for(const id of node.prerequisites){const item=document.createElement('li'),link=document.createElement('a');link.href='#skill-'+id;link.dataset.from=id;link.dataset.to=node.id;link.textContent=QuantCurriculum.get(id).name;item.appendChild(link);list.appendChild(item);}card.appendChild(list);}
+        const availability=document.createElement('p');availability.textContent=node.eligible?'Prerequisites ready':'Prerequisites pending';card.appendChild(availability);column.appendChild(card);
+      }
+      box.appendChild(column);
+    }
+  }
+
   function renderKnowledgeTree() {
+    renderQuantTree();
     const canvas = els.knowledgeCanvas;
     if (!canvas || typeof buildKnowledgeNodes === 'undefined') return;
 
@@ -1109,7 +1161,7 @@ const Dashboard = (() => {
     if (!els.arcadeFrame) return;
     const diff = ARCADE_DIFF_LEVELS[arcadeDiffIdx] || 'hard';
     const gateUrl = browser.runtime.getURL('gate/gate.html')
-      + `?arcade=1&challenge=${encodeURIComponent(arcadeType)}&difficulty=${encodeURIComponent(diff)}&reinforce=1`;
+      + `?arcade=1&challenge=${encodeURIComponent(arcadeType==='applied'?'math':arcadeType)}${arcadeType==='applied'?'&track=applied':''}&difficulty=${encodeURIComponent(diff)}&reinforce=1`;
     els.arcadeFrame.src = gateUrl;
     els.arcadeFrame.classList.remove('hidden');
     // Hide start screen, hide regen bar
@@ -1153,6 +1205,15 @@ const Dashboard = (() => {
   }
 
   function bindEvents() {
+    document.getElementById('export-learning').onclick=async()=>{
+      try {
+        const result=await browser.runtime.sendMessage({type:'quantCommand',command:{op:'export'}});
+        if(result.error) throw Error(result.error);
+        const url=URL.createObjectURL(new Blob([JSON.stringify(result.state,null,2)],{type:'application/json'}));
+        const a=document.createElement('a');a.href=url;a.download='quant-learning.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      } catch(e){document.getElementById('export-learning-error').textContent=e.message;}
+    };
+
     // Dashboard tabs
     document.querySelectorAll('.dash-tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -1363,6 +1424,12 @@ const Dashboard = (() => {
     const site = state.blockedSites.find(s => s.domain === domain);
     if (!site) return;
 
+    els.editChallengeType.querySelectorAll('[data-legacy]').forEach(o=>o.remove());
+    if (['terminal','both'].includes(site.challengeType)) {
+      const option=document.createElement('option');option.value=site.challengeType;
+      option.textContent=site.challengeType==='terminal'?'Terminal (legacy — kept until you choose a replacement)':'Both (legacy)';
+      option.dataset.legacy='true';els.editChallengeType.appendChild(option);
+    }
     els.editModalTitle.textContent = domain;
     els.editChallengeType.value = site.challengeType || 'typing';
     els.editDailyLimit.value = site.dailyLimitMinutes || '';

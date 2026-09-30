@@ -7,6 +7,15 @@
 
 const GitChallenge = (() => {
   // ── State ─────────────────────────────────────────────────────────────
+  async function saveAttempt(passed, struggled, usedHelp, summary, invalidate = false) {
+    const result = await browser.runtime.sendMessage({type:'recordLearningAttempt',discipline:'git',eventId:crypto.randomUUID(),challenge,passed,source:challengeSource,struggled,usedHelp:usedHelp || hintsUsed > 0,summary,invalidate});
+    if(result.error) {
+      challengeResolved = false;
+      window.alert('Learning progress could not be saved: ' + result.error + '. Please retry.');
+      throw Error(result.error);
+    }
+    return result.profile;
+  }
   let config = null;
   let challenge = null;
   let challengeSource = null;
@@ -1618,8 +1627,7 @@ const GitChallenge = (() => {
     const summary = `PASSED in ${cmdCount} commands (${parts.join(', ')})`;
 
     // Update profile
-    GitChallengeProvider.updateProfileAfterChallenge(profile, challenge, true, challengeSource, struggled, helpUsedThisChallenge, summary);
-    await browser.runtime.sendMessage({ type: 'saveGitLearningProfile', profile });
+    profile = await saveAttempt(true, struggled, helpUsedThisChallenge, summary);
 
     // Log to daily challenge log
     const solveTime = Math.round((Date.now() - challengeStartTime) / 1000);
@@ -1692,8 +1700,7 @@ Respond with ONLY valid JSON:
             if (parsed.kind === 'challenge_issue') {
               appendOutput(`<span class="term-error">Challenge issue detected: ${escapeHtml(parsed.message)}</span>`);
               appendOutput('<span class="term-dim">This challenge appears to be broken. Skipping without penalty...</span>');
-              GitChallengeProvider.removeChallengeAttempts(profile, challenge);
-              await browser.runtime.sendMessage({ type: 'saveGitLearningProfile', profile });
+              profile = await saveAttempt(false, false, false, null, true);
               setTimeout(() => getChallenge(), 1500);
               return;
             }
@@ -1774,8 +1781,7 @@ ${lastOutput ? `Last output: ${lastOutput.slice(0, 300)}` : ''}`;
   async function skipChallenge() {
     if (challengeResolved) return;
 
-    GitChallengeProvider.updateProfileAfterChallenge(profile, challenge, false, challengeSource);
-    await browser.runtime.sendMessage({ type: 'saveGitLearningProfile', profile });
+    profile = await saveAttempt(false, false, helpUsedThisChallenge, 'Skipped');
 
     // Log skipped attempt so heatmap shows engagement
     browser.runtime.sendMessage({ type: 'logChallengeCompletion', challengeType: 'git', solveTime: 0 }).catch(() => {});
