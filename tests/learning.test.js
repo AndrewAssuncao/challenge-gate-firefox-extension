@@ -288,3 +288,15 @@ test('reasoning variants require reading changing invariants, capacities and rel
   for(const level of [0,1]){const q=C.question('brain-invariant',seed,false,level),step=level?3+seed%3:2;assert.equal(q.answer,seed%step);assert.equal(q.construction.answer,step);assert.match(q.hints.join(' '),new RegExp('modulo '+step));}
  }
 });
+
+test('table construction remainder matches each seating problem',()=>{
+ for(let seed=0;seed<36;seed++){
+  const q=C.question('brain-bounds',seed,false,0);
+  const [,total,capacity]=q.prompt.match(/^(\d+) people.*at most (\d+) people/).map(Number);
+  const remaining=total-q.construction.answer*capacity;
+  assert.ok(remaining>0 && remaining<capacity);
+  assert.ok(q.construction.prompt.includes(`with ${remaining} people at the last table`));
+  assert.ok(q.solution.includes(`remaining ${remaining} people`));
+  assert.equal(q.answer,q.construction.answer+1);
+ }
+});

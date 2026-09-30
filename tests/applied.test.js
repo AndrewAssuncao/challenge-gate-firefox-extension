@@ -54,3 +54,12 @@ test('applied track is Arcade-only and routes prerequisites without fabricating 
  }
  for(const s of C.skills.filter(s=>s.track==='applied'))assert.equal(E.evidence(state,s.id).practiced,true,s.id);
 });
+
+test('conditional quote explanations format complements and retain semantic identity',()=>{
+ for(let seed=0;seed<18;seed++)for(const level of [0,1]){
+  const q=C.question('market-quote',seed,false,level);
+  assert.ok(!q.solution.includes('999999999'));
+  assert.ok(q.solution.includes(level?'0.8 ×':'0.2 ×'));
+  assert.ok(q.familyId && q.semanticKey);
+ }
+});

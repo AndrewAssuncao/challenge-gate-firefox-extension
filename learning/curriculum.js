@@ -153,7 +153,7 @@ const QuantCurriculum = (() => {
       'brain-pigeon':{prompt:'How many socks can the worst case contain before the guarantee is forced?',answer:level?2*n:n},
       'brain-balance':{prompt:level?'In the first weighing, how many candidate positions belong in each of the three equal branches?':'How many coins belong in EACH of the three equal groups at the first split?',answer:3**(k-1)},
       'brain-invariant':{prompt:'Which modulus is preserved by the allowed removal? Enter that modulus.',answer:level?3+seed%3:2},
-      'brain-bounds':{prompt:level?'In a most-even allocation, how many workers receive strictly more than the average workload?':'To attain the bound, how many tables are completely full (with one person at the last table)?',answer:level?1+seed%(n-1):n}
+      'brain-bounds':{prompt:level?'In a most-even allocation, how many workers receive strictly more than the average workload?':`To attain the bound, how many tables are completely full (with ${1+seed%((2+seed%4)-1)} people at the last table)?`,answer:level?1+seed%(n-1):n}
     };
     if(checks[id]) q.construction=checks[id];
     if(id==='brain-invariant') {const step=level?3+seed%3:2;q.hints=[`Removing ${step} preserves the remainder modulo ${step}.`,`Divide the initial count by ${step} and keep its remainder.`];q.explanation='Removing a fixed k preserves the remainder modulo k. The invariant must match the actual operation.';q.workedExample='Starting with 14 and removing 4 at a time leaves 2: 14 = 3 × 4 + 2.';}
