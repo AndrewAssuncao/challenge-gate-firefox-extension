@@ -147,3 +147,17 @@ test('transfer hints describe the transfer task rather than the foundation',()=>
  assert.match(C.question('brain-pigeon',1,false,1).hints.join(' '),/three|triple|2/i);
  assert.match(C.question('arith-percent',1,false,1).hints.join(' '),/divid|original/i);
 });
+test('perfect learner reaches every foundation skill without repeated-content credit',()=>{
+ const reached=new Set();
+ for(const [mode,track] of [['math','arithmetic'],['math','probability'],['python',''],['brainteasers','']]){
+  const h=session(mode,track);const targets=C.skills.filter(s=>s.mode===mode && (!track || s.track===track));
+  for(let i=0;i<160 && !targets.every(s=>E.evidence(h.state,s.id).practiced);i++){
+   h.begin();h.answer();
+  }
+  for(const skill of targets){assert.equal(E.evidence(h.state,skill.id).practiced,true,`${mode}: ${skill.id} stalled`);reached.add(skill.id);}
+  const novel=h.state.events.filter(e=>e.kind==='attempt' && e.firstTry);
+  assert.equal(new Set(novel.map(e=>e.semanticKey)).size,novel.length);
+  for(const skill of targets)assert.equal(E.evidence(h.state,skill.id).retained,false,'readiness is not retention');
+ }
+ assert.equal(reached.size,21);
+});

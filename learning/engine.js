@@ -54,10 +54,15 @@ const QuantLearning = (() => {
   function question(lesson) { return C.question(lesson.skillId,lesson.seed,lesson.harder,lesson.level || 0); }
   function seen(state,q) {return state.events.some(e=>e.semanticKey===q.semanticKey && ['attempt','exposure'].includes(e.kind));}
   function freshQuestion(state,lesson) {
-    for(let i=0;i<96;i++) {
-      if(!seen(state,question(lesson))) return;
-      lesson.seed=++state.serial;
+    const preferred=lesson.level || 0;
+    for(const level of [preferred,1-preferred]) {
+      lesson.level=level;
+      for(let i=0;i<18;i++) {
+        if(!seen(state,question(lesson))) return;
+        lesson.seed=++state.serial;
+      }
     }
+    lesson.level=preferred;
     // Exhausted local material can still serve retrieval, but never novel evidence.
     lesson.reason='Local variations have been seen. This is retrieval practice, not new readiness evidence.';
   }
