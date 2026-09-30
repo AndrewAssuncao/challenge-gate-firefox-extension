@@ -7,3 +7,8 @@ test('all Quant Coding reference solutions satisfy executable test cases in both
  const n=Number(execFileSync('python3',['-c',script],{input:JSON.stringify(questions),encoding:'utf8',timeout:10000}));
  assert.ok(n>=90);console.log(`${n} executable Python oracle checks passed`);
 });
+test('simulation tests reject inclusive thresholds and ignored coordinates in every variant',()=>{
+ const questions=[];for(const level of [0,1])for(let seed=1;seed<=9;seed++)questions.push(C.question('code-simulation',seed,false,level));
+ const script=`import json,sys,math\nfor q in json.load(sys.stdin):\n bodies=(["return sum(x <= threshold for x in draws) / len(draws)"] if not q['transfer'] else ["return sum(a <= threshold and b <= threshold for a,b in draws) / len(draws)","return sum(a < threshold for a,b in draws) / len(draws)","return sum(b < threshold for a,b in draws) / len(draws)","return sum(a < threshold or b < threshold for a,b in draws) / len(draws)"])\n for body in bodies:\n  ns={}\n  exec(q['starterCode'].split('\\n')[0]+'\\n    '+body,ns)\n  rejected=False\n  for t in q['testCases']:\n   try: value=eval(q['functionName']+'('+t['input']+')',ns); rejected |= not math.isclose(value,eval(t['expected']),abs_tol=t.get('tolerance',0),rel_tol=0)\n   except Exception as error: raise AssertionError((q['id'],body,error))\n  assert rejected,(q['id'],body)\n`;
+ execFileSync('python3',['-c',script],{input:JSON.stringify(questions),encoding:'utf8',timeout:10000});
+});

@@ -67,12 +67,12 @@ const QuantCurriculum = (() => {
         case 'code-pnl': return code('break_even_exit','quantity, entry_price, target_pnl','Return the exit price needed for target_pnl. Quantity is nonzero and signed. Round to 6 decimals.', [[`2, 100, ${n*2}`,100+n],['-2, 100, 10',95],['5, 20, 0',20]],'return round(entry_price + target_pnl / quantity, 6)');
         case 'code-ev': return code('net_value','outcomes, probabilities, fee','Return expected net payoff after paying a fixed entry fee, rounded to 6 decimals.',[[`[${n}, ${n+4}], [0.5, 0.5], 2`,n],['[-4, 8], [0.75, 0.25], 1',-2],['[5], [1], 5',0]],'return round(sum(x * p for x, p in zip(outcomes, probabilities)) - fee, 6)');
         case 'code-variance': return code('shifted_variance','values, shift','Add shift to every value, then return population variance rounded to 6 decimals. Can you avoid allocating a new list?',[[`[${n}, ${n+2}], 100`,1],['[5, 5, 5], -8',0],['[-2, 0, 2], 9',2.666667]],'mean = sum(values) / len(values)\nreturn round(sum((x - mean) ** 2 for x in values) / len(values), 6)');
-        case 'code-call': return code('call_spread_profit','spot, low_strike, high_strike, net_premium','Return expiry profit of a long call at low_strike and a short call at high_strike, after subtracting net premium. low_strike < high_strike.',[['115, 100, 110, 3',7],['90, 100, 110, 3',-3],['105, 100, 110, 3',2]],'return max(spot - low_strike, 0) - max(spot - high_strike, 0) - net_premium');
-        case 'code-simulation': return code('estimate_both','draws, threshold','Each draw is a pair of simulated values. Return the fraction where BOTH are below threshold, rounded to 6 decimals. Draws is nonempty.',[['[(0.1, 0.2), (0.8, 0.1)], 0.5',.5],['[(0.7, 0.8)], 0.5',0],['[(0.1, 0.1)], 0.5',1]],'return round(sum(a < threshold and b < threshold for a, b in draws) / len(draws), 6)');
+        case 'code-call': return code('call_spread_profit','spot, low_strike, high_strike, net_premium','Return expiry profit of a long call at low_strike and a short call at high_strike, after subtracting net premium. low_strike < high_strike.',[[`${100+n}, 100, 110, 3`,Math.min(n,10)-3],['90, 100, 110, 3',-3],['105, 100, 110, 3',2]],'return max(spot - low_strike, 0) - max(spot - high_strike, 0) - net_premium');
+        case 'code-simulation': return code('estimate_both','draws, threshold','Each draw is a pair of simulated values. Return the fraction where BOTH are below threshold, rounded to 6 decimals. Draws is nonempty.',[[`[(${n/20}, 0.2), (0.8, 0.1)], 0.5`,n<10?.5:0],['[(0.5, 0.1)], 0.5',0],['[(0.1, 0.5)], 0.5',0],['[(0.1, 0.8)], 0.5',0],['[(0.8, 0.1)], 0.5',0],['[(0.1, 0.1)], 0.5',1]],'return round(sum(a < threshold and b < threshold for a, b in draws) / len(draws), 6)');
       }
     }
     switch(id) {
-      case 'code-simulation': return code('estimate_probability','draws, threshold','Return the fraction of supplied simulated draws strictly below threshold. Round to 6 decimals. Draws is nonempty.',[['[0.1, 0.6, 0.8, 0.3], 0.5',.5],['[0.5], 0.5',0],['[0.1, 0.2, 0.3], 0.5',1]],'return round(sum(x < threshold for x in draws) / len(draws), 6)');
+      case 'code-simulation': return code('estimate_probability','draws, threshold','Return the fraction of supplied simulated draws strictly below threshold. Round to 6 decimals. Draws is nonempty.',[[`[${n/20}, 0.6, 0.8, 0.3], 0.5`,n<10?.5:.25],['[0.5], 0.5',0],['[0.1, 0.2, 0.3], 0.5',1]],'return round(sum(x < threshold for x in draws) / len(draws), 6)');
       case 'code-pnl': return code('pnl','quantity, entry_price, exit_price','Write pnl(quantity, entry_price, exit_price). Return signed position profit. Inputs are integers.', [[`${n}, 100, 103`,n*3],[`${-n}, 100, 103`,-n*3],['0, 50, 70',0],[`${n}, 103, 100`,-n*3]],'return quantity * (exit_price - entry_price)');
       case 'code-ev': return code('expected_value','outcomes, probabilities','Return the weighted expected value, rounded to 6 decimal places. Inputs are equal-length nonempty lists; probabilities sum to 1.',[[`[${n}, ${n+4}], [0.5, 0.5]`,n+2],['[-4, 8], [0.75, 0.25]',-1],['[5], [1]',5]],'return round(sum(x * p for x, p in zip(outcomes, probabilities)), 6)');
       case 'code-variance': return code('variance','values','Return the population variance of a nonempty list, rounded to 6 decimal places.',[[`[${n}, ${n+2}]`,1],['[5, 5, 5]',0],['[-2, 0, 2]',2.666667]],'mean = sum(values) / len(values)\nreturn round(sum((x - mean) ** 2 for x in values) / len(values), 6)');
@@ -103,12 +103,49 @@ const QuantCurriculum = (() => {
     'brain-bounds':['construct','Capacity gives a lower bound, and an explicit allocation attains it.','A lower bound alone always proves the optimum is achievable.'],
     'brain-conditioning':['branches','Weight each first-step branch by its probability, then add.','Average all branch values equally regardless of their probabilities.']
   };
+  const transferHints={
+    'arith-percent':['The new price is 120% of the original.', 'Divide the final price by 1.2; do not take 20% off the final price.'],
+    'arith-fraction':['The ratio has five parts in total.', 'Cash is two of those five parts, not two thirds of the total.'],
+    'arith-return':['Use the reduced value as the base for the recovery gain.', 'A fall from 100 to 80 needs a gain of 20/80.'],
+    'prob-complement':['The stated outcomes are mutually exclusive and exhaustive.', 'Subtract both known probabilities from 1.'],
+    'prob-conditional':['List only the even die outcomes.', 'Within {2,4,6}, count the outcomes exceeding 3.'],
+    'prob-ev':['Net value equals gross expected payoff minus the entry fee.', 'A fair fee equals the probability-weighted gross payoff.'],
+    'prob-independent':['At least one success is the complement of all failures.', 'Independence lets you multiply the failure probabilities.'],
+    'prob-bayes':['Of the flagged cases, 8 are true and 9 are false.', 'Use all flagged cases, not all people, in the denominator.'],
+    'prob-variance':['Adding a constant shifts the mean by the same constant.', 'The deviations from the mean do not change.'],
+    'brain-pigeon':['Avoid a triple by drawing two socks of every color.', 'That worst case has twice the number of colors. One more draw forces a triple.'],
+    'brain-balance':['Build a decision tree with three outcomes at every level.', 'Equal three-way partitions attain 3 raised to the number of weighings.'],
+    'brain-invariant':['Subtracting 3 preserves the remainder modulo 3, not parity.', 'Write the initial count as a multiple of 3 plus a remainder.'],
+    'brain-cases':['Separate first digit 1 from first digit not 1.', 'In the second case, only last digit 1 qualifies. These cases do not overlap.'],
+    'brain-symmetry':['Swap A and B in each ordering.', 'The swap pairs every A-before-B outcome with a B-before-A outcome.'],
+    'brain-bounds':['Could all workers have at most four tasks?', 'Capacity would be one short. Assign five to one worker and four to each other worker.'],
+    'brain-conditioning':['The first branch has weight 1/4; the other has weight 3/4.', 'Multiply each payoff by its own weight, then add.'],
+    'code-pnl':['Rearrange target_pnl = quantity * (exit_price - entry_price).', 'Divide the target by the signed quantity and add entry_price.'],
+    'code-ev':['Compute expected gross payoff first.', 'Subtract the fixed fee once, outside the weighted sum.'],
+    'code-variance':['A common shift changes the mean but not deviations.', 'Compute the variance of the original values, avoiding another list.'],
+    'code-call':['The short call subtracts the high-strike payoff.', 'Subtract the net premium once after combining the long and short payoffs.'],
+    'code-simulation':['Both coordinates must be strictly below the threshold.', 'Use a < threshold and b < threshold; equality must fail for either coordinate.']
+  };
   function question(id,seed,harder=false,level=0) {
     const q=buildQuestion(id,seed,harder,level);q.familyId=`${id}:${level?'transfer':'foundation'}`;
+    if(level) q.hints=transferHints[id] || q.hints;
     if(reasons[id]) {const [value,good,bad]=reasons[id];q.correctReason=value;
       q.reasonOptions=[{value,label:good},{value:'unsupported',label:bad}];
       if(seed%2)q.reasonOptions.reverse();
     }
+    const n=(seed%9)+2+(harder?5:0), k=seed%3+2;
+    const checks={
+      'brain-pigeon':{prompt:'How many socks can the worst case contain before the guarantee is forced?',answer:level?2*n:n},
+      'brain-balance':{prompt:level?'In the first weighing, how many candidate positions belong in each of the three equal branches?':'How many coins belong in EACH of the three equal groups at the first split?',answer:3**(k-1)},
+      'brain-invariant':{prompt:'Which modulus is preserved by the allowed removal? Enter that modulus.',answer:level?3:2},
+      'brain-bounds':{prompt:level?'To attain the bound, how many workers get five tasks when every other worker gets four?':'To attain the bound, how many tables are completely full (with one person at the last table)?',answer:level?1:n}
+    };
+    if(checks[id]) q.construction=checks[id];
+    if(level && id==='brain-invariant') {q.explanation='Removing a fixed k preserves the remainder modulo k. The relevant invariant depends on the operation; subtracting 3 does not preserve parity.';q.workedExample='Starting with 14 and removing 4 at a time leaves a minimum of 2, because 14 = 3 × 4 + 2.';}
+    if(level && id==='brain-pigeon') {q.explanation='To force t objects in one category, first count the worst arrangement with at most t - 1 in every category, then add one.';q.workedExample='With 4 colors, eight socks can have two of each. Nine guarantee three of a color.';}
+    if(level && id==='arith-percent') {q.explanation='Invert percentage growth by dividing by the growth factor. Subtracting the same percentage from the final amount uses the wrong base.';q.workedExample='A 25% rise produces 150. Original value = 150 / 1.25 = 120.';}
+    // Content identity is independent of generation IDs, seeds and presentation order.
+    q.semanticKey=JSON.stringify([1,q.skillId,q.familyId,q.prompt,q.functionName || null,q.testCases || null,q.answer ?? null,q.solution,q.construction || null]);
     return q;
   }
   return {skills,get,question};

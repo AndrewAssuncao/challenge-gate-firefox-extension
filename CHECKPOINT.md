@@ -18,3 +18,13 @@ Limitations: real Firefox webRequest + CDN Pyodide still require manual acceptan
 AI personalization was tested with no-key/malformed fixtures, not a paid model.
 Trading & Options is explicitly staged in CURRICULUM.md; no applied/live trading UI
 is claimed. See IMPLEMENTATION.md and ATTRIBUTION.md.
+
+## Independent review corrections (2026-09-30)
+
+Canonical semantic content keys now prevent previously attempted or exposed material from becoming new independent evidence merely through new lesson/variant IDs. Existing version-1 evidence remains in history but is not trusted for readiness. Evidence invalidation works by durable attempt ID after lesson replacement. Python runs use a fresh namespace per submission; missing functions fail, submitted syntax errors count as learner failures, and infrastructure errors do not. Simulation tests cover equality and both mixed-coordinate directions. Transfer hints match their task. Pigeonhole, weighing, invariant and bounds exercises require an intermediate numerical construction check as well as the answer and reasoning selection.
+
+Dashboard activity is derived from durable quant attempts plus legacy logs without rewriting legacy history; completed Quant Coding and Math lessons appear in activity totals. Tests cover duplicate-event aggregation and historical invalidation.
+
+Verification: 32 Node tests pass, including 102 executable reference checks and mutation rejection across 18 simulation variants. The browser smoke runs the actual pinned CDN Pyodide 0.25.1 Worker in an isolated installed Chrome profile, including repeated submissions, deleted function, syntax error classification, lesson reload/resume, gate unlock, dashboard activity and legacy Terminal settings preservation. Browser extension APIs are still supplied by the background harness. Standard Firefox/web-ext/geckodriver are unavailable on this machine; no actual Firefox extension integration claim is made.
+
+Scope: this is a 21-skill foundation with two exercise families per skill, not a complete quant interview course. Brainteaser checks are structured recognition and bounded construction, not free-form proof grading. Trading & Options remains the next approved Arcade slice, to follow independent re-review of these core corrections. No API credits spent, software installed, credentials changed or code published.

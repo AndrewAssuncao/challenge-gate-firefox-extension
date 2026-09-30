@@ -7,7 +7,7 @@ const DAY=86400000;
 function session(mode='math',track='arithmetic') {
   let state=E.empty(), lesson, time=1000, serial=0;
   const run=cmd=>{const r=E.apply(state,{lessonId:lesson?.id,revision:lesson?.revision,...cmd},time);state=r.state;lesson=r.lesson;return r;};
-  return {run,begin:(fresh=true)=>run({op:'begin',mode,track,fresh}),answer:(correct=true)=>run({op:'attempt',eventId:'e'+(++serial),answer:correct?E.question(lesson).answer:123456,reason:E.question(lesson).correctReason,correct}),get state(){return state;},get lesson(){return lesson;},set time(n){time=n;}};
+  return {run,begin:(fresh=true)=>run({op:'begin',mode,track,fresh}),answer:(correct=true)=>run({op:'attempt',eventId:'e'+(++serial),answer:correct?E.question(lesson).answer:123456,reason:E.question(lesson).correctReason,construction:E.question(lesson).construction?.answer,correct}),get state(){return state;},get lesson(){return lesson;},set time(n){time=n;}};
 }
 test('diagnostic → explanation → guided practice → independent check survives reload',()=>{
  const h=session();h.begin();assert.equal(h.lesson.stage,'diagnostic');h.answer(false);assert.equal(h.lesson.stage,'teach');
@@ -110,4 +110,40 @@ test('transfer questions change the task structure and include oracles',()=>{
 test('raw export preserves unsupported schema for recovery',async()=>{
  const raw={version:99,important:'keep me'};const store=Store.create({get:async()=>({quantLearner:raw}),set:async()=>{throw Error('must not write');}});
  assert.deepEqual((await store.command({op:'export'})).state,raw);
+});
+test('repeated content across lessons cannot invent independent evidence',()=>{
+ const h=session('brainteasers','');for(let i=0;i<15;i++){h.begin();h.answer();}
+ const independent=h.state.events.filter(e=>e.kind==='attempt' && e.firstTry && !e.assisted);
+ assert.equal(new Set(independent.map(e=>e.semanticKey)).size,independent.length);
+ const q=C.question('code-simulation',1,false,1),same=C.question('code-simulation',1,false,1);
+ assert.equal(q.semanticKey,same.semanticKey);
+ const old=structuredClone(h.state);old.events.forEach(e=>{e.contentVersion=1;});
+ for(const s of C.skills)assert.equal(E.evidence(old,s.id).practiced,false);
+});
+test('durable evidence can be invalidated after its lesson is replaced',()=>{
+ const h=session();h.begin();h.answer();const target=h.state.events[0].id;h.begin();
+ const active=structuredClone(h.lesson);const r=E.apply(h.state,{op:'invalidate',target});
+ assert.deepEqual(r.state.lessons[active.key],active);assert.equal(E.evidence(r.state,'arith-percent').independent,0);
+ assert.equal(E.apply(r.state,{op:'invalidate',target}).state.events.length,r.state.events.length);
+});
+test('activity derives completed quant lessons and time without mutating legacy logs',()=>{
+ const h=session('python','');h.begin();h.time=6000;h.answer();
+ const d=new Date(6000),day=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+ const legacy={[day]:{typing:2,totalTime:10}};
+ const a=E.activity(h.state,legacy);assert.equal(a[day].python,1);assert.equal(a[day].totalTime,15);
+ assert.deepEqual(E.activity(h.state,legacy),a);assert.deepEqual(legacy,{[day]:{typing:2,totalTime:10}});
+ const duplicate=structuredClone(h.state);duplicate.events.push(duplicate.events[0]);assert.deepEqual(E.activity(duplicate,legacy),a);
+});
+test('construction objectives require a correct intermediate check',()=>{
+ for(const id of ['brain-pigeon','brain-balance','brain-invariant','brain-bounds'])for(const level of [0,1]){
+  const q=C.question(id,3,false,level);assert.ok(q.construction);
+  const h=session('brainteasers','');h.begin();const state=structuredClone(h.state),lesson=state.lessons[h.lesson.key];lesson.skillId=id;lesson.level=level;
+  const item=E.question(lesson);const r=E.apply(state,{op:'attempt',lessonId:lesson.id,revision:lesson.revision,eventId:'construction',answer:item.answer,reason:item.correctReason,construction:item.construction.answer+1});
+  assert.equal(r.state.events.at(-1).correct,false);assert.equal(r.state.events.at(-1).error,'construction mismatch');
+ }
+});
+test('transfer hints describe the transfer task rather than the foundation',()=>{
+ assert.match(C.question('brain-invariant',1,false,1).hints.join(' '),/3|three/i);
+ assert.match(C.question('brain-pigeon',1,false,1).hints.join(' '),/three|triple|2/i);
+ assert.match(C.question('arith-percent',1,false,1).hints.join(' '),/divid|original/i);
 });

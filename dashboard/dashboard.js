@@ -104,6 +104,7 @@ const Dashboard = (() => {
     const result = await browser.runtime.sendMessage({type:'quantCommand',command:{op:'read'}});
     quantError = result.error || '';
     if (result.state) quantState = result.state;
+    state.dailyChallengeLog=QuantLearning.activity(quantState,state.dailyChallengeLog || {});
   }
 
   function render() {
@@ -688,7 +689,7 @@ const Dashboard = (() => {
       for (let dow = 0; dow < days; dow++) {
         const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const entry = log[dateKey] || {};
-        const total = (entry.typing || 0) + (entry.python || 0) + (entry.terminal || 0) + (entry.git || 0);
+        const total = (entry.typing || 0) + (entry.python || 0) + (entry.terminal || 0) + (entry.git || 0) + (entry.math || 0) + (entry.brainteasers || 0);
 
         const x = padLeft + w * step;
         const y = padTop + dow * step;
@@ -724,6 +725,8 @@ const Dashboard = (() => {
         if (cell.entry.python) parts.push(`${cell.entry.python} python`);
         if (cell.entry.terminal) parts.push(`${cell.entry.terminal} terminal`);
         if (cell.entry.git) parts.push(`${cell.entry.git} git`);
+        if(cell.entry.math)parts.push(`${cell.entry.math} quant math`);
+        if(cell.entry.brainteasers)parts.push(`${cell.entry.brainteasers} brainteasers`);
         tooltip.textContent = `${cell.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${parts.join(', ')}`;
         tooltip.classList.remove('hidden');
         const tw = tooltip.offsetWidth;
@@ -748,12 +751,12 @@ const Dashboard = (() => {
     weekStart.setDate(weekStart.getDate() - dayOfWeek + 1);
     weekStart.setHours(0, 0, 0, 0);
 
-    let weekCounts = { typing: 0, python: 0, terminal: 0, git: 0, time: 0 };
-    let totalCounts = { typing: 0, python: 0, terminal: 0, git: 0, time: 0 };
+    let weekCounts = { typing: 0, python: 0, terminal: 0, git: 0, math:0, brainteasers:0, time: 0 };
+    let totalCounts = { typing: 0, python: 0, terminal: 0, git: 0, math:0, brainteasers:0, time: 0 };
 
     for (const [dateKey, entry] of Object.entries(log)) {
       const d = new Date(dateKey + 'T00:00:00');
-      for (const type of ['typing', 'python', 'terminal', 'git']) {
+      for (const type of ['typing', 'python', 'terminal', 'git', 'math', 'brainteasers']) {
         totalCounts[type] += entry[type] || 0;
         if (d >= weekStart) weekCounts[type] += entry[type] || 0;
       }
@@ -767,6 +770,8 @@ const Dashboard = (() => {
       if (counts.python) parts.push(`${counts.python} python`);
       if (counts.terminal) parts.push(`${counts.terminal} terminal`);
       if (counts.git) parts.push(`${counts.git} git`);
+      if(counts.math)parts.push(`${counts.math} quant math`);
+      if(counts.brainteasers)parts.push(`${counts.brainteasers} brainteasers`);
       const time = counts.time > 0 ? ` · ${Math.floor(counts.time / 60)}m` : '';
       return (parts.join(', ') || 'none') + time;
     }

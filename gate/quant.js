@@ -57,7 +57,7 @@ const QuantChallenge = (() => {
   }
   async function attempt(dontKnow, correct) {
     // Keep the same event ID on write failure, so retry is idempotent.
-    pending ||= {op:'attempt',eventId:crypto.randomUUID(),answer:el('quant-answer').value,reason:el('quant-reason-choice').value,correct,dontKnow};
+    pending ||= {op:'attempt',eventId:crypto.randomUUID(),answer:el('quant-answer').value,reason:el('quant-reason-choice').value,construction:el('quant-construction').value,correct,dontKnow};
     const cmd=pending;
     let r;
     try {r=await mutate(cmd,false);} catch(e) {if(!e.retryable) pending=null;throw e;}
@@ -86,8 +86,8 @@ const QuantChallenge = (() => {
     el('quant-teaching').hidden=!teaching && !lesson.teaching;
     text('quant-objective','Goal: '+skill.objective);
     text('quant-contrast','Watch for: '+skill.commonError);
-    text('quant-explanation',lesson.teaching?.explanation || skill.explanation);
-    text('quant-example',lesson.teaching?.workedExample || skill.example);
+    text('quant-explanation',lesson.teaching?.explanation || q.explanation);
+    text('quant-example',lesson.teaching?.workedExample || q.workedExample);
     text('quant-connection',lesson.teaching?.connection || (skill.prerequisites.length?`Builds on: ${skill.prerequisites.map(id=>QuantCurriculum.get(id).name).join(', ')}.`:'Start from the definition, then apply it to a different example.'));
     text('quant-next-step',lesson.teaching?.nextStep || 'Try guided practice, then a fresh independent check. Hints remain available.');
     el('quant-ai-label').hidden=!lesson.teaching;
@@ -98,6 +98,8 @@ const QuantChallenge = (() => {
     el('quant-next').hidden=lesson.stage!=='teach';
     el('quant-question').hidden=!assessing;
     text('quant-prompt',q.prompt);
+    el('quant-construction').hidden=!assessing || !q.construction;el('quant-construction-label').hidden=!assessing || !q.construction;
+    text('quant-construction-label',q.construction?.prompt || '');el('quant-construction').value='';
     const choice=el('quant-reason-choice');choice.replaceChildren();
     choice.hidden=!assessing || !q.reasonOptions;el('quant-reason-label').hidden=choice.hidden;
     if(q.reasonOptions){const blank=document.createElement('option');blank.value='';blank.textContent='Choose a reason';choice.appendChild(blank);

@@ -507,6 +507,7 @@ Respond with ONLY valid JSON:
         <div class="test-label">Error</div>
         <div class="test-error">${escapeHtml(data.error)}</div>
       </div>`;
+      if (data.errorKind === 'user-code') void onFailed();
       return;
     }
 
