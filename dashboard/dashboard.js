@@ -788,7 +788,29 @@ const Dashboard = (() => {
     git: { 1: 'Basics', 2: 'Branching', 3: 'History', 4: 'Advanced', 5: 'Workflows' }
   };
 
+  function renderQuantTree() {
+    const box=document.getElementById('quant-knowledge-tree');if(!box)return;
+    box.replaceChildren();if(quantError){box.textContent=quantError;return;}
+    const graph=QuantLearning.graph(quantState),columns=['arithmetic','probability','reasoning','coding'];
+    const positions=new Map(),rows=new Map();
+    for(const n of graph.nodes){const col=columns.indexOf(n.track);const row=Math.max(n.rank,rows.get(col) || 0);positions.set(n.id,{x:col*270+12,y:row*112+40});rows.set(col,row+1);}
+    const ns='http://www.w3.org/2000/svg';
+    const make=(tag,attrs={},text)=>{const el=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);if(text!==undefined)el.textContent=text;return el;};
+    const svg=make('svg',{width:1080,height:Math.max(...rows.values())*112+50,role:'img','aria-label':'Quant curriculum prerequisites and learner evidence'});
+    columns.forEach((track,i)=>svg.appendChild(make('text',{x:i*270+12,y:20,fill:'currentColor'},track)));
+    for(const edge of graph.edges){const a=positions.get(edge.from),b=positions.get(edge.to);const line=make('path',{d:`M ${a.x+120} ${a.y+88} L ${b.x+120} ${b.y}`,stroke:'#64748b','stroke-width':1.5,fill:'none','data-from':edge.from,'data-to':edge.to});line.appendChild(make('title',{},`${edge.from} → ${edge.to}`));svg.appendChild(line);svg.appendChild(make('path',{d:`M ${b.x+116} ${b.y-6} L ${b.x+120} ${b.y} L ${b.x+124} ${b.y-6}`,stroke:'#64748b',fill:'none'}));}
+    for(const n of graph.nodes){const p=positions.get(n.id),e=n.evidence;const g=make('g',{'data-skill-id':n.id,'data-status':e.status,'data-eligible':String(n.eligible)});
+      const color=e.status==='needs practice'?'#f59e0b':e.retained?'#34d399':e.practiced?'#60a5fa':'#64748b';
+      g.appendChild(make('rect',{x:p.x,y:p.y,width:244,height:88,rx:8,fill:'#111827',stroke:color,'stroke-width':2}));
+      const lines=[n.name,`${e.status} · ${e.independent} independent`,n.reviewDue?'Review due':e.dueAt?'Review '+new Date(e.dueAt).toLocaleDateString():'No review scheduled',n.eligible?'Prerequisites ready':'Prerequisites pending'];
+      lines.forEach((t,i)=>g.appendChild(make('text',{x:p.x+9,y:p.y+18+i*19,fill:i===0?'#f8fafc':'#cbd5e1','font-size':12},t)));
+      g.appendChild(make('title',{},`${n.id}: ${n.objective || n.name}. Prerequisites: ${n.prerequisites.join(', ') || 'none'}.`));svg.appendChild(g);
+    }
+    box.appendChild(svg);
+  }
+
   function renderKnowledgeTree() {
+    renderQuantTree();
     const canvas = els.knowledgeCanvas;
     if (!canvas || typeof buildKnowledgeNodes === 'undefined') return;
 

@@ -103,7 +103,7 @@ test('brainteaser number without a correct reason cannot pass',()=>{
 });
 test('transfer questions change the task structure and include oracles',()=>{
  for(const skill of C.skills){const a=C.question(skill.id,2,false,0),b=C.question(skill.id,2,false,1);assert.notEqual(a.prompt,b.prompt);assert.notEqual(a.familyId,b.familyId);assert.equal(b.transfer,true);}
- assert.equal(C.question('prob-conditional',2,false,1).answer,2/3);
+ assert.equal(C.question('prob-conditional',2,false,1).answer,4/5);
  assert.equal(C.question('prob-bayes',2,false,1).answer,8/17);
  assert.equal(C.question('brain-invariant',2,false,1).answer,2);
 });
@@ -160,4 +160,38 @@ test('perfect learner reaches every foundation skill without repeated-content cr
   for(const skill of targets)assert.equal(E.evidence(h.state,skill.id).retained,false,'readiness is not retention');
  }
  assert.equal(reached.size,21);
+});
+test('failed or hinted first transfer recovers and continued perfect practice preserves readiness',()=>{
+ for(const intervention of ['fail','hint']){
+  const h=session('math','probability');let intervened=false;
+  for(let i=0;i<160;i++){
+   h.begin();if(h.lesson.stage==='teach')h.run({op:'continue'});
+   const q=E.question(h.lesson);
+   if(!intervened && q.transfer){intervened=true;if(intervention==='hint')h.run({op:'assist'});h.answer(intervention!=='fail');}
+   else h.answer();
+  }
+  assert.ok(intervened);
+  for(const skill of C.skills.filter(s=>s.track==='probability'))assert.equal(E.evidence(h.state,skill.id).practiced,true,intervention+': '+skill.id);
+ }
+});
+test('durable transfer qualification is removed by invalidation',()=>{
+ const h=session();for(let i=0;i<5;i++){h.begin();h.answer();}
+ const transfers=h.state.events.filter(e=>e.isTransfer&&e.correct);assert.ok(transfers.length);
+ let state=h.state;for(const e of transfers)state=E.apply(state,{op:'invalidate',target:e.id}).state;
+ assert.equal(E.evidence(state,'arith-percent').practiced,false);
+});
+test('skill tree is acyclic, uses real prerequisite edges and matches evidence',()=>{
+ const h=session();h.begin();h.answer();const graph=E.graph(h.state,2000);
+ assert.equal(graph.nodes.length,21);
+ for(const node of graph.nodes){assert.deepEqual(node.evidence,E.evidence(h.state,node.id));assert.equal(node.eligible,node.prerequisites.every(id=>E.evidence(h.state,id).practiced));}
+ for(const edge of graph.edges){assert.ok(C.get(edge.to).prerequisites.includes(edge.from));assert.ok(graph.nodes.find(n=>n.id===edge.from).rank<graph.nodes.find(n=>n.id===edge.to).rank);}
+ assert.equal(graph.nodes.find(n=>n.id==='code-ev').eligible,false);
+});
+test('review failure repairs without erasing unrelated skills or crediting assistance',()=>{
+ const h=session();for(let i=0;i<10;i++){h.begin();h.answer();}
+ assert.ok(E.evidence(h.state,'arith-fraction').practiced);
+ h.time=8*DAY;h.begin();assert.equal(h.lesson.stage,'review');const skill=h.lesson.skillId;h.answer(false);
+ assert.equal(E.evidence(h.state,skill).status,'needs practice');assert.ok(E.evidence(h.state,'arith-fraction').practiced);
+ h.run({op:'continue'});h.answer();assert.equal(E.evidence(h.state,skill).practiced,false);
+ h.answer();assert.equal(E.evidence(h.state,skill).practiced,true);assert.equal(E.evidence(h.state,skill).retained,false);
 });
