@@ -1,0 +1,14 @@
+#quant-challenge { margin-bottom:24px; }
+#quant-challenge h2 { font-size:22px; margin:12px 0 6px; }
+#quant-status, #quant-reason, #quant-ai-label { color:var(--text-dim); font-size:13px; margin-bottom:12px; }
+#quant-teaching { background:var(--bg-raised); border-left:3px solid var(--accent); padding:20px; margin:18px 0; }
+#quant-teaching p, #quant-example, #quant-feedback { white-space:pre-wrap; margin:10px 0; }
+#quant-example { font-family:var(--mono); font-size:13px; }
+#quant-prompt { font-size:18px; margin:20px 0 14px; }
+#quant-answer { background:var(--bg-input); color:var(--text-bright); border:1px solid var(--border); padding:12px; width:min(320px,70%); font:inherit; }
+#quant-actions { display:flex; gap:10px; margin:16px 0; flex-wrap:wrap; }
+#quant-hints { white-space:pre-wrap; color:var(--text-dim); }
+#quant-error { color:var(--error); margin:12px 0; }
+#quant-track { background:var(--bg-input); color:var(--text); padding:8px; }
+[hidden] { display:none !important; }
+@media(max-width:700px) { .gate-header-row { flex-wrap:wrap; gap:16px; } #challenge-toggle { flex-wrap:wrap; } #gate-container {padding:24px 18px;} }

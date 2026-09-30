@@ -571,18 +571,14 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
   }
 
   function pickLocal(profile) {
-    if (!localProblems || localProblems.length === 0) return null;
-    const completed = profile.recentChallenges.map(c => c.id);
-    const tier = (CURRICULUM[profile.currentTopicIndex] || CURRICULUM[0]).tier;
-    const sanitizePool = (problems) => problems.map(sanitizeChallenge).filter(Boolean);
-    const eligible = sanitizePool(localProblems.filter(p =>
-      p.tier === tier && !completed.includes(p.id)
-    ));
-    if (eligible.length > 0) return eligible[Math.floor(Math.random() * eligible.length)];
-    const all = sanitizePool(localProblems.filter(p => p.tier === tier));
-    if (all.length > 0) return all[Math.floor(Math.random() * all.length)];
-    const fallback = sanitizePool(localProblems);
-    return fallback[Math.floor(Math.random() * fallback.length)] || null;
+    if (!localProblems || !localProblems.length) return null;
+    const due = typeof SpacedRepetition !== 'undefined' ? SpacedRepetition.getReviewDueTopics(profile, CURRICULUM) : [];
+    const target = due[0]?.id || (CURRICULUM[profile.currentTopicIndex] || CURRICULUM[0]).id;
+    const pool = localProblems.filter(p => p.topic === target).map(sanitizeChallenge).filter(Boolean);
+    const recent = new Set(profile.recentChallenges.map(c => c.id));
+    const fresh = pool.filter(p => !recent.has(p.id));
+    const choices = fresh.length ? fresh : pool;
+    return choices[Math.floor(Math.random() * choices.length)] || null;
   }
 
   function recomputeWeakAreas(profile) {
@@ -642,8 +638,8 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
       const topicData = currentTopic ? profile.topicHistory[currentTopic.id] : null;
       const hasConfidence = topicData && typeof topicData.confidenceLevel === 'number';
       const shouldAdvance = hasConfidence
-        ? (topicData.confidenceLevel >= 2 || topicData.passes >= 2)
-        : (topicData && topicData.passes >= 2);
+        ? (topicData.confidenceLevel >= 2)
+        : false;
 
       if (shouldAdvance) {
         profile.currentTopicIndex++;
@@ -651,7 +647,7 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
         while (profile.currentTopicIndex < CURRICULUM.length - 1) {
           const nextTopic = CURRICULUM[profile.currentTopicIndex];
           const nextData = profile.topicHistory[nextTopic.id];
-          if (nextData && nextData.passes >= 2) {
+          if (nextData && nextData.confidenceLevel >= 2) {
             profile.currentTopicIndex++;
           } else {
             break;
@@ -704,6 +700,13 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
       }
     }
 
+    const idx = CURRICULUM.findIndex(t => t.id === topicId);
+    if (idx >= 0) profile.currentTopicIndex = Math.min(profile.currentTopicIndex, idx);
+    if (topicStats) {
+      topicStats.confidenceLevel = 0;
+      topicStats.consecutivePasses = 0;
+      topicStats.nextReviewDate = Date.now();
+    }
     recomputeWeakAreas(profile);
     return profile;
   }

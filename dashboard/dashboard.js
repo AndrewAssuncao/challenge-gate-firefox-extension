@@ -4,6 +4,8 @@
 
 const Dashboard = (() => {
   let state = null;
+  let quantState = QuantLearning.empty();
+  let quantError = '';
   let settingsUnlocked = false;
   let editingDomain = null;
   let refreshTimer = null;
@@ -99,6 +101,9 @@ const Dashboard = (() => {
 
   async function loadState() {
     state = await browser.runtime.sendMessage({ type: 'getState' });
+    const result = await browser.runtime.sendMessage({type:'quantCommand',command:{op:'read'}});
+    quantError = result.error || '';
+    if (result.state) quantState = result.state;
   }
 
   function render() {
@@ -114,8 +119,8 @@ const Dashboard = (() => {
 
   function renderHeader() {
     const p = state.progression;
-    els.statChallenges.textContent = `${p.totalChallengesCompleted || 0} challenges`;
-    els.statTier.textContent = `Tier ${p.pythonTier || 1}`;
+    els.statChallenges.textContent = `${(p.totalChallengesCompleted || 0) + quantState.events.filter(e=>e.completed).length} challenges`;
+    els.statTier.textContent = `${QuantCurriculum.skills.filter(s=>QuantLearning.evidence(quantState,s.id).practiced).length} / ${QuantCurriculum.skills.length} quant skills practiced`;
   }
 
   function renderSites() {
@@ -162,7 +167,7 @@ const Dashboard = (() => {
       const remainText = remainMin !== null ? `${remainMin}m` : '—';
       const remainClass = remainMin !== null && remainMin <= 5 ? 'cell-warn' : 'cell-dim';
 
-      const challengeLabel = { typing: 'Typing', python: 'Python', terminal: 'Terminal', git: 'Git', both: 'Both' }[site.challengeType] || 'Typing';
+      const challengeLabel = { typing: 'Typing', python: 'Quant Coding', terminal: 'Terminal (legacy)', git: 'Git', brainteasers:'Brainteasers', math:'Quant Math', both: 'Both (legacy)' }[site.challengeType] || 'Typing';
 
       return `<tr data-domain="${esc(site.domain)}">
         <td>${esc(site.domain)}</td>
@@ -237,6 +242,10 @@ const Dashboard = (() => {
     els.terminalProgressView.classList.add('hidden');
     if (els.gitProgressView) els.gitProgressView.classList.add('hidden');
 
+    document.getElementById('quant-progress-view').classList.add('hidden');
+    if (['python','math','brainteasers'].includes(activeProgressView)) {
+      renderQuantProgress(); return;
+    }
     if (activeProgressView === 'typing') {
       els.typingSpeedView.classList.remove('hidden');
       renderTypingChart();
@@ -249,6 +258,21 @@ const Dashboard = (() => {
     } else if (activeProgressView === 'git') {
       if (els.gitProgressView) els.gitProgressView.classList.remove('hidden');
       renderGitLearning();
+    }
+  }
+
+  function renderQuantProgress() {
+    const box=document.getElementById('quant-progress-view');
+    box.classList.remove('hidden'); box.replaceChildren();
+    if (quantError) {box.textContent=quantError;return;}
+    for (const skill of QuantCurriculum.skills.filter(s=>s.mode===activeProgressView)) {
+      const e=QuantLearning.evidence(quantState,skill.id);
+      const row=document.createElement('p');
+      row.textContent=`${skill.name} · ${skill.track} · ${e.status} · ${e.independent} independent checks${e.dueAt ? ' · review '+new Date(e.dueAt).toLocaleDateString() : ''}`;
+      row.style.margin='12px 0';box.appendChild(row);
+    }
+    for (const lesson of Object.values(quantState.lessons).filter(l=>l.mode===activeProgressView && l.stage!=='done')) {
+      const row=document.createElement('p');row.textContent=`Resume ${QuantCurriculum.get(lesson.skillId).name}: ${lesson.stage}. ${lesson.reason}`;box.appendChild(row);
     }
   }
 
@@ -1153,6 +1177,15 @@ const Dashboard = (() => {
   }
 
   function bindEvents() {
+    document.getElementById('export-learning').onclick=async()=>{
+      try {
+        const result=await browser.runtime.sendMessage({type:'quantCommand',command:{op:'export'}});
+        if(result.error) throw Error(result.error);
+        const url=URL.createObjectURL(new Blob([JSON.stringify(result.state,null,2)],{type:'application/json'}));
+        const a=document.createElement('a');a.href=url;a.download='quant-learning.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      } catch(e){document.getElementById('export-learning-error').textContent=e.message;}
+    };
+
     // Dashboard tabs
     document.querySelectorAll('.dash-tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -1363,6 +1396,12 @@ const Dashboard = (() => {
     const site = state.blockedSites.find(s => s.domain === domain);
     if (!site) return;
 
+    els.editChallengeType.querySelectorAll('[data-legacy]').forEach(o=>o.remove());
+    if (['terminal','both'].includes(site.challengeType)) {
+      const option=document.createElement('option');option.value=site.challengeType;
+      option.textContent=site.challengeType==='terminal'?'Terminal (legacy — kept until you choose a replacement)':'Both (legacy)';
+      option.dataset.legacy='true';els.editChallengeType.appendChild(option);
+    }
     els.editModalTitle.textContent = domain;
     els.editChallengeType.value = site.challengeType || 'typing';
     els.editDailyLimit.value = site.dailyLimitMinutes || '';

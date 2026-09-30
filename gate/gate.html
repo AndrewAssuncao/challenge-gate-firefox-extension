@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="python.css">
   <link rel="stylesheet" href="terminal.css">
   <link rel="stylesheet" href="git.css">
+  <link rel="stylesheet" href="quant.css">
 </head>
 <body>
   <div id="gate-container">
@@ -18,8 +19,9 @@
         <div class="gate-domain" id="gate-domain"></div>
         <div id="challenge-toggle" class="hidden">
           <button class="toggle-btn active" data-challenge="typing">typing</button>
-          <button class="toggle-btn" data-challenge="python">python</button>
-          <button class="toggle-btn" data-challenge="terminal">terminal</button>
+          <button class="toggle-btn" data-challenge="python">quant coding</button>
+          <button class="toggle-btn" data-challenge="brainteasers">brainteasers</button>
+          <button class="toggle-btn" data-challenge="math">quant math</button>
           <button class="toggle-btn" data-challenge="git">git</button>
         </div>
       </div>
@@ -54,6 +56,19 @@
       </div>
     </div>
 
+    <section id="quant-challenge" class="hidden" aria-label="Quant lesson">
+      <div id="quant-track-wrap"><label for="quant-track">Math track </label><select id="quant-track"><option value="arithmetic">Mental arithmetic</option><option value="probability">Probability &amp; expected value</option></select></div>
+      <h2 id="quant-title"></h2><p id="quant-status"></p><p id="quant-reason"></p>
+      <div id="quant-feedback" role="status"></div>
+      <div id="quant-teaching" hidden><p id="quant-ai-label" hidden>Personalized AI explanation — assessment uses the local answer key.</p><p id="quant-objective"></p><p id="quant-explanation"></p><p id="quant-contrast"></p><h3>Worked example</h3><pre id="quant-example"></pre><p id="quant-connection"></p><p id="quant-next-step"></p></div>
+      <button id="quant-next" class="gate-btn" hidden>Try guided practice</button>
+      <div id="quant-question"><p id="quant-prompt"></p><p id="quant-hints"></p></div>
+      <label id="quant-reason-label" for="quant-reason-choice" hidden>Why does that answer follow?</label><select id="quant-reason-choice" hidden></select>
+      <form id="quant-form"><label for="quant-answer">Your answer </label><input id="quant-answer" autocomplete="off" inputmode="decimal"><button class="gate-btn" type="submit">Check</button></form>
+      <div id="quant-actions"><button id="quant-hint" class="gate-btn gate-btn-ghost">Hint</button><button id="quant-learn" class="gate-btn gate-btn-ghost">I don’t know — teach me</button></div>
+      <button id="quant-tutor" class="gate-btn gate-btn-ghost">Personalize explanation with AI</button>
+      <p id="quant-error" role="alert"></p><button id="quant-reload" class="gate-btn" hidden>Reload saved lesson</button>
+    </section>
     <!-- Python challenge -->
     <div id="python-challenge" class="challenge-panel hidden">
       <div id="python-meta">
@@ -175,6 +190,9 @@
   <script src="terminal.js"></script>
   <script src="git-provider.js"></script>
   <script src="git.js"></script>
+  <script src="../learning/curriculum.js"></script>
+  <script src="../learning/engine.js"></script>
+  <script src="quant.js"></script>
   <script src="gate.js"></script>
 </body>
 </html>

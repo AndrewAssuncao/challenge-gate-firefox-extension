@@ -23,7 +23,7 @@ const Gate = (() => {
       document.getElementById('challenge-toggle').classList.add('hidden');
       document.body.classList.add('arcade-mode');
 
-      const initial = ['python', 'terminal', 'git'].includes(challengeType) ? challengeType : 'python';
+      const initial = ['typing', 'python', 'terminal', 'git', 'brainteasers', 'math'].includes(challengeType) ? challengeType : 'python';
       showChallenge(initial);
       return;
     }
@@ -54,7 +54,7 @@ const Gate = (() => {
     });
 
     // Set initial active based on site's challenge type
-    const initial = ['python', 'terminal', 'git'].includes(challengeType) ? challengeType : 'typing';
+    const initial = ['typing', 'python', 'terminal', 'git', 'brainteasers', 'math'].includes(challengeType) ? challengeType : 'typing';
     btns.forEach(b => b.classList.toggle('active', b.dataset.challenge === initial));
     showChallenge(initial);
   }
@@ -75,6 +75,8 @@ const Gate = (() => {
   }
 
   function showChallenge(type) {
+    if (typeof QuantChallenge !== 'undefined') QuantChallenge.destroy();
+    PythonChallenge.destroyWorker();
     // Destroy previous challenge to clean up event listeners
     if (activeChallenge === 'terminal' && typeof TerminalChallenge !== 'undefined' && TerminalChallenge.destroy) {
       TerminalChallenge.destroy();
@@ -95,7 +97,9 @@ const Gate = (() => {
       if (typeof TypingChallenge !== 'undefined') TypingChallenge.init(getConfig());
     } else if (type === 'python') {
       document.getElementById('python-challenge').classList.remove('hidden');
-      if (typeof PythonChallenge !== 'undefined') PythonChallenge.init(getConfig());
+      QuantChallenge.init(getConfig(), 'python');
+    } else if (type === 'brainteasers' || type === 'math') {
+      QuantChallenge.init(getConfig(), type);
     } else if (type === 'terminal') {
       document.getElementById('terminal-challenge').classList.remove('hidden');
       if (typeof TerminalChallenge !== 'undefined') TerminalChallenge.init(getConfig());
@@ -204,7 +208,7 @@ const Gate = (() => {
     }
   }
 
-  init();
+  queueMicrotask(init);
 
   return { onChallengeComplete, showContinuePrompt, hideContinuePrompt, domain, isSettingsGate, isArcade };
 })();

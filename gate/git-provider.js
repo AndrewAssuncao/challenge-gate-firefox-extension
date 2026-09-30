@@ -466,15 +466,15 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
       const topicData = currentTopic ? profile.topicHistory[currentTopic.id] : null;
       const hasConfidence = topicData && typeof topicData.confidenceLevel === 'number';
       const shouldAdvance = hasConfidence
-        ? (topicData.confidenceLevel >= 2 || topicData.passes >= 2)
-        : (topicData && topicData.passes >= 2);
+        ? (topicData.confidenceLevel >= 2)
+        : false;
 
       if (shouldAdvance) {
         profile.currentTopicIndex++;
         while (profile.currentTopicIndex < GIT_CURRICULUM.length - 1) {
           const nextTopic = GIT_CURRICULUM[profile.currentTopicIndex];
           const nextData = profile.topicHistory[nextTopic.id];
-          if (nextData && nextData.passes >= 2) profile.currentTopicIndex++;
+          if (nextData && nextData.confidenceLevel >= 2) profile.currentTopicIndex++;
           else break;
         }
       }
@@ -521,6 +521,13 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
       }
     }
 
+    const idx = GIT_CURRICULUM.findIndex(t => t.id === topicId);
+    if (idx >= 0) profile.currentTopicIndex = Math.min(profile.currentTopicIndex, idx);
+    if (topicStats) {
+      topicStats.confidenceLevel = 0;
+      topicStats.consecutivePasses = 0;
+      topicStats.nextReviewDate = Date.now();
+    }
     recomputeWeakAreas(profile);
     return profile;
   }

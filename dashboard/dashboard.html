@@ -41,8 +41,9 @@
             <input type="text" id="new-domain" placeholder="example.com" spellcheck="false" autocomplete="off">
             <select id="new-challenge-type">
               <option value="typing">Typing</option>
-              <option value="python">Python</option>
-              <option value="terminal">Terminal</option>
+              <option value="python">Quant Coding</option>
+              <option value="brainteasers">Brainteasers</option>
+              <option value="math">Quant Math</option>
               <option value="git">Git</option>
               <option value="both">Both</option>
             </select>
@@ -112,8 +113,9 @@
         <div class="section-header">
           <div id="progress-toggle">
             <button class="toggle-btn active" data-view="typing">typing</button>
-            <button class="toggle-btn" data-view="python">python</button>
-            <button class="toggle-btn" data-view="terminal">terminal</button>
+            <button class="toggle-btn" data-view="python">quant coding</button>
+            <button class="toggle-btn" data-view="brainteasers">brainteasers</button>
+            <button class="toggle-btn" data-view="math">quant math</button>
             <button class="toggle-btn" data-view="git">git</button>
           </div>
         </div>
@@ -123,6 +125,9 @@
           <div id="typing-chart-stats"></div>
         </div>
 
+        <div id="quant-progress-view" class="hidden"></div>
+        <button id="export-learning" class="dash-btn">Export quant learning record</button>
+        <p id="export-learning-error" role="alert"></p>
         <div id="python-progress-view" class="hidden">
           <div id="learning-curriculum"></div>
           <div id="learning-stats"></div>
@@ -141,7 +146,7 @@
 
       <!-- Knowledge Map -->
       <section id="knowledge-section">
-        <h2>Knowledge Map</h2>
+        <h2>Legacy programming knowledge map</h2><p>Previous Python and Terminal records are preserved here. Quant progress is shown above and starts from evidence collected in the new curriculum.</p>
         <div id="knowledge-legend">
           <span class="legend-item"><span class="legend-dot" style="background:#4a7eff"></span>Python</span>
           <span class="legend-item"><span class="legend-dot" style="background:#9ece6a"></span>Terminal</span>
@@ -275,8 +280,10 @@
     <div id="tab-arcade" class="hidden">
       <div id="arcade-controls">
         <div id="arcade-type-btns">
-          <button class="arcade-type-btn active" data-type="python">Python</button>
-          <button class="arcade-type-btn" data-type="terminal">Terminal</button>
+          <button class="arcade-type-btn active" data-type="python">Quant Coding</button>
+          <button class="arcade-type-btn" data-type="typing">Typing</button>
+          <button class="arcade-type-btn" data-type="brainteasers">Brainteasers</button>
+          <button class="arcade-type-btn" data-type="math">Quant Math</button>
           <button class="arcade-type-btn" data-type="git">Git</button>
         </div>
         <div id="arcade-difficulty-wrap">
@@ -285,7 +292,7 @@
             <span>Relaxed</span><span>Normal</span><span>Hard</span><span>Intense</span><span>Brutal</span><span>Marathon</span>
           </div>
         </div>
-        <span id="arcade-time-est" class="difficulty-time">~3-5 min</span>
+        <span id="arcade-time-est" class="difficulty-time">~3-5 min</span><p>Quant lessons resume your saved step and use evidence to set the level. The difficulty slider applies to Git; quant gates stay brief.</p>
       </div>
       <div id="arcade-frame-wrap">
         <div id="arcade-start-screen">
@@ -310,8 +317,9 @@
         <label>Challenge type</label>
         <select id="edit-challenge-type">
           <option value="typing">Typing</option>
-          <option value="python">Python</option>
-          <option value="terminal">Terminal</option>
+          <option value="python">Quant Coding</option>
+          <option value="brainteasers">Brainteasers</option>
+              <option value="math">Quant Math</option>
           <option value="git">Git</option>
           <option value="both">Both</option>
         </select>
@@ -339,6 +347,8 @@
   </div>
 
   <script src="knowledge-graph.js"></script>
+  <script src="../learning/curriculum.js"></script>
+  <script src="../learning/engine.js"></script>
   <script src="dashboard.js"></script>
 </body>
 </html>

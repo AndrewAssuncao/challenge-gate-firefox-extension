@@ -107,97 +107,9 @@ async function loadState() {
       await browser.storage.local.set({ dailyChallengeLog }).catch(logStorageError);
     }
 
-    // One-time migration: redistribute over-concentrated topic passes
-    // Before the advancement fix, all challenges logged under the first topic
-    // (e.g., 'basics' for Python) even when the user was doing strings, conditionals, etc.
-    // This spreads excess passes across subsequent topics proportionally.
-    const CURRICULA = {
-      learningProfile: [
-        'basics', 'strings', 'conditionals', 'loops',
-        'lists', 'dicts', 'sets_tuples', 'comprehensions', 'functions',
-        'string_ops', 'error_handling', 'file_patterns', 'sorting', 'recursion',
-        'classes', 'generators', 'decorators', 'data_structs', 'algorithms',
-        'dp', 'graphs', 'advanced', 'functional', 'concurrency',
-        'composition', 'testing', 'api_patterns', 'data_pipelines', 'design_patterns',
-        'code_review_bugs', 'code_review_perf', 'code_review_style', 'refactoring', 'architecture'
-      ],
-      terminalLearningProfile: [
-        'navigation', 'file_creation', 'file_reading', 'paths', 'help_man',
-        'copy_move', 'remove_find', 'grep_search', 'permissions', 'redirection',
-        'text_processing', 'processes', 'environment', 'aliases_history', 'package_managers',
-        'git_basics', 'git_branching', 'ssh', 'docker_basics', 'curl_networking',
-        'shell_scripting', 'git_advanced', 'docker_compose', 'sed_awk', 'system_debug'
-      ],
-      gitLearningProfile: [
-        'git_init', 'git_staging', 'git_commit', 'git_log',
-        'git_branch_create', 'git_checkout', 'git_merge_ff', 'git_merge_3way',
-        'git_rebase', 'git_cherry_pick', 'git_stash', 'git_reset',
-        'git_rebase_interactive', 'git_bisect', 'git_reflog', 'git_tags',
-        'git_merge_conflicts', 'git_workflows', 'git_advanced_rebase', 'git_submodules'
-      ]
-    };
+    // Legacy profiles are preserved as evidence, never redistributed into unattempted topics.
+    // Quant learner state is versioned and owned by LearnerStore independently.
 
-    let profilesMigrated = false;
-    for (const [profileKey, topicOrder] of Object.entries(CURRICULA)) {
-      const prof = profileKey === 'learningProfile' ? learningProfile
-        : profileKey === 'terminalLearningProfile' ? terminalLearningProfile
-        : gitLearningProfile;
-      if (!prof || !prof.topicHistory) continue;
-
-      // Check if first topic has disproportionate passes vs later topics
-      const firstId = topicOrder[0];
-      const firstStats = prof.topicHistory[firstId];
-      if (!firstStats || firstStats.passes < 3) continue;
-
-      // Count how many subsequent topics have zero passes
-      const emptyTopics = [];
-      for (let i = 1; i < topicOrder.length; i++) {
-        const tid = topicOrder[i];
-        const st = prof.topicHistory[tid];
-        if (!st || st.passes === 0) emptyTopics.push(tid);
-        else break; // stop at first topic that has passes (natural progression)
-      }
-
-      if (emptyTopics.length === 0) continue;
-
-      // Distribute: keep 2 passes on first topic, spread rest to empty topics
-      const excess = firstStats.passes - 2;
-      if (excess <= 0) continue;
-
-      const perTopic = Math.max(1, Math.floor(excess / emptyTopics.length));
-      let distributed = 0;
-      for (const tid of emptyTopics) {
-        if (distributed >= excess) break;
-        const give = Math.min(perTopic, excess - distributed);
-        if (!prof.topicHistory[tid]) {
-          prof.topicHistory[tid] = { attempts: 0, passes: 0, fails: 0, lastSeen: null };
-        }
-        prof.topicHistory[tid].passes += give;
-        prof.topicHistory[tid].attempts += give;
-        prof.topicHistory[tid].lastSeen = Date.now();
-        distributed += give;
-      }
-      firstStats.passes = 2;
-      firstStats.attempts = Math.max(firstStats.attempts, 2);
-
-      // Advance currentTopicIndex to match the distribution
-      const lastDistributed = emptyTopics[Math.min(emptyTopics.length - 1, Math.ceil(distributed / perTopic) - 1)];
-      const newIdx = topicOrder.indexOf(lastDistributed);
-      if (newIdx > prof.currentTopicIndex) {
-        prof.currentTopicIndex = Math.min(newIdx + 1, topicOrder.length - 1);
-      }
-
-      profilesMigrated = true;
-    }
-
-    if (profilesMigrated) {
-      const saves = {};
-      if (learningProfile) saves.learningProfile = learningProfile;
-      if (terminalLearningProfile) saves.terminalLearningProfile = terminalLearningProfile;
-      if (gitLearningProfile) saves.gitLearningProfile = gitLearningProfile;
-      await browser.storage.local.set(saves).catch(logStorageError);
-      console.log('[Challenge Gate] Migrated topic history: redistributed concentrated passes');
-    }
   } catch (err) {
     console.error('[Challenge Gate] Failed to load state:', err);
   }
@@ -487,7 +399,33 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
+let legacyQueue = Promise.resolve();
+function legacyCommand(msg) {
+  const work = legacyQueue.then(async () => {
+    const map = {python:['learningProfile',ChallengeProvider],git:['gitLearningProfile',GitChallengeProvider],terminal:['terminalLearningProfile',TerminalChallengeProvider]};
+    const [key, provider] = map[msg.discipline] || [];
+    if (!key) throw Error('Unknown learning discipline');
+    const data = await browser.storage.local.get(key);
+    const next = JSON.parse(JSON.stringify(data[key] || provider.defaultProfile()));
+    next.savedEvents ||= [];
+    if (next.savedEvents.includes(msg.eventId)) return {profile:next};
+    if (msg.invalidate) provider.removeChallengeAttempts(next, msg.challenge);
+    else provider.updateProfileAfterChallenge(next, msg.challenge, msg.passed, msg.source, msg.struggled, msg.usedHelp, msg.summary);
+    next.savedEvents.push(msg.eventId);
+    await browser.storage.local.set({[key]:next});
+    if(key==='learningProfile') learningProfile=next;
+    if(key==='gitLearningProfile') gitLearningProfile=next;
+    if(key==='terminalLearningProfile') terminalLearningProfile=next;
+    return {profile:next};
+  });
+  legacyQueue=work.catch(()=>{});
+  return work;
+}
+const quantStore = LearnerStore.create(browser.storage.local);
+
 const messageHandlers = {
+  recordLearningAttempt(msg) { return legacyCommand(msg); },
+  quantCommand(msg) { return quantStore.command(msg.command).catch(error => ({error:error.message,retryable:!!error.retryable})); },
   async getState() {
     await flushActiveTrack();
 
@@ -623,10 +561,8 @@ const messageHandlers = {
     return learningProfile;
   },
 
-  async saveLearningProfile(msg) {
-    learningProfile = msg.profile;
-    await browser.storage.local.set({ learningProfile }).catch(logStorageError);
-    return { success: true };
+  async saveLearningProfile() {
+    return {error:'This page uses an outdated learning format. Reload before saving progress.'};
   },
 
   // Terminal learning profile
@@ -634,10 +570,8 @@ const messageHandlers = {
     return terminalLearningProfile;
   },
 
-  async saveTerminalLearningProfile(msg) {
-    terminalLearningProfile = msg.profile;
-    await browser.storage.local.set({ terminalLearningProfile }).catch(logStorageError);
-    return { success: true };
+  async saveTerminalLearningProfile() {
+    return {error:'This page uses an outdated learning format. Reload before saving progress.'};
   },
 
   // Git learning profile
@@ -645,10 +579,8 @@ const messageHandlers = {
     return gitLearningProfile;
   },
 
-  async saveGitLearningProfile(msg) {
-    gitLearningProfile = msg.profile;
-    await browser.storage.local.set({ gitLearningProfile }).catch(logStorageError);
-    return { success: true };
+  async saveGitLearningProfile() {
+    return {error:'This page uses an outdated learning format. Reload before saving progress.'};
   },
 
   async getProgression() {

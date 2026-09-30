@@ -293,7 +293,11 @@ json.dumps(__run_single_test(__function_name, __raw_input))
         // Compare: use return value primarily, fallback to stdout
         const actual = payload.actual;
         const expected = String(tc.expected);
-        const passed = normalizeOutput(actual) === normalizeOutput(expected);
+        const numeric = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?$/i;
+        const a = normalizeOutput(actual), b = normalizeOutput(expected);
+        const passed = Number.isFinite(tc.tolerance) && tc.tolerance >= 0 && numeric.test(a) && numeric.test(b)
+          ? Math.abs(Number(a) - Number(b)) <= tc.tolerance
+          : a === b;
 
         if (payload.repaired) {
           diagnostics.repairedTests.push({

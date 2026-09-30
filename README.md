@@ -1,45 +1,48 @@
-# Challenge Gate
+# Challenge Gate — quant learning branch
 
-Challenge Gate is a Firefox extension that blocks distracting websites until you complete a typing or Python challenge.
+A Firefox extension that blocks distracting sites until a short challenge is
+completed. This branch keeps the existing blocker, Typing, Git, Python editor,
+dashboard and optional Anthropic relay, and adds durable quant learning.
 
-## Features
+Visible modes: **Typing, Git, Quant Coding, Brainteasers, Quant Math**. Quant Math
+has separate arithmetic and probability tracks. Existing Terminal-configured sites
+retain their old challenge until you explicitly choose a replacement.
 
-- Block specific sites and force a challenge before access
-- Choose typing, Python, or mixed challenges per site
-- Track daily usage and enforce daily time caps
-- Protect settings behind an additional challenge
-- Use the built-in local Python problem bank, or add your own Anthropic API key for AI-generated mentor challenges
+Quant lessons diagnose a skill, explain it with a worked example when needed,
+provide guided practice, then ask an independent question. Progress is saved
+locally across sessions. Hints and AI explanations count as assistance, not mastery.
+The existing Arcade is the place to continue practice. See [CURRICULUM.md](CURRICULUM.md)
+for the 21-skill foundation, transfer tasks and staged Trading & Options sessions.
 
-## Install
+## Try locally
 
-1. Download or clone this repository.
-2. Open Firefox and go to `about:debugging`.
-3. Click `This Firefox`.
-4. Click `Load Temporary Add-on...`.
-5. Select `manifest.json`.
+1. Use a disposable Firefox profile for initial verification.
+2. Open `about:debugging` → **This Firefox** → **Load Temporary Add-on**.
+3. Select this checkout's `manifest.json`.
+4. Open the popup → Dashboard to configure sites or use Arcade.
 
-## Configure
+The extension's ID and permissions are unchanged. No backend or Pi installation
+is required. Quant assessment and local teaching need no model API key. Python
+execution still loads the existing Pyodide runtime from jsDelivr.
 
-1. Open the extension popup.
-2. Click `Dashboard`.
-3. Add the sites you want to block.
-4. If you want AI-generated Python mentor challenges, open `Settings` and paste your own Anthropic API key.
+**Personalize explanation with AI** uses the existing configured Anthropic key
+only when clicked. Learning evidence and the selected lesson are supplied as
+context. The model does not select mastery or change assessment answer keys.
+Git's existing AI behavior is retained. No API key is shipped in the repository.
 
-If no API key is configured, the extension still works and falls back to the local Python problem set.
+The Learning tab displays independent evidence and review dates and can export
+quant learner JSON. Import/restore UI is not implemented.
 
-## Privacy
+## Development
 
-- No API key is included in this repository.
-- If you enter an Anthropic API key, it is stored locally in Firefox extension storage on your machine.
+```sh
+node --test tests/*.test.js
+```
 
-## Project Structure
+Tests require Node.js and Python 3; no package installation or network is needed
+for the core suite. Browser smoke tests additionally use an installed Playwright
+and Chromium. See [IMPLEMENTATION.md](IMPLEMENTATION.md) for test commands,
+verification limits, architecture and remaining manual Firefox checks.
 
-- `manifest.json`: Firefox extension manifest
-- `background/background.js`: blocking, usage tracking, and API relay
-- `dashboard/dashboard.html`: main configuration UI
-- `gate/`: typing and Python challenge flows
-- `popup/`: quick controls
-
-## License
-
-MIT
+[ATTRIBUTION.md](ATTRIBUTION.md) records teaching-workflow inspiration from
+Amos Blomqvist's Learn configuration. Existing project license: MIT.
