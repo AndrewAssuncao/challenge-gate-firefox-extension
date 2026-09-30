@@ -21,7 +21,8 @@ const QuantLearning = (() => {
     const novelAssessments=events.filter(e=>e.contentVersion===2 && !e.assisted && e.firstTry && ['check','diagnostic','review'].includes(e.stage)).slice(-5);
     const novelReady=novelAssessments.length>=5 && novelAssessments.filter(e=>e.correct).length>=4 && new Set(novelAssessments.map(e=>e.lessonId)).size>=2 && new Set(novel.map(e=>e.familyId)).size>=2 && novel.some(e=>e.isTransfer);
     const recovered=practiced && !novelReady;
-    const retained = practiced && independent.length>0 && clean.some(e=>e.stage==='review' && e.at-independent[0].at >= 7*DAY);
+    const qualifyingBaseline=Math.min(Infinity,...eligible.filter(e=>e.correct).map(e=>e.at));
+    const retained = practiced && Number.isFinite(qualifyingBaseline) && clean.some(e=>e.stage==='review' && e.at-qualifyingBaseline >= 7*DAY);
     const last = events.at(-1);
     const unresolved = !!last && (!last.correct || last.assisted);
     const interval = retained ? Math.min(30, 14 * 2 ** Math.max(0, independent.filter(e=>e.stage==='review').length-1)) : practiced ? 7 : 1;

@@ -246,3 +246,15 @@ test('natural brainteaser selector recovers balance after mistakes or hints and 
   const after=E.evidence(h.state,'brain-balance');assert.equal(after.practiced,true);assert.equal(after.novelIndependent,before);assert.ok(after.reassessed);
  }
 });
+test('retention uses earliest valid qualifying baseline, not latest per-item retests',()=>{
+ let state=E.empty(),serial=0;
+ function attempt(seed,level,now,stage){const id='retention-'+(++serial),lesson={id,key:'test',mode:'brainteasers',track:'',skillId:'brain-balance',stage,seed,level,revision:0,assisted:false,checks:0,required:1,stepStartedAt:now};state.lessons.test=lesson;const q=E.question(lesson);state=E.apply(state,{op:'attempt',lessonId:id,revision:0,eventId:id,answer:q.answer,reason:q.correctReason,construction:q.construction.answer},now).state;}
+ for(const level of [0,1])for(let seed=1;seed<=3;seed++)attempt(seed,level,1000,'check');
+ const originals=state.events.filter(e=>e.kind==='attempt').map(e=>e.id);
+ attempt(1,0,8*DAY,'review');assert.equal(E.evidence(state,'brain-balance').retained,true);
+ for(const level of [0,1])for(let seed=1;seed<=3;seed++)attempt(seed,level,16*DAY,'review');
+ assert.equal(E.evidence(state,'brain-balance').retained,true);
+ // Removing all evidence before day16 removes the elapsed valid baseline.
+ for(const e of state.events.filter(e=>e.kind==='attempt'&&e.at<16*DAY))state=E.apply(state,{op:'invalidate',target:e.id},16*DAY).state;
+ assert.equal(E.evidence(state,'brain-balance').retained,false);
+});
