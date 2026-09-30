@@ -36,3 +36,9 @@ Review found that fixed transfer-family selection could exhaust a small family a
 Zen was found at `/Applications/Zen 2.app`: version 1.22.3b, Gecko 156.0.1. Its help output confirms isolated-profile, headless, Marionette and WebDriver BiDi flags. This corrects the earlier incomplete browser inventory; authentic Zen extension testing is being investigated, and is not yet a passing test.
 
 The call-spread oracle now always includes an expiry above the upper strike. A mutation sweep covers all ten coding templates, both difficulty settings and nine seeds (360 mutant/variant combinations), rejecting common sign, weighting, fee, variance and threshold errors. All 34 tests pass, with 105 reference oracle checks. The bounds construction prompt no longer gives away the optimum load before the main answer.
+
+### Authentic Zen runtime
+
+The installed Zen 1.22.3b (Gecko 156.0.1) successfully loads the extension temporarily via its built-in Marionette `Addon:Install` API in a new headless profile. `tests/zen-smoke.py` uses a fixed UUID only in that disposable profile, navigates with the explicit test-system-context flag, and runs a Quant Coding exercise in the real extension page using the actual CDN Pyodide Worker and extension APIs. All four P&L tests pass and the learner records one independent check. This is a Zen result, not a standard Firefox result. Full browser restart, gate unlock and old-mode Zen coverage remain to be added; the broader Chromium harness remains complementary coverage. No geckodriver, web-ext, or new browser installation was needed.
+
+The reproducible Zen smoke also confirms saved independent evidence survives page reload (a completed lesson advances to a fresh check on reopening). The smoke exits successfully.
