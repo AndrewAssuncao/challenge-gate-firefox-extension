@@ -81,7 +81,7 @@ const QuantChallenge = (() => {
     const skill=QuantCurriculum.get(lesson.skillId), q=QuantLearning.question(lesson), ev=QuantLearning.evidence(state,skill.id);
     text('quant-title',skill.name);
     text('quant-reason',lesson.reason);
-    text('quant-status',`${lesson.stage} · ${ev.status} · ${ev.independent} independent checks`);
+    text('quant-status',`${lesson.stage} · ${ev.status} · ${ev.novelIndependent} novel checks · ${ev.reassessed} known-item reassessments`);
     const teaching=lesson.stage==='teach' || lesson.stage==='guided';
     el('quant-teaching').hidden=!teaching && !lesson.teaching;
     text('quant-objective','Goal: '+skill.objective);

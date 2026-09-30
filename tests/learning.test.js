@@ -195,3 +195,54 @@ test('review failure repairs without erasing unrelated skills or crediting assis
  h.run({op:'continue'});h.answer();assert.equal(E.evidence(h.state,skill).practiced,false);
  h.answer();assert.equal(E.evidence(h.state,skill).practiced,true);assert.equal(E.evidence(h.state,skill).retained,false);
 });
+test('every skill recovers after exhausted failures/hints using delayed reassessment across reloads',()=>{
+ for(const skill of C.skills)for(const intervention of ['fail','hint']){
+  let state=E.empty(),lesson,now=1000,serial=0;
+  const apply=cmd=>{const r=E.apply(JSON.parse(JSON.stringify(state)),{lessonId:lesson?.id,revision:lesson?.revision,...cmd},now);state=JSON.parse(JSON.stringify(r.state));lesson=r.lesson;};
+  const fresh=()=>{
+   const id='test-'+(++serial);lesson={id,key:'test',mode:skill.mode,track:skill.track,skillId:skill.id,stage:'check',seed:serial,level:serial%2,revision:0,assisted:false,checks:0,required:1,stepStartedAt:now};state.lessons.test=lesson;
+  };
+  // Expose every local item without any independent pass.
+  for(let seed=1;seed<=18;seed++)for(const level of [0,1]){
+   fresh();lesson.seed=seed;lesson.level=level;state.lessons.test=lesson;
+   if(intervention==='hint')apply({op:'assist'});
+   const q=E.question(lesson);apply({op:'attempt',eventId:'bad-'+serial,answer:intervention==='fail'?99999:q.answer,reason:q.correctReason,construction:q.construction?.answer,correct:intervention!=='fail'});
+  }
+  assert.equal(E.evidence(state,skill.id).independent,0);
+  fresh();let q=E.question(lesson);apply({op:'attempt',eventId:'early',answer:q.answer,reason:q.correctReason,construction:q.construction?.answer,correct:true});
+  assert.equal(E.evidence(state,skill.id).independent,0,'immediate repetition is not reassessment');
+  now+=7*DAY+1;
+  for(let i=0;i<30;i++){
+   fresh();q=E.question(lesson);apply({op:'attempt',eventId:'repair-'+serial,answer:q.answer,reason:q.correctReason,construction:q.construction?.answer,correct:true});
+  }
+  assert.equal(E.evidence(state,skill.id).practiced,true,skill.id+' '+intervention);
+  assert.equal(E.evidence(state,skill.id).novelIndependent,0);assert.equal(E.evidence(state,skill.id).recovered,true);assert.equal(E.evidence(state,skill.id).status,'practiced (reassessed)');
+  const accepted=state.events.filter(e=>e.retest&&!e.assisted&&e.correct);
+  assert.ok(accepted.length>=5);assert.ok(accepted.every(e=>!e.firstTry));
+  assert.equal(E.evidence(state,skill.id).independent,new Set(accepted.map(e=>e.semanticKey)).size);
+ }
+});
+test('conditional and Bayes transfer hints derive from the same parameters as answers',()=>{
+ for(const harder of [false,true])for(let seed=1;seed<=18;seed++){
+  const n=seed%9+2+(harder?5:0),conditional=C.question('prob-conditional',seed,harder,1),bayes=C.question('prob-bayes',seed,harder,1);
+  assert.equal(conditional.answer,n/(n+1));assert.ok(conditional.hints.join(' ').includes(`${n} of those ${n+1}`));
+  assert.equal(bayes.answer,(n+4)/(n+13));assert.ok(bayes.hints.join(' ').includes(`${n+4}+9 = ${n+13}`));
+ }
+});
+test('natural brainteaser selector recovers balance after mistakes or hints and a delayed session',()=>{
+ for(const mode of ['fail','hint']){
+  const h=session('brainteasers','');let interventions=0;
+  const step=()=>{h.begin();if(h.lesson.stage==='teach')h.run({op:'continue'});
+   const intervene=h.lesson.skillId==='brain-balance' && !h.lesson.assisted && interventions<(mode==='fail'?2:3);
+   if(intervene){interventions++;if(mode==='hint')h.run({op:'assist'});}
+   h.answer(!(intervene&&mode==='fail'));
+  };
+  for(let i=0;i<150;i++)step();
+  assert.equal(interventions,mode==='fail'?2:3);
+  assert.equal(E.evidence(h.state,'brain-balance').practiced,false);
+  const before=E.evidence(h.state,'brain-balance').novelIndependent;
+  h.time=8*DAY;
+  for(let i=0;i<200;i++)step();
+  const after=E.evidence(h.state,'brain-balance');assert.equal(after.practiced,true);assert.equal(after.novelIndependent,before);assert.ok(after.reassessed);
+ }
+});

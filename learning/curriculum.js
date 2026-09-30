@@ -134,6 +134,8 @@ const QuantCurriculum = (() => {
       if(seed%2)q.reasonOptions.reverse();
     }
     const n=(seed%9)+2+(harder?5:0), k=seed%3+2;
+    if(level && id==='prob-conditional') q.hints=[`Condition on the ${n+1} even outcomes from 2 through ${2*(n+1)}.`, `Exclude 2; ${n} of those ${n+1} outcomes exceed 2.`];
+    if(level && id==='prob-bayes') q.hints=[`Among the flagged cases, ${n+4} are true and 9 are false.`, `The denominator is ${n+4}+9 = ${n+13}; the numerator is ${n+4}.`];
     const checks={
       'brain-pigeon':{prompt:'How many socks can the worst case contain before the guarantee is forced?',answer:level?2*n:n},
       'brain-balance':{prompt:level?'In the first weighing, how many candidate positions belong in each of the three equal branches?':'How many coins belong in EACH of the three equal groups at the first split?',answer:3**(k-1)},

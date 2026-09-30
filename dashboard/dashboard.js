@@ -269,7 +269,7 @@ const Dashboard = (() => {
     for (const skill of QuantCurriculum.skills.filter(s=>s.mode===activeProgressView)) {
       const e=QuantLearning.evidence(quantState,skill.id);
       const row=document.createElement('p');
-      row.textContent=`${skill.name} · ${skill.track} · ${e.status} · ${e.independent} independent checks${e.dueAt ? ' · review '+new Date(e.dueAt).toLocaleDateString() : ''}`;
+      row.textContent=`${skill.name} · ${skill.track} · ${e.status} · ${e.novelIndependent} novel checks · ${e.reassessed} known-item reassessments${e.dueAt ? ' · review '+new Date(e.dueAt).toLocaleDateString() : ''}`;
       row.style.margin='12px 0';box.appendChild(row);
     }
     for (const lesson of Object.values(quantState.lessons).filter(l=>l.mode===activeProgressView && l.stage!=='done')) {
@@ -791,22 +791,22 @@ const Dashboard = (() => {
   function renderQuantTree() {
     const box=document.getElementById('quant-knowledge-tree');if(!box)return;
     box.replaceChildren();if(quantError){box.textContent=quantError;return;}
-    const graph=QuantLearning.graph(quantState),columns=['arithmetic','probability','reasoning','coding'];
-    const positions=new Map(),rows=new Map();
-    for(const n of graph.nodes){const col=columns.indexOf(n.track);const row=Math.max(n.rank,rows.get(col) || 0);positions.set(n.id,{x:col*270+12,y:row*112+40});rows.set(col,row+1);}
-    const ns='http://www.w3.org/2000/svg';
-    const make=(tag,attrs={},text)=>{const el=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);if(text!==undefined)el.textContent=text;return el;};
-    const svg=make('svg',{width:1080,height:Math.max(...rows.values())*112+50,role:'img','aria-label':'Quant curriculum prerequisites and learner evidence'});
-    columns.forEach((track,i)=>svg.appendChild(make('text',{x:i*270+12,y:20,fill:'currentColor'},track)));
-    for(const edge of graph.edges){const a=positions.get(edge.from),b=positions.get(edge.to);const line=make('path',{d:`M ${a.x+120} ${a.y+88} L ${b.x+120} ${b.y}`,stroke:'#64748b','stroke-width':1.5,fill:'none','data-from':edge.from,'data-to':edge.to});line.appendChild(make('title',{},`${edge.from} → ${edge.to}`));svg.appendChild(line);svg.appendChild(make('path',{d:`M ${b.x+116} ${b.y-6} L ${b.x+120} ${b.y} L ${b.x+124} ${b.y-6}`,stroke:'#64748b',fill:'none'}));}
-    for(const n of graph.nodes){const p=positions.get(n.id),e=n.evidence;const g=make('g',{'data-skill-id':n.id,'data-status':e.status,'data-eligible':String(n.eligible)});
-      const color=e.status==='needs practice'?'#f59e0b':e.retained?'#34d399':e.practiced?'#60a5fa':'#64748b';
-      g.appendChild(make('rect',{x:p.x,y:p.y,width:244,height:88,rx:8,fill:'#111827',stroke:color,'stroke-width':2}));
-      const lines=[n.name,`${e.status} · ${e.independent} independent`,n.reviewDue?'Review due':e.dueAt?'Review '+new Date(e.dueAt).toLocaleDateString():'No review scheduled',n.eligible?'Prerequisites ready':'Prerequisites pending'];
-      lines.forEach((t,i)=>g.appendChild(make('text',{x:p.x+9,y:p.y+18+i*19,fill:i===0?'#f8fafc':'#cbd5e1','font-size':12},t)));
-      g.appendChild(make('title',{},`${n.id}: ${n.objective || n.name}. Prerequisites: ${n.prerequisites.join(', ') || 'none'}.`));svg.appendChild(g);
+    const graph=QuantLearning.graph(quantState),tracks=['arithmetic','probability','reasoning','coding'];
+    box.style.display='grid';box.style.gridTemplateColumns='repeat(4, minmax(230px, 1fr))';box.style.gap='16px';
+    for(const track of tracks){
+      const column=document.createElement('div'),heading=document.createElement('h3');heading.textContent=track;column.appendChild(heading);
+      for(const node of graph.nodes.filter(n=>n.track===track)){
+        const e=node.evidence,card=document.createElement('article');card.id='skill-'+node.id;card.dataset.skillId=node.id;card.dataset.status=e.status;card.dataset.eligible=String(node.eligible);
+        card.style.cssText='border:1px solid #64748b;border-radius:8px;padding:12px;margin-bottom:12px;scroll-margin:20px';
+        const name=document.createElement('h4');name.textContent=node.name;card.appendChild(name);
+        const status=document.createElement('p');status.textContent=`${e.status} · ${e.novelIndependent} novel checks · ${e.reassessed} known-item reassessments`;card.appendChild(status);
+        const review=document.createElement('p');review.textContent=node.reviewDue?'Review due':e.dueAt?'Review '+new Date(e.dueAt).toLocaleDateString():'No review scheduled';card.appendChild(review);
+        const label=document.createElement('p');label.textContent=node.prerequisites.length?'Requires all:':'Prerequisites: none';card.appendChild(label);
+        if(node.prerequisites.length){const list=document.createElement('ul');for(const id of node.prerequisites){const item=document.createElement('li'),link=document.createElement('a');link.href='#skill-'+id;link.dataset.from=id;link.dataset.to=node.id;link.textContent=QuantCurriculum.get(id).name;item.appendChild(link);list.appendChild(item);}card.appendChild(list);}
+        const availability=document.createElement('p');availability.textContent=node.eligible?'Prerequisites ready':'Prerequisites pending';card.appendChild(availability);column.appendChild(card);
+      }
+      box.appendChild(column);
     }
-    box.appendChild(svg);
   }
 
   function renderKnowledgeTree() {

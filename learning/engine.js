@@ -12,15 +12,21 @@ const QuantLearning = (() => {
     const invalid = new Set(state.events.filter(e=>e.kind==='invalidate').map(e=>e.target));
     const events = state.events.filter(e=>e.skillId===skillId && e.kind==='attempt' && !invalid.has(e.id));
     const clean = events.filter(e=>e.contentVersion===2 && e.correct && !e.assisted && ['check','diagnostic','review'].includes(e.stage));
-    const independent = [...new Map(clean.filter(e=>e.firstTry).map(e=>[e.semanticKey,e])).values()];
-    const assessments = events.filter(e=>e.contentVersion===2 && !e.assisted && e.firstTry === true && ['check','diagnostic','review'].includes(e.stage)).slice(-5);
+    const eligible = events.filter(e=>e.contentVersion===2 && !e.assisted && (e.firstTry === true || e.retest === true) && ['check','diagnostic','review'].includes(e.stage));
+    const latest = [...new Map(eligible.map(e=>[e.semanticKey,e])).values()].sort((a,b)=>a.at-b.at);
+    const independent = latest.filter(e=>e.correct);
+    const assessments = latest.slice(-5);
     const practiced = assessments.length >= 5 && assessments.filter(e=>e.correct).length >= 4 && new Set(assessments.map(e=>e.lessonId)).size >= 2 && new Set(independent.map(e=>e.familyId)).size >= 2 && independent.some(e=>e.isTransfer);
+    const novel = [...new Map(clean.filter(e=>e.firstTry).map(e=>[e.semanticKey,e])).values()];
+    const novelAssessments=events.filter(e=>e.contentVersion===2 && !e.assisted && e.firstTry && ['check','diagnostic','review'].includes(e.stage)).slice(-5);
+    const novelReady=novelAssessments.length>=5 && novelAssessments.filter(e=>e.correct).length>=4 && new Set(novelAssessments.map(e=>e.lessonId)).size>=2 && new Set(novel.map(e=>e.familyId)).size>=2 && novel.some(e=>e.isTransfer);
+    const recovered=practiced && !novelReady;
     const retained = practiced && independent.length>0 && clean.some(e=>e.stage==='review' && e.at-independent[0].at >= 7*DAY);
     const last = events.at(-1);
     const unresolved = !!last && (!last.correct || last.assisted);
     const interval = retained ? Math.min(30, 14 * 2 ** Math.max(0, independent.filter(e=>e.stage==='review').length-1)) : practiced ? 7 : 1;
-    return {skillId,attempts:events.length,independent:independent.length,practiced:practiced && !unresolved,retained:retained && !unresolved,
-      status:unresolved?'needs practice':retained?'retained':practiced?'practiced':events.length?'learning':'new',
+    return {skillId,attempts:events.length,independent:independent.length,novelIndependent:novel.length,reassessed:independent.filter(e=>e.retest).length,recovered:recovered && !unresolved,practiced:practiced && !unresolved,retained:retained && !unresolved,
+      status:unresolved?'needs practice':retained?'retained':recovered?'practiced (reassessed)':practiced?'practiced':events.length?'learning':'new',
       dueAt:clean.length ? clean.at(-1).at+interval*DAY : 0,
       recent:events.slice(-5), lastAt:last?.at || 0};
   }
@@ -53,18 +59,25 @@ const QuantLearning = (() => {
   }
   function question(lesson) { return C.question(lesson.skillId,lesson.seed,lesson.harder,lesson.level || 0); }
   function seen(state,q) {return state.events.some(e=>e.semanticKey===q.semanticKey && ['attempt','exposure'].includes(e.kind));}
-  function freshQuestion(state,lesson) {
-    const preferred=lesson.level || 0;
+  function lastExposure(state,q) {
+    return Math.max(-Infinity,...state.events.filter(e=>e.semanticKey===q.semanticKey && ['attempt','exposure'].includes(e.kind)).map(e=>e.at));
+  }
+  function freshQuestion(state,lesson,now) {
+    const preferred=lesson.level || 0,candidates=[];
+    delete lesson.retestAt;
     for(const level of [preferred,1-preferred]) {
       lesson.level=level;
       for(let i=0;i<18;i++) {
-        if(!seen(state,question(lesson))) return;
+        const q=question(lesson),last=lastExposure(state,q);
+        if(last===-Infinity)return;
+        candidates.push({level,seed:lesson.seed,last});
         lesson.seed=++state.serial;
       }
     }
-    lesson.level=preferred;
-    // Exhausted local material can still serve retrieval, but never novel evidence.
-    lesson.reason='Local variations have been seen. This is retrieval practice, not new readiness evidence.';
+    // Reassessment replaces evidence for this content; it never adds a distinct item.
+    const oldest=candidates.sort((a,b)=>a.last-b.last)[0];
+    lesson.level=oldest.level;lesson.seed=oldest.seed;lesson.retestAt=oldest.last+7*DAY;
+    lesson.reason=now>=lesson.retestAt?'Delayed independent reassessment: this replaces evidence for a previously seen item.':'Seen material: retrieval only. Independent reassessment is available '+new Date(lesson.retestAt).toLocaleDateString()+'.';
   }
   function expose(state,lesson,now) {
     const q=question(lesson);
@@ -84,7 +97,7 @@ const QuantLearning = (() => {
         const next=select(state,cmd.mode,cmd.track,now); const serial=++state.serial;
         lesson={id:`lesson-${serial}`,key,mode:cmd.mode,track:cmd.track || '',skillId:next.skill.id,stage:next.stage,reason:next.reason,
           seed:serial,level:evidence(state,next.skill.id).independent>=2 && evidence(state,next.skill.id).independent%2===0?1:0,revision:0,assisted:false,draft:'',checks:0,required:cmd.settingsGate?2:1,harder:!!cmd.settingsGate,practice:!!cmd.practice,startedAt:now,stepStartedAt:now};
-        freshQuestion(state,lesson);
+        freshQuestion(state,lesson,now);
         state.lessons[key]=lesson;
       }
       return {state,lesson};
@@ -117,7 +130,7 @@ const QuantLearning = (() => {
       lesson.assisted=true;
     } else if (cmd.op==='continue') {
       if (lesson.stage!=='teach') throw Error('No explanation to continue');
-      lesson.stage='guided';lesson.seed=++state.serial;freshQuestion(state,lesson);expose(state,lesson,now);lesson.assisted=true;lesson.draft='';lesson.hints=0;
+      lesson.stage='guided';lesson.seed=++state.serial;freshQuestion(state,lesson,now);expose(state,lesson,now);lesson.assisted=true;lesson.draft='';lesson.hints=0;
     } else if (cmd.op==='attempt') {
       if (!['diagnostic','guided','check','review'].includes(lesson.stage)) throw Error('Read the explanation first');
       if (typeof cmd.eventId!=='string' || !cmd.eventId || cmd.eventId.length>120) throw Error('Missing attempt identifier');
@@ -132,7 +145,7 @@ const QuantLearning = (() => {
       const constructionCorrect=!q.construction || constructionValue===q.construction.answer;
       const correct=!cmd.dontKnow && numericalCorrect && reasonCorrect && constructionCorrect;
       const assisted=lesson.assisted || lesson.stage==='guided';
-      const event={id:cmd.eventId,kind:'attempt',lessonId:lesson.id,skillId:lesson.skillId,variant:q.id,familyId:q.familyId,semanticKey:q.semanticKey,contentVersion:2,gradingVersion:2,isTransfer:q.transfer,firstTry:!seen(state,q),selectedReason:cmd.reason || null,construction:constructionValue,stage:lesson.stage,correct,assisted,
+      const event={id:cmd.eventId,kind:'attempt',lessonId:lesson.id,skillId:lesson.skillId,variant:q.id,familyId:q.familyId,semanticKey:q.semanticKey,contentVersion:2,gradingVersion:2,isTransfer:q.transfer,firstTry:!seen(state,q),retest:seen(state,q) && now-lastExposure(state,q)>=7*DAY,selectedReason:cmd.reason || null,construction:constructionValue,stage:lesson.stage,correct,assisted,
         dontKnow:!!cmd.dontKnow,error:correct?null:cmd.dontKnow?'not yet known':q.kind==='code'?'code tests failed':!reasonCorrect?'reason mismatch':!constructionCorrect?'construction mismatch':'answer mismatch',at:now,elapsedMs:Math.max(0,Math.min(now-lesson.stepStartedAt,3600000))};
       state.events.push(event);
       lesson.feedback={correct,solution:q.solution,assisted,stage:lesson.stage,eventId:event.id};
@@ -141,7 +154,7 @@ const QuantLearning = (() => {
       else if (assisted) {lesson.stage='check';lesson.assisted=false;lesson.seed=++state.serial;lesson.reason='Now solve a new variation without hints.';}
       else {lesson.checks++;lesson.stage=lesson.checks>=lesson.required?'done':'check';event.completed=lesson.stage==='done';lesson.assisted=false;if(lesson.stage==='check') lesson.seed=++state.serial;}
     } else throw Error('Unknown learner operation');
-    if(cmd.op==='attempt' && lesson.stage==='check') freshQuestion(state,lesson);
+    if(cmd.op==='attempt' && lesson.stage==='check') freshQuestion(state,lesson,now);
     if(['attempt','continue'].includes(cmd.op)) lesson.stepStartedAt=now;
     lesson.revision++;
     return {state,lesson};

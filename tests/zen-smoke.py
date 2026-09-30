@@ -88,15 +88,54 @@ try:
  z.wait('return typeof browser !== "undefined" && !!document.querySelector("#tab-overview")')
  tree=z.js('return [...document.querySelectorAll("#quant-knowledge-tree [data-skill-id]")].map(n=>({id:n.dataset.skillId,status:n.dataset.status}))')
  assert len(tree)==21,tree
+ links=z.js('return [...document.querySelectorAll("#quant-knowledge-tree a[data-from]")].map(a=>({from:a.dataset.from,to:a.dataset.to,target:a.hash,label:a.textContent}))')
+ expected=json.loads(subprocess.check_output(['node','-e','console.log(JSON.stringify(require("./learning/engine").graph(require("./learning/engine").empty()).edges))'],cwd=ROOT,text=True))
+ assert sorted((e['from'],e['to']) for e in links)==sorted((e['from'],e['to']) for e in expected)
+ assert all(e['target']=='#skill-'+e['from'] and e['label'] for e in links)
+ print('PASS: every visible prerequisite link exactly matches the curriculum DAG',flush=True)
  assert next(n for n in tree if n['id']=='code-pnl')['status']=='learning'
  persisted=z.js('return browser.storage.local.get(["quantLearner","blockedSites"])')
  assert persisted['quantLearner']['events']==events,persisted
  assert persisted['blockedSites']==saved['blockedSites']
  print('PASS: learner evidence and site policy survive full browser restart and temporary add-on reload',flush=True)
- for mode,ready in [('typing','!!document.querySelector("#typing-challenge") && !document.querySelector("#typing-challenge").classList.contains("hidden")'),('git','!!document.querySelector("#git-input") && document.querySelector("#git-prompt-area").textContent.length > 0'),('terminal','!!document.querySelector("#terminal-input") && document.querySelector("#terminal-prompt-area").textContent.length > 0')]:
-  z.navigate(BASE+'gate/gate.html?challenge='+mode+'&arcade=1')
-  z.wait('return '+ready)
-  print('PASS: '+mode+' initializes in authentic Zen',flush=True)
+ solutions={
+  'g-init-01':['git init','git status'],
+  'g-staging-01':['git add .','git commit -m "Save changes"'],
+  'g-commit-01':['git add one.txt','git commit -m "One"','git add two.txt','git commit -m "Two"','git add three.txt','git commit -m "Three"'],
+  'g-log-01':['git log','git log --oneline'],
+  't1-01':['pwd','ls'],'t1-02':['cd ~/projects/webapp'],
+  't1-03':['mkdir -p ~/projects/webapp/config','touch ~/projects/webapp/config/settings.json'],
+  't1-04':['mkdir -p ~/projects/api','touch ~/projects/api/server.py ~/projects/api/routes.py'],
+  't1-05':['cat ~/projects/webapp/README.md'],'t1-06':['tail -n 3 ~/projects/webapp/app.log'],
+  't1-07':['cat ../README.md'],'t1-08':['man ls']
+ }
+ for mode in ['typing','git','terminal']:
+  z.navigate(BASE+'dashboard/dashboard.html');z.wait('return typeof browser !== "undefined"')
+  z.js('return browser.storage.local.set({unlocks:{},blockedSites:[{enabled:true,domain:"127.0.0.1",challengeType:'+json.dumps(mode)+',unlockDurationMinutes:7}]})')
+  z.navigate(target)
+  if mode=='typing':
+   z.wait('return document.querySelectorAll("#words .word").length===25')
+   words=z.js('return [...document.querySelectorAll("#words .word")].map(e=>e.textContent).join(" ")')
+   element=z.call('WebDriver:FindElement',{'using':'css selector','value':'#words-wrapper'})['value']
+   key=element.get('element-6066-11e4-a52e-4f735466cecf') or element.get('ELEMENT')
+   z.call('WebDriver:ElementSendKeys',{'id':key,'text':words})
+  else:
+   z.wait('return document.querySelector("#'+mode+'-prompt-area")?.textContent.length>0')
+   prompt=z.js('return document.querySelector("#'+mode+'-prompt-area").textContent')
+   bank=json.loads(Path(ROOT,'gate/challenges/'+mode+'-problems.json').read_text())
+   item=next(q for q in bank if q['scenario'] in prompt)
+   print('Solving',mode,item['id'],flush=True)
+   for command in solutions[item['id']]:
+    z.js('const input=document.querySelector("#'+mode+'-input");input.value='+json.dumps(command)+';input.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));')
+    time.sleep(.1)
+  z.wait('return document.querySelector("#gate-continue") && !document.querySelector("#gate-continue").classList.contains("hidden")')
+  z.wait('return browser.storage.local.get("unlocks").then(d=>!!d.unlocks?.["127.0.0.1"])')
+  history=z.js('return browser.storage.local.get(["typingHistory","gitLearningProfile","terminalLearningProfile"])')
+  if mode=='typing':assert history.get('typingHistory'),history
+  else:assert any(e.get('passed') for e in history[mode+'LearningProfile']['recentChallenges']),history
+  z.navigate(target);z.wait('return document.title === "Local test destination"')
+  print('PASS: '+mode+' exercise, saved completion and actual destination unlock',flush=True)
+
 finally:
  if z:z.stop()
  server.shutdown();server.server_close()
