@@ -22,23 +22,25 @@ const QuantLearning = (() => {
     const novelReady=novelAssessments.length>=5 && novelAssessments.filter(e=>e.correct).length>=4 && new Set(novelAssessments.map(e=>e.lessonId)).size>=2 && new Set(novel.map(e=>e.familyId)).size>=2 && novel.some(e=>e.isTransfer);
     const recovered=practiced && !novelReady;
     const qualifyingBaseline=Math.min(Infinity,...eligible.filter(e=>e.correct).map(e=>e.at));
-    const retained = practiced && Number.isFinite(qualifyingBaseline) && clean.some(e=>e.stage==='review' && e.at-qualifyingBaseline >= 7*DAY);
+    const retained = practiced && Number.isFinite(qualifyingBaseline) && eligible.some(e=>e.correct && e.stage==='review' && e.at-qualifyingBaseline >= 7*DAY);
+    const lastReview=eligible.filter(e=>e.correct && e.stage==='review').at(-1);
+    const scheduleAnchor=lastReview?.at ?? (Number.isFinite(qualifyingBaseline)?qualifyingBaseline:null);
     const last = events.at(-1);
     const unresolved = !!last && (!last.correct || last.assisted);
     const interval = retained ? Math.min(30, 14 * 2 ** Math.max(0, independent.filter(e=>e.stage==='review').length-1)) : practiced ? 7 : 1;
     return {skillId,attempts:events.length,independent:independent.length,novelIndependent:novel.length,reassessed:independent.filter(e=>e.retest).length,recovered:recovered && !unresolved,practiced:practiced && !unresolved,retained:retained && !unresolved,
       status:unresolved?'needs practice':retained?'retained':recovered?'practiced (reassessed)':practiced?'practiced':events.length?'learning':'new',
-      dueAt:clean.length ? clean.at(-1).at+interval*DAY : 0,
+      dueAt:scheduleAnchor!==null ? scheduleAnchor+interval*DAY : 0,
       recent:events.slice(-5), lastAt:last?.at || 0};
   }
   function select(state, mode, track, now) {
     const pool=C.skills.filter(s=>s.mode===mode && (!track || s.track===track));
     if (!pool.length) throw Error('Unknown practice track');
     const eligible=pool.filter(s=>s.prerequisites.every(id=>evidence(state,id).practiced));
-    const due=eligible.filter(s=>{const e=evidence(state,s.id); return e.dueAt && e.dueAt<=now;}).sort((a,b)=>evidence(state,a.id).dueAt-evidence(state,b.id).dueAt);
-    if (due.length) return {skill:due[0], reason:'A spaced review is due.',stage:'review'};
     const repair=eligible.find(s=>evidence(state,s.id).status==='needs practice');
     if (repair) return {skill:repair,reason:'Your last attempt showed a gap. Rebuild it before moving on.',stage:'teach'};
+    const due=eligible.filter(s=>{const e=evidence(state,s.id); return e.dueAt && e.dueAt<=now;}).sort((a,b)=>evidence(state,a.id).dueAt-evidence(state,b.id).dueAt);
+    if (due.length) return {skill:due[0], reason:'A spaced review is due.',stage:'review'};
     const target=pool.find(s=>!evidence(state,s.id).practiced);
     function prerequisite(s,seen=new Set()) {
       if(seen.has(s.id)) throw Error('Curriculum dependency cycle');
@@ -92,6 +94,7 @@ const QuantLearning = (() => {
   function apply(input, cmd, now=Date.now()) {
     const state=JSON.parse(JSON.stringify(validate(input)));
     if (cmd.op==='begin') {
+      if(cmd.track==='applied' && (cmd.mode!=='math' || !cmd.practice))throw Error('Trading & Options is available only in Arcade.');
       const key=`${cmd.mode}:${cmd.track || ''}:${cmd.settingsGate?'settings':'practice'}`;
       let lesson=state.lessons[key];
       if (!lesson || (lesson.stage==='done' && cmd.fresh)) {
@@ -131,7 +134,7 @@ const QuantLearning = (() => {
       lesson.assisted=true;
     } else if (cmd.op==='continue') {
       if (lesson.stage!=='teach') throw Error('No explanation to continue');
-      lesson.stage='guided';lesson.seed=++state.serial;freshQuestion(state,lesson,now);expose(state,lesson,now);lesson.assisted=true;lesson.draft='';lesson.hints=0;
+      lesson.stage='guided';lesson.seed=++state.serial;freshQuestion(state,lesson,now);lesson.reason='Guided practice: use the explanation and hints. This attempt cannot qualify as independent evidence.';expose(state,lesson,now);lesson.assisted=true;lesson.draft='';lesson.hints=0;
     } else if (cmd.op==='attempt') {
       if (!['diagnostic','guided','check','review'].includes(lesson.stage)) throw Error('Read the explanation first');
       if (typeof cmd.eventId!=='string' || !cmd.eventId || cmd.eventId.length>120) throw Error('Missing attempt identifier');
@@ -143,11 +146,11 @@ const QuantLearning = (() => {
       const reasonCorrect=!q.reasonOptions || cmd.reason===q.correctReason;
       const constructionValue=parseNumber(cmd.construction);
       if(q.construction && constructionValue===null && !cmd.dontKnow) throw Error('Enter the intermediate construction check.');
-      const constructionCorrect=!q.construction || constructionValue===q.construction.answer;
+      const constructionCorrect=!q.construction || Math.abs(constructionValue-q.construction.answer)<=q.tolerance;
       const correct=!cmd.dontKnow && numericalCorrect && reasonCorrect && constructionCorrect;
       const assisted=lesson.assisted || lesson.stage==='guided';
       const event={id:cmd.eventId,kind:'attempt',lessonId:lesson.id,skillId:lesson.skillId,variant:q.id,familyId:q.familyId,semanticKey:q.semanticKey,contentVersion:2,gradingVersion:2,isTransfer:q.transfer,firstTry:!seen(state,q),retest:seen(state,q) && now-lastExposure(state,q)>=7*DAY,selectedReason:cmd.reason || null,construction:constructionValue,stage:lesson.stage,correct,assisted,
-        dontKnow:!!cmd.dontKnow,error:correct?null:cmd.dontKnow?'not yet known':q.kind==='code'?'code tests failed':!reasonCorrect?'reason mismatch':!constructionCorrect?'construction mismatch':'answer mismatch',at:now,elapsedMs:Math.max(0,Math.min(now-lesson.stepStartedAt,3600000))};
+        dontKnow:!!cmd.dontKnow,error:correct?null:cmd.dontKnow?'not yet known':q.kind==='code'?'code tests failed':!reasonCorrect?'reason mismatch':!constructionCorrect?'construction mismatch':'answer mismatch',at:now,elapsedMs:now-lesson.stepStartedAt>600000?null:Math.max(0,now-lesson.stepStartedAt)};
       state.events.push(event);
       lesson.feedback={correct,solution:q.solution,assisted,stage:lesson.stage,eventId:event.id};
       lesson.draft='';lesson.hints=0;delete lesson.teaching;

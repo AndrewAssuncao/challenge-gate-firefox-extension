@@ -24,12 +24,31 @@ const QuantCurriculum = (() => {
     ['code-variance','python','coding','Variance',['code-ev','prob-variance'], 'Population variance is the average squared distance from the mean. Squaring prevents positive and negative deviations from cancelling.', 'For [1, 3], the mean is 2 and variance is ((1-2)^2 + (3-2)^2)/2 = 1. Use ** 2 for a square in Python.', ['Compute the mean first.', 'Average squared deviations; divide by n, not n - 1.']],
     ['code-call','python','coding','Option payoff and profit',['code-pnl','prob-ev'], 'At expiry a long call pays max(spot - strike, 0). Profit subtracts the premium paid. These are expiry values, not a pricing model.', 'Spot 115, strike 100, premium 6: payoff 15, profit 9. At spot 90, profit is -6.', ['Separate payoff from profit.', 'Use max(spot - strike, 0) - premium.']]
   ].map(([id,mode,track,name,prerequisites,explanation,example,hints]) => ({id,mode,track,name,prerequisites,explanation,example,hints}));
+  const Applied=typeof QuantApplied!=='undefined'?QuantApplied:require('./applied');
+  skills.push(...Applied.skills);
   const get = id => skills.find(s => s.id === id);
   function buildQuestion(id, seed, harder = false, level = 0) {
+    if(id.startsWith('market-'))return Applied.question(id,seed,harder,level);
     const s = get(id); if (!s) throw Error('Unknown skill');
     const n = (seed % 9) + 2 + (harder ? 5 : 0);
     const q = { id: `${id}:${seed % 9}:${harder ? 1 : 0}:${level}`, skillId:id, seed, transfer:level > 0, prompt:'', hints:s.hints, explanation:s.explanation, workedExample:s.example, tolerance:0.000001 };
     const numeric = (prompt,answer,solution) => Object.assign(q,{kind:'number',prompt,answer,solution});
+    if(id==='brain-invariant') {
+      const step=level?3+seed%3:2,residue=seed%step,start=n*step+residue;
+      return numeric(`Start with ${start} tokens and remove exactly ${step} each time. What is the smallest possible remainder?`,residue,`Removal preserves the remainder modulo ${step}. ${start} = ${n} × ${step} + ${residue}; the minimum is ${residue}.`);
+    }
+    if(id==='brain-bounds') {
+      const capacity=2+seed%4,remainder=level?1+seed%(n-1):1+seed%(capacity-1),total=n*capacity+remainder;
+      return numeric(level?`${total} indivisible tasks must be assigned to ${n} workers. What is the smallest achievable maximum workload?`:`${total} people need seats at tables holding at most ${capacity} people. What is the minimum number of tables?`,level?capacity+1:n+1,level?`At most ${capacity} per worker gives insufficient total capacity ${n*capacity}. Assign ${capacity+1} to ${remainder} workers and ${capacity} to the rest.`:`${n} full tables hold ${n*capacity}; the remaining ${remainder} people need one more table. Minimum ${n+1}.`);
+    }
+    if(id==='brain-symmetry') {
+      const task=seed%3;
+      return numeric(level?`Uniformly shuffle ${n+2} distinct cards including A, B and C. What is the probability that ${['A appears before B','A appears before B, which appears before C','both A and B appear before C'][task]}?`:`Uniformly shuffle ${n+2} distinct cards. What is the probability that card A is first?`,level?[.5,1/6,1/3][task]:1/(n+2),level?['Relabeling A and B pairs the two equally likely relative orders: 1/2.','The three named cards have 6 equally likely relative orders; only ABC qualifies: 1/6.','Of 6 equally likely relative orders, ABC and BAC qualify: 2/6 = 1/3.'][task]:`All ${n+2} cards have the same chance of first: 1/${n+2}.`);
+    }
+    if(id==='prob-variance') {
+      const distance=1+seed%3,scale=2+seed%3;
+      return numeric(level?`X has variance ${n}. Define Y = ${scale} × X + 7. What is the variance of Y?`:`An equal chance of ${n-distance} or ${n+distance} has what variance?`,level?n*scale**2:distance**2,level?`Adding 7 does not change variance. Scaling by ${scale} multiplies squared deviations by ${scale**2}: ${n*scale**2}.`:`The mean is ${n}; both deviations have magnitude ${distance}. Variance = ${distance} squared = ${distance**2}.`);
+    }
     if(level && !id.startsWith('code-')) {
       switch(id) {
         case 'arith-percent': return numeric(`A price rises by 20% and is now ${n*12}. What was its original price?`,n*10, `Divide the final price by 1.2: ${n*12}/1.2 = ${n*10}.`);
@@ -40,17 +59,13 @@ const QuantCurriculum = (() => {
         case 'prob-ev': return numeric(`A fair coin game pays ${n*3} on heads and ${n} on tails. What entry fee makes expected net profit zero?`,n*2,`The fair fee is expected gross payoff: (${n*3}+${n})/2 = ${n*2}.`);
         case 'brain-pigeon': return numeric(`For ${n} colors, how many draws guarantee THREE socks of one color? Unlimited socks of each color are available.`,2*n+1,`At most two of each color avoids a triple: ${2*n} socks. One more forces a triple.`);
         case 'brain-balance': {const k=seed%3+2;return numeric(`A balance gives three outcomes per weighing. With ${k} weighings, at most how many candidate positions can be distinguished for a coin known to be heavier?`,3**k,`A decision tree has at most 3^${k} = ${3**k} leaves. Equal three-way partitions attain the bound.`);}
-        case 'brain-invariant': return numeric(`Start with ${n*3+2} tokens and remove exactly 3 each time. What is the smallest possible remainder?`,2,`Removing 3 preserves the remainder modulo 3. ${n*3+2} leaves remainder 2.`);
       }
     }
     switch(id) {
       case 'brain-cases': return numeric(level ? `A code has two digits from 1 to ${n}. Repetition is allowed. How many codes have at least one digit equal to 1?` : `A shop offers ${n} red designs and ${n+2} blue designs, all distinct. How many ways can you choose one design?`, level ? 2*n-1 : 2*n+2, level ? `First digit 1: ${n} codes. First digit not 1 but last digit 1: ${n-1}. Total ${2*n-1}.` : `The color cases are disjoint: ${n} + ${n+2} = ${2*n+2}.`);
-      case 'brain-symmetry': return numeric(level ? `Uniformly shuffle ${n+2} distinct cards. What is the probability that card A appears before card B? Enter a decimal.` : `Uniformly shuffle ${n+2} distinct cards. What is the probability that card A is first?`,level ? .5 : 1/(n+2),level ? 'Exchanging A and B pairs every A-before-B ordering with exactly one B-before-A ordering. Probability = 1/2.' : `All ${n+2} cards have the same chance of being first: 1/${n+2}.`);
-      case 'brain-bounds': return numeric(level ? `${n*4+1} tasks must be assigned to ${n} workers. What is the smallest achievable maximum number of tasks assigned to any one worker? Tasks are indivisible.` : `${n*4+1} people need seats at tables holding at most 4 people. What is the minimum number of tables?`,level ? 5 : n+1,level ? 'If everyone had at most 4 tasks, capacity would be too small. Give one worker 5 and the rest 4; the bound is attained.' : `At least ceil(${n*4+1}/4) = ${n+1}. Fill ${n} tables and seat the last person at another.`);
       case 'brain-conditioning': return numeric(level ? `Pick bag A with probability 1/4, otherwise bag B. A always pays ${n*4}; B pays ${n*2}. What is the expected payoff?` : `Pick bag A or B with equal probability. A always pays ${n}; B pays ${n*3}. What is the expected payoff?`,level ? n*2.5 : n*2,level ? `0.25 × ${n*4} + 0.75 × ${n*2} = ${n*2.5}.` : `0.5 × ${n} + 0.5 × ${n*3} = ${n*2}.`);
       case 'prob-independent': return numeric(level ? `An independent trial succeeds with probability 1/2. What is the probability of at least one success in ${seed%3+2} trials?` : `Two independent events have probabilities 1/2 and ${n}/20. What is the probability that both occur?`,level ? 1-.5**(seed%3+2) : n/40,level ? `Use the complement of all failures: 1 - (1/2)^${seed%3+2}.` : `(1/2) × (${n}/20) = ${n}/40.`);
       case 'prob-bayes': return numeric(level ? `A condition affects ${n+6} of 100 people. A test flags ${n+4} affected people and 9 unaffected people. What is P(condition | flagged)?` : `${n} true events and ${n+2} false alarms produce a signal. Given a signal, what is the probability of a true event?`,level ? (n+4)/(n+13) : n/(2*n+2),level ? `There are ${n+4} true positives and 9 false positives: ${n+4}/(${n+4}+9).` : `${n}/(${n}+${n+2}). Condition on all signals.`);
-      case 'prob-variance': return numeric(level ? `A random value has variance ${n}. Add 7 to every outcome. What is its new variance?` : `An equal chance of ${n-2} or ${n+2} has what variance?`,level ? n : 4,level ? 'Adding a constant shifts outcomes and mean equally. Deviations, and therefore variance, do not change.' : `The mean is ${n}; each squared deviation is 4.`);
       case 'arith-percent': return numeric(`What is ${n * 5}% of ${40 + n * 10}?`, n*5*(40+n*10)/100, `(${n*5} / 100) × ${40+n*10} = ${n*5*(40+n*10)/100}.`);
       case 'arith-fraction': return numeric(`Express ${n} / 20 as a percentage. Enter the number without %.`, n*5, `${n} / 20 × 100 = ${n*5}%.`);
       case 'arith-return': return numeric(`A portfolio starts at 100, rises ${n}%, then falls ${n}%. What is its final value?`, (10000-n*n)/100, `100 × (1 + ${n}/100) × (1 - ${n}/100) = ${(10000-n*n)/100}.`);
@@ -59,7 +74,6 @@ const QuantCurriculum = (() => {
       case 'prob-ev': return numeric(`A fair coin game pays ${n*3} on heads and loses ${n} on tails. What is expected net payoff?`,n, `0.5 × ${n*3} + 0.5 × (-${n}) = ${n}.`);
       case 'brain-pigeon': return numeric(`A drawer has unlimited socks in ${n} colors. Drawing without looking, how many socks guarantee two of the same color?`,n+1, `The first ${n} can have distinct colors. Draw ${n+1} must repeat a color.`);
       case 'brain-balance': { const k=seed%3+2, coins=3**k; q.id = `${id}:${k}`; return numeric(`Among ${coins} identical-looking coins, exactly one is heavier. Using a balance scale, what is the minimum number of weighings needed in the worst case?`,k, `Each weighing has three outcomes. ${k} balanced ternary splits distinguish ${coins} candidates; fewer cannot.`); }
-      case 'brain-invariant': return numeric(`There are ${2*n+1} tokens. You may only remove exactly two at a time. What is the smallest number of tokens that can remain?`,1, 'Subtracting two preserves odd parity. Repeated removal reaches 1, never 0.');
     }
     const code = (name,args,prompt,tests,solution) => Object.assign(q,{kind:'code',functionName:name,starterCode:`def ${name}(${args}):\n    pass\n`,prompt,testCases:tests.map(([input,expected])=>({input,expected:String(expected), tolerance:0.000001})),solution,topic:id});
     if(level) {
@@ -80,11 +94,12 @@ const QuantCurriculum = (() => {
     }
   }
   const order=['arith-percent','arith-fraction','arith-return','prob-complement','prob-conditional','prob-independent','prob-bayes','prob-ev','prob-variance','brain-cases','brain-pigeon','brain-balance','brain-invariant','brain-symmetry','brain-bounds','brain-conditioning','code-pnl','code-ev','code-simulation','code-variance','code-call'];
+  order.push(...Applied.skills.map(s=>s.id));
   skills.sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id));
   const objectives={
     'arith-percent':'Calculate and invert a percentage of a stated base.', 'arith-fraction':'Translate among fractions, percentages and part-to-whole ratios.', 'arith-return':'Compound growth factors and solve a recovery-return problem.',
-    'prob-complement':'Use an exhaustive partition without confusing disjoint and independent events.', 'prob-conditional':'Construct the conditioned sample space and its denominator.', 'prob-independent':'Multiply only under independence and use complements for repeated trials.', 'prob-bayes':'Include base rates and false positives when reversing a condition.', 'prob-ev':'Compute expected net payoff and derive a fair entry fee.', 'prob-variance':'Compute dispersion and explain translation invariance.',
-    'brain-cases':'Count disjoint exhaustive cases without double counting.', 'brain-pigeon':'Construct a worst case and identify the first guaranteed repetition.', 'brain-balance':'Connect an information lower bound with a balanced construction.', 'brain-invariant':'Identify a preserved residue to rule out an unreachable state.', 'brain-symmetry':'Justify equal probabilities by a relabeling bijection.', 'brain-bounds':'Prove a lower bound and provide an attaining allocation.', 'brain-conditioning':'Combine first-step branches with their correct weights.',
+    'prob-complement':'Use an exhaustive partition without confusing disjoint and independent events.', 'prob-conditional':'Construct the conditioned sample space and its denominator.', 'prob-independent':'Multiply only under independence and use complements for repeated trials.', 'prob-bayes':'Include base rates and false positives when reversing a condition.', 'prob-ev':'Compute expected net payoff and derive a fair entry fee.', 'prob-variance':'Compute dispersion and variance under scaling and translation.',
+    'brain-cases':'Count disjoint exhaustive cases without double counting.', 'brain-pigeon':'Construct a worst case and identify the first guaranteed repetition.', 'brain-balance':'Connect an information lower bound with a balanced construction.', 'brain-invariant':'Identify a preserved residue to rule out an unreachable state.', 'brain-symmetry':'Count favorable relative orders justified by relabeling symmetry.', 'brain-bounds':'Prove a lower bound and provide an attaining allocation.', 'brain-conditioning':'Combine first-step branches with their correct weights.',
     'code-pnl':'Implement signed P&L and rearrange it to solve for an exit price.', 'code-ev':'Aggregate weighted outcomes and subtract a fixed fee.', 'code-simulation':'Estimate single and joint events from reproducible simulated draws.', 'code-variance':'Implement population variance and exploit shift invariance.', 'code-call':'Separate expiry payoff from profit and compose a call spread.'
   };
   const errors={
@@ -93,13 +108,13 @@ const QuantCurriculum = (() => {
     'brain-cases':'Counting the overlap twice.', 'brain-pigeon':'Giving a possible result instead of a worst-case guarantee.', 'brain-balance':'Stating a bound without an achievable comparison strategy.', 'brain-invariant':'Tracking examples without identifying what the operation preserves.', 'brain-symmetry':'Assuming symmetry when sampling is not uniform.', 'brain-bounds':'Giving a lower bound without an attaining construction.', 'brain-conditioning':'Averaging branches without their probabilities.',
     'code-pnl':'Losing the sign of a short position.', 'code-ev':'Pairing weights with the wrong outcomes.', 'code-simulation':'Using a strict threshold as an inclusive threshold or confusing a sample estimate with an exact probability.', 'code-variance':'Dividing by n - 1 when population variance is requested.', 'code-call':'Confusing payoff with profit or forgetting the short leg.'
   };
-  for(const s of skills) {s.objective=objectives[s.id];s.commonError=errors[s.id];s.contentVersion=1;}
+  for(const s of skills) {s.objective=objectives[s.id] || s.objective;s.commonError=errors[s.id] || s.commonError;s.contentVersion=1;}
   const reasons={
     'brain-cases':['cases','Partition into disjoint cases and add their counts.','Multiply the counts of overlapping cases.'],
     'brain-pigeon':['worst','Fill every category to one below the target, then add one.','The most likely arrangement determines a guarantee.'],
     'brain-balance':['tree','Three outcomes per weighing give a bound; equal groups attain it.','Two pans mean exactly two outcomes per weighing.'],
     'brain-invariant':['residue','Removing a fixed amount preserves the remainder modulo that amount.','Every smaller nonnegative count must eventually be reachable.'],
-    'brain-symmetry':['bijection','A label swap pairs equally likely outcomes without changing the experiment.','All named events have equal probability even without a symmetry.'],
+    'brain-symmetry':['bijection','Relabeling named cards gives equally likely relative orders; count the favorable orders.','All named events have equal probability even without a symmetry.'],
     'brain-bounds':['construct','Capacity gives a lower bound, and an explicit allocation attains it.','A lower bound alone always proves the optimum is achievable.'],
     'brain-conditioning':['branches','Weight each first-step branch by its probability, then add.','Average all branch values equally regardless of their probabilities.']
   };
@@ -108,10 +123,8 @@ const QuantCurriculum = (() => {
     'arith-fraction':['The ratio has five parts in total.', 'Cash is two of those five parts, not two thirds of the total.'],
     'arith-return':['Use the reduced value as the base for the recovery gain.', 'A fall from 100 to 80 needs a gain of 20/80.'],
     'prob-complement':['The stated outcomes are mutually exclusive and exhaustive.', 'Subtract both known probabilities from 1.'],
-    'prob-conditional':['List only the even die outcomes.', 'Within {2,4,6}, count the outcomes exceeding 3.'],
     'prob-ev':['Net value equals gross expected payoff minus the entry fee.', 'A fair fee equals the probability-weighted gross payoff.'],
     'prob-independent':['At least one success is the complement of all failures.', 'Independence lets you multiply the failure probabilities.'],
-    'prob-bayes':['Of the flagged cases, 8 are true and 9 are false.', 'Use all flagged cases, not all people, in the denominator.'],
     'prob-variance':['Adding a constant shifts the mean by the same constant.', 'The deviations from the mean do not change.'],
     'brain-pigeon':['Avoid a triple by drawing two socks of every color.', 'That worst case has twice the number of colors. One more draw forces a triple.'],
     'brain-balance':['Build a decision tree with three outcomes at every level.', 'Equal three-way partitions attain 3 raised to the number of weighings.'],
@@ -139,13 +152,17 @@ const QuantCurriculum = (() => {
     const checks={
       'brain-pigeon':{prompt:'How many socks can the worst case contain before the guarantee is forced?',answer:level?2*n:n},
       'brain-balance':{prompt:level?'In the first weighing, how many candidate positions belong in each of the three equal branches?':'How many coins belong in EACH of the three equal groups at the first split?',answer:3**(k-1)},
-      'brain-invariant':{prompt:'Which modulus is preserved by the allowed removal? Enter that modulus.',answer:level?3:2},
-      'brain-bounds':{prompt:level?'In a most-even allocation, how many workers receive strictly more than the average workload?':'To attain the bound, how many tables are completely full (with one person at the last table)?',answer:level?1:n}
+      'brain-invariant':{prompt:'Which modulus is preserved by the allowed removal? Enter that modulus.',answer:level?3+seed%3:2},
+      'brain-bounds':{prompt:level?'In a most-even allocation, how many workers receive strictly more than the average workload?':'To attain the bound, how many tables are completely full (with one person at the last table)?',answer:level?1+seed%(n-1):n}
     };
     if(checks[id]) q.construction=checks[id];
-    if(level && id==='brain-invariant') {q.explanation='Removing a fixed k preserves the remainder modulo k. The relevant invariant depends on the operation; subtracting 3 does not preserve parity.';q.workedExample='Starting with 14 and removing 4 at a time leaves a minimum of 2, because 14 = 3 × 4 + 2.';}
+    if(id==='brain-invariant') {const step=level?3+seed%3:2;q.hints=[`Removing ${step} preserves the remainder modulo ${step}.`,`Divide the initial count by ${step} and keep its remainder.`];q.explanation='Removing a fixed k preserves the remainder modulo k. The invariant must match the actual operation.';q.workedExample='Starting with 14 and removing 4 at a time leaves 2: 14 = 3 × 4 + 2.';}
+    if(level && id==='brain-bounds') {const capacity=2+seed%4;q.hints=[`Could every worker have at most ${capacity} tasks?`,`Start with ${capacity} tasks each and distribute the remaining tasks one per worker.`];}
+    if(level && id==='brain-symmetry')q.hints=['Enumerate equally likely relative orders of only the named cards.','Count favorable relative orders and divide by all their relative orders.'];
+    if(level && id==='prob-variance') {q.explanation='Adding a constant shifts outcomes and mean equally. Multiplying outcomes by a scales deviations by a, so variance scales by a squared.';q.workedExample='If Var(X)=2, then Var(3X+5)=9 × 2 = 18.';q.hints=['Separate the scaling from the shift.','Square the scale factor and multiply the original variance; the shift contributes nothing.'];}
     if(level && id==='brain-pigeon') {q.explanation='To force t objects in one category, first count the worst arrangement with at most t - 1 in every category, then add one.';q.workedExample='With 4 colors, eight socks can have two of each. Nine guarantee three of a color.';}
     if(level && id==='arith-percent') {q.explanation='Invert percentage growth by dividing by the growth factor. Subtracting the same percentage from the final amount uses the wrong base.';q.workedExample='A 25% rise produces 150. Original value = 150 / 1.25 = 120.';}
+    if(q.kind==='number')q.tolerance=0.00005;
     // Content identity is independent of generation IDs, seeds and presentation order.
     q.semanticKey=JSON.stringify([1,q.skillId,q.familyId,q.prompt,q.functionName || null,q.testCases || null,q.answer ?? null,q.solution,q.construction || null]);
     return q;

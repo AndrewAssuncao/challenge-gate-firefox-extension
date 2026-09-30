@@ -116,6 +116,7 @@ const Gate = (() => {
       originalUrl,
       isSettingsGate,
       isArcade,
+      appliedTrack:isArcade && params.get('track')==='applied',
       arcadeDifficulty,
       reinforceOnly
     };

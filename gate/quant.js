@@ -20,9 +20,11 @@ const QuantChallenge = (() => {
     return r;
   }
   async function init(cfg, type) {
-    destroy();config=cfg;mode=type;track=mode==='math'?'arithmetic':'';
+    destroy();config=cfg;mode=type;track=mode==='math'?(cfg.isArcade && cfg.appliedTrack?'applied':'arithmetic'):'';
     panel.classList.remove('hidden');
     el('quant-track-wrap').hidden=mode!=='math';
+    const oldApplied=el('quant-track').querySelector('option[value=applied]');if(oldApplied)oldApplied.remove();
+    if(cfg.isArcade){const option=document.createElement('option');option.value='applied';option.textContent='Trading & Options (simulated)';el('quant-track').appendChild(option);}
     el('quant-track').value=track;
     el('quant-track').onchange=async()=>{track=el('quant-track').value;await begin();};
     el('quant-reload').onclick=()=>begin();
@@ -34,7 +36,7 @@ const QuantChallenge = (() => {
     el('quant-answer').oninput=()=>{const value=el('quant-answer').value;act(()=>mutate({op:'draft',value},false));};
     await begin(true);
   }
-  async function begin(fresh=false) {
+  async function begin(fresh=true) {
     const token=++generation;busy=false;pending=null;
     Gate.hideContinuePrompt();
     PythonChallenge.destroyWorker();
@@ -56,8 +58,9 @@ const QuantChallenge = (() => {
     return work;
   }
   async function attempt(dontKnow, correct) {
-    // Keep the same event ID on write failure, so retry is idempotent.
-    pending ||= {op:'attempt',eventId:crypto.randomUUID(),answer:el('quant-answer').value,reason:el('quant-reason-choice').value,construction:el('quant-construction').value,correct,dontKnow};
+    // A retry keeps its identifier only while the submitted payload is unchanged.
+    const next={op:'attempt',answer:el('quant-answer').value,reason:el('quant-reason-choice').value,construction:el('quant-construction').value,correct,dontKnow};
+    if(!pending || JSON.stringify({...pending,eventId:undefined})!==JSON.stringify(next))pending={...next,eventId:crypto.randomUUID()};
     const cmd=pending;
     let r;
     try {r=await mutate(cmd,false);} catch(e) {if(!e.retryable) pending=null;throw e;}
@@ -66,8 +69,7 @@ const QuantChallenge = (() => {
     await render();
   }
   async function tutor() {
-    // Revealing custom instruction must never count as independent evidence.
-    await mutate({op:'assist'},false);
+    // Only a validated, durably saved teaching response counts as assistance.
     const token=generation;
     text('quant-error','Asking your configured tutor…');
     const r=await browser.runtime.sendMessage({type:'claudeGenerate',prompt:QuantLearning.prompt(state,lesson),maxTokens:1600});

@@ -143,14 +143,14 @@ test('construction objectives require a correct intermediate check',()=>{
  }
 });
 test('transfer hints describe the transfer task rather than the foundation',()=>{
- assert.match(C.question('brain-invariant',1,false,1).hints.join(' '),/3|three/i);
+ assert.match(C.question('brain-invariant',1,false,1).hints.join(' '),/modulo 4/i);
  assert.match(C.question('brain-pigeon',1,false,1).hints.join(' '),/three|triple|2/i);
  assert.match(C.question('arith-percent',1,false,1).hints.join(' '),/divid|original/i);
 });
 test('perfect learner reaches every foundation skill without repeated-content credit',()=>{
  const reached=new Set();
  for(const [mode,track] of [['math','arithmetic'],['math','probability'],['python',''],['brainteasers','']]){
-  const h=session(mode,track);const targets=C.skills.filter(s=>s.mode===mode && (!track || s.track===track));
+  const h=session(mode,track);const targets=C.skills.filter(s=>s.mode===mode && (!track || s.track===track) && s.track!=='applied');
   for(let i=0;i<160 && !targets.every(s=>E.evidence(h.state,s.id).practiced);i++){
    h.begin();h.answer();
   }
@@ -182,7 +182,7 @@ test('durable transfer qualification is removed by invalidation',()=>{
 });
 test('skill tree is acyclic, uses real prerequisite edges and matches evidence',()=>{
  const h=session();h.begin();h.answer();const graph=E.graph(h.state,2000);
- assert.equal(graph.nodes.length,21);
+ assert.equal(graph.nodes.length,C.skills.length);
  for(const node of graph.nodes){assert.deepEqual(node.evidence,E.evidence(h.state,node.id));assert.equal(node.eligible,node.prerequisites.every(id=>E.evidence(h.state,id).practiced));}
  for(const edge of graph.edges){assert.ok(C.get(edge.to).prerequisites.includes(edge.from));assert.ok(graph.nodes.find(n=>n.id===edge.from).rank<graph.nodes.find(n=>n.id===edge.to).rank);}
  assert.equal(graph.nodes.find(n=>n.id==='code-ev').eligible,false);
@@ -213,7 +213,7 @@ test('every skill recovers after exhausted failures/hints using delayed reassess
   assert.equal(E.evidence(state,skill.id).independent,0,'immediate repetition is not reassessment');
   now+=7*DAY+1;
   for(let i=0;i<30;i++){
-   fresh();q=E.question(lesson);apply({op:'attempt',eventId:'repair-'+serial,answer:q.answer,reason:q.correctReason,construction:q.construction?.answer,correct:true});
+   fresh();lesson.seed=1+i%18;lesson.level=i%2;state.lessons.test=lesson;q=E.question(lesson);apply({op:'attempt',eventId:'repair-'+serial,answer:q.answer,reason:q.correctReason,construction:q.construction?.answer,correct:true});
   }
   assert.equal(E.evidence(state,skill.id).practiced,true,skill.id+' '+intervention);
   assert.equal(E.evidence(state,skill.id).novelIndependent,0);assert.equal(E.evidence(state,skill.id).recovered,true);assert.equal(E.evidence(state,skill.id).status,'practiced (reassessed)');
@@ -257,4 +257,34 @@ test('retention uses earliest valid qualifying baseline, not latest per-item ret
  // Removing all evidence before day16 removes the elapsed valid baseline.
  for(const e of state.events.filter(e=>e.kind==='attempt'&&e.at<16*DAY))state=E.apply(state,{op:'invalidate',target:e.id},16*DAY).state;
  assert.equal(E.evidence(state,'brain-balance').retained,false);
+});
+test('daily routine practice cannot postpone scheduled retention reviews forever',()=>{
+ const h=session();for(let i=0;i<15;i++){h.begin();h.answer();}
+ const initialDue=E.evidence(h.state,'arith-percent').dueAt;
+ for(let day=1;day<=30;day++){h.time=day*DAY+1000;h.begin();if(h.lesson.stage==='teach')h.run({op:'continue'});h.answer();}
+ for(const skill of C.skills.filter(s=>s.track==='arithmetic'))assert.equal(E.evidence(h.state,skill.id).retained,true,skill.id);
+ assert.ok(initialDue<8*DAY);
+});
+test('recently exposed known-item review cannot award retention',()=>{
+ const h=session();for(let i=0;i<5;i++){h.begin();h.answer();}
+ const state=structuredClone(h.state),q=C.question('arith-percent',1,false,0),now=8*DAY;
+ state.events.push({id:'recent-help',kind:'exposure',semanticKey:q.semanticKey,skillId:q.skillId,at:now-1000});
+ const lesson={id:'review',key:'review',mode:'math',skillId:q.skillId,seed:1,level:0,stage:'review',revision:0,assisted:false,checks:0,required:1,stepStartedAt:now};state.lessons.review=lesson;
+ const result=E.apply(state,{op:'attempt',lessonId:lesson.id,revision:0,eventId:'not-delayed',answer:q.answer},now);
+ assert.equal(result.state.events.at(-1).retest,false);assert.equal(E.evidence(result.state,q.skillId).retained,false);
+});
+test('four-decimal responses satisfy stated numeric precision',()=>{
+ const q=C.question('arith-return',1,false,1);assert.ok(Math.abs(17.6471-q.answer)<=q.tolerance);
+});
+test('resuming an old attempt does not log an hour of inactive time',()=>{
+ const h=session();h.begin();h.time=2*DAY;h.answer();assert.equal(h.state.events.at(-1).elapsedMs,null);
+});
+test('reasoning variants require reading changing invariants, capacities and relative orders',()=>{
+ for(const [skill,level] of [['brain-invariant',0],['brain-invariant',1],['brain-bounds',1],['brain-symmetry',1],['prob-variance',0],['prob-variance',1]]){
+  const questions=Array.from({length:18},(_,i)=>C.question(skill,i+1,false,level));
+  assert.ok(new Set(questions.map(q=>q.answer)).size>=2,skill+' has a constant answer');
+ }
+ for(let seed=1;seed<=18;seed++){
+  for(const level of [0,1]){const q=C.question('brain-invariant',seed,false,level),step=level?3+seed%3:2;assert.equal(q.answer,seed%step);assert.equal(q.construction.answer,step);assert.match(q.hints.join(' '),new RegExp('modulo '+step));}
+ }
 });

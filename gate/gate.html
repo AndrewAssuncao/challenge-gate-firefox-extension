@@ -65,7 +65,7 @@
       <div id="quant-question"><p id="quant-prompt"></p><p id="quant-hints"></p></div>
       <label id="quant-reason-label" for="quant-reason-choice" hidden>Why does that answer follow?</label><select id="quant-reason-choice" hidden></select>
       <label id="quant-construction-label" for="quant-construction" hidden></label><input id="quant-construction" hidden autocomplete="off" inputmode="numeric">
-      <form id="quant-form"><label for="quant-answer">Your answer </label><input id="quant-answer" autocomplete="off" inputmode="decimal"><button class="gate-btn" type="submit">Check</button></form>
+      <form id="quant-form"><label for="quant-answer">Your answer (exact fraction or rounded to 4 decimal places) </label><input id="quant-answer" autocomplete="off" inputmode="decimal"><button class="gate-btn" type="submit">Check</button></form>
       <div id="quant-actions"><button id="quant-hint" class="gate-btn gate-btn-ghost">Hint</button><button id="quant-learn" class="gate-btn gate-btn-ghost">I don’t know — teach me</button></div>
       <button id="quant-tutor" class="gate-btn gate-btn-ghost">Personalize explanation with AI</button>
       <p id="quant-error" role="alert"></p><button id="quant-reload" class="gate-btn" hidden>Reload saved lesson</button>
@@ -191,6 +191,7 @@
   <script src="terminal.js"></script>
   <script src="git-provider.js"></script>
   <script src="git.js"></script>
+  <script src="../learning/applied.js"></script>
   <script src="../learning/curriculum.js"></script>
   <script src="../learning/engine.js"></script>
   <script src="quant.js"></script>

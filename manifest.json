@@ -23,7 +23,8 @@
       "gate/challenge-provider.js",
       "gate/git-provider.js",
       "gate/terminal-provider.js",
-      "learning/curriculum.js",
+      "learning/applied.js",
+    "learning/curriculum.js",
       "learning/engine.js",
       "learning/store.js",
       "background/background.js"
@@ -56,6 +57,7 @@
     "gate/git-provider.js",
     "gate/pyodide-worker.js",
     "gate/challenges/*",
+    "learning/applied.js",
     "learning/curriculum.js",
     "learning/engine.js",
     "gate/quant.js",

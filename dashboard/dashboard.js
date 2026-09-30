@@ -120,8 +120,9 @@ const Dashboard = (() => {
 
   function renderHeader() {
     const p = state.progression;
-    els.statChallenges.textContent = `${(p.totalChallengesCompleted || 0) + quantState.events.filter(e=>e.completed).length} challenges`;
-    els.statTier.textContent = `${QuantCurriculum.skills.filter(s=>QuantLearning.evidence(quantState,s.id).practiced).length} / ${QuantCurriculum.skills.length} quant skills practiced`;
+    const invalid=new Set(quantState.events.filter(e=>e.kind==='invalidate').map(e=>e.target));
+    els.statChallenges.textContent = `${(p.totalChallengesCompleted || 0) + quantState.events.filter(e=>e.completed && !invalid.has(e.id)).length} challenges`;
+    els.statTier.textContent = quantError || `${QuantCurriculum.skills.filter(s=>QuantLearning.evidence(quantState,s.id).practiced).length} / ${QuantCurriculum.skills.length} quant skills practiced`;
   }
 
   function renderSites() {
@@ -791,10 +792,10 @@ const Dashboard = (() => {
   function renderQuantTree() {
     const box=document.getElementById('quant-knowledge-tree');if(!box)return;
     box.replaceChildren();if(quantError){box.textContent=quantError;return;}
-    const graph=QuantLearning.graph(quantState),tracks=['arithmetic','probability','reasoning','coding'];
-    box.style.display='grid';box.style.gridTemplateColumns='repeat(4, minmax(230px, 1fr))';box.style.gap='16px';
+    const graph=QuantLearning.graph(quantState),tracks=['arithmetic','probability','reasoning','coding','applied'];
+    box.style.display='grid';box.style.gridTemplateColumns='repeat(5, minmax(230px, 1fr))';box.style.gap='16px';
     for(const track of tracks){
-      const column=document.createElement('div'),heading=document.createElement('h3');heading.textContent=track;column.appendChild(heading);
+      const column=document.createElement('div'),heading=document.createElement('h3');heading.textContent=track==='applied'?'Trading & Options':track;column.appendChild(heading);
       for(const node of graph.nodes.filter(n=>n.track===track)){
         const e=node.evidence,card=document.createElement('article');card.id='skill-'+node.id;card.dataset.skillId=node.id;card.dataset.status=e.status;card.dataset.eligible=String(node.eligible);
         card.style.cssText='border:1px solid #64748b;border-radius:8px;padding:12px;margin-bottom:12px;scroll-margin:20px';
@@ -1160,7 +1161,7 @@ const Dashboard = (() => {
     if (!els.arcadeFrame) return;
     const diff = ARCADE_DIFF_LEVELS[arcadeDiffIdx] || 'hard';
     const gateUrl = browser.runtime.getURL('gate/gate.html')
-      + `?arcade=1&challenge=${encodeURIComponent(arcadeType)}&difficulty=${encodeURIComponent(diff)}&reinforce=1`;
+      + `?arcade=1&challenge=${encodeURIComponent(arcadeType==='applied'?'math':arcadeType)}${arcadeType==='applied'?'&track=applied':''}&difficulty=${encodeURIComponent(diff)}&reinforce=1`;
     els.arcadeFrame.src = gateUrl;
     els.arcadeFrame.classList.remove('hidden');
     // Hide start screen, hide regen bar

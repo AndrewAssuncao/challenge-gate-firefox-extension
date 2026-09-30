@@ -87,7 +87,7 @@ try:
  z.install();z.navigate(BASE+'dashboard/dashboard.html')
  z.wait('return typeof browser !== "undefined" && !!document.querySelector("#tab-overview")')
  tree=z.js('return [...document.querySelectorAll("#quant-knowledge-tree [data-skill-id]")].map(n=>({id:n.dataset.skillId,status:n.dataset.status}))')
- assert len(tree)==21,tree
+ assert len(tree)==26,tree
  links=z.js('return [...document.querySelectorAll("#quant-knowledge-tree a[data-from]")].map(a=>({from:a.dataset.from,to:a.dataset.to,target:a.hash,label:a.textContent}))')
  expected=json.loads(subprocess.check_output(['node','-e','console.log(JSON.stringify(require("./learning/engine").graph(require("./learning/engine").empty()).edges))'],cwd=ROOT,text=True))
  assert sorted((e['from'],e['to']) for e in links)==sorted((e['from'],e['to']) for e in expected)
@@ -135,6 +135,40 @@ try:
   else:assert any(e.get('passed') for e in history[mode+'LearningProfile']['recentChallenges']),history
   z.navigate(target);z.wait('return document.title === "Local test destination"')
   print('PASS: '+mode+' exercise, saved completion and actual destination unlock',flush=True)
+
+ z.navigate(BASE+'dashboard/dashboard.html');z.wait('return typeof browser !== "undefined" && !!document.querySelector("[data-type=applied]")')
+ unlockBefore=z.js('return browser.storage.local.get("unlocks")')
+ z.js('document.querySelector(".dash-tab[data-tab=arcade]").click();document.querySelector("[data-type=applied]").click();document.querySelector("#arcade-start-btn").click();')
+ frame='document.querySelector("#arcade-frame").contentDocument'
+ z.wait('return '+frame+'?.querySelector("#quant-status")?.textContent.length > 0')
+ assert 'track=applied' in z.js('return document.querySelector("#arcade-frame").src')
+ teachingChecked=False
+ for step in range(180):
+  learner=z.js('return browser.storage.local.get("quantLearner").then(d=>d.quantLearner)')
+  record=json.loads(subprocess.check_output(['node','-e','const C=require("./learning/curriculum"),E=require("./learning/engine"),s=JSON.parse(require("fs").readFileSync(0,"utf8")),lesson=s.lessons["math:applied:practice"];console.log(JSON.stringify({lesson,q:E.question(lesson),ready:C.skills.filter(s=>s.track==="applied").every(skill=>E.evidence(s,skill.id).practiced)}))'],input=json.dumps(learner),cwd=ROOT,text=True))
+  lesson,q=record['lesson'],record['q']
+  if record['ready']:break
+  if step==0:assert lesson['skillId']=='arith-percent',lesson
+  if lesson['stage']=='done':
+   z.js(frame+'.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));')
+   z.wait('return browser.storage.local.get("quantLearner").then(d=>d.quantLearner.lessons["math:applied:practice"].id!=='+json.dumps(lesson['id'])+')')
+   continue
+  if lesson['skillId']=='market-contracts' and not teachingChecked:
+   z.js(frame+'.querySelector("#quant-learn").click()')
+   z.wait('return '+frame+'.querySelector("#quant-status").textContent.startsWith("teach")')
+   z.js('window.__oldAppliedFrame='+frame+';document.querySelector("#arcade-frame").contentWindow.location.reload()')
+   z.wait('return '+frame+'!==window.__oldAppliedFrame && '+frame+'?.querySelector("#quant-status")?.textContent.startsWith("teach")')
+   assert 'per underlying unit' in z.js('return '+frame+'.querySelector("#quant-explanation").textContent')
+   teachingChecked=True;continue
+  if lesson['stage']=='teach':
+   z.js(frame+'.querySelector("#quant-next").click()')
+  else:
+   z.js('const d='+frame+';d.querySelector("#quant-answer").value='+json.dumps(str(q['answer']))+';d.querySelector("#quant-construction").value='+json.dumps(str(q.get('construction',{}).get('answer','')))+';d.querySelector("#quant-reason-choice").value='+json.dumps(q.get('correctReason',''))+';d.querySelector("#quant-form").requestSubmit();')
+  z.wait('return browser.storage.local.get("quantLearner").then(d=>d.quantLearner.lessons["math:applied:practice"].revision>'+str(lesson['revision'])+')')
+ else:raise AssertionError('Applied Arcade did not reach readiness')
+ assert teachingChecked
+ assert z.js('return browser.storage.local.get("unlocks")')==unlockBefore
+ print('PASS: dedicated applied Arcade, prerequisite routing, teaching/resume, all five units through readiness, no browsing unlock',flush=True)
 
 finally:
  if z:z.stop()

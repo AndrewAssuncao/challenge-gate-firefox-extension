@@ -62,3 +62,11 @@ Authentic Zen completed Typing (real WebDriver text input), Git staging and lega
 Final rerun: all 42 Node tests pass. Zen additionally verified every visible prerequisite link exactly matches the source DAG, and completed another Git log exercise and Terminal file-reading exercise through actual destination unlock.
 
 Retention review correction: the retained baseline now uses the earliest non-invalidated qualifying pass, independently of latest per-item reassessments. A regression retains all six balance items through day8 and day16 reviews, then verifies that invalidating the earlier evidence removes unsupported retention. The focused 35 learner tests pass.
+
+### Applied Arcade and authorized external review
+
+Five applied units now reuse the existing learner state and UI: market-contracts, market-execution, market-options, market-quote, market-greeks. They form the applied Quant Math track, exposed in Arcade only. Every scenario is simulated with explicit units/multiplier/fees/assumptions. Independent numeric oracles and conceptual mutations cover the supplied fixtures and generated variants. The recovery/graph sweeps now include all 26 skills.
+
+The authorized installed Claude Code review was read-only, with no tools/MCP/customizations and only a supplied extension source/test/curriculum bundle. Its confirmed stale-gate, review scheduling, rounding, failed-AI-assistance, changed-retry payload, recent-hint retention, timing/header and constant-answer findings were addressed with regressions. REVIEW_NOTES.md records the remaining non-security-boundary and legacy-only limitations; no hostile-code/anti-cheating guarantee is claimed.
+
+Current verification: 55 Node tests pass. Authentic Zen passes full interception/CDN Python/unlock/restart, Typing/Git/Terminal completion, exact prerequisite links and the dedicated applied Arcade through all five units, including saved teaching reload and unchanged browsing unlock state. LOCAL_INSTALL.md explains temporary loading and data persistence. Standard Firefox remains untested.
