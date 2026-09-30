@@ -121,7 +121,7 @@ const PythonChallenge = (() => {
     if (!config.arcadeDifficulty) {
       try { scheduledDifficulty = (await browser.runtime.sendMessage({ type: 'getCurrentDifficulty' })).difficulty; } catch {}
     }
-    const result = await ChallengeProvider.getChallenge(profile, config.isSettingsGate, scheduledDifficulty, config.reinforceOnly);
+    const result = await ChallengeProvider.getChallenge(profile, scheduledDifficulty, config.reinforceOnly);
     challenge = result.challenge;
     challengeSource = result.source;
 

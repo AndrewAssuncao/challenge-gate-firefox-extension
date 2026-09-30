@@ -127,7 +127,7 @@ const TerminalChallengeProvider = (() => {
     marathon: 'Generate an extensive, multi-step scenario that tests deep terminal mastery. Require sustained focus, complex pipelines, multi-tool integration, and thorough problem solving (~20-40 minutes).'
   };
 
-  function buildMentorPrompt(profile, isSettingsGate, crossDisciplineContext, scheduledDifficulty, reinforceOnly) {
+  function buildMentorPrompt(profile, crossDisciplineContext, scheduledDifficulty, reinforceOnly) {
     const currentTopic = TERMINAL_CURRICULUM[profile.currentTopicIndex] || TERMINAL_CURRICULUM[0];
     const tier = currentTopic.tier;
 
@@ -149,9 +149,7 @@ const TerminalChallengeProvider = (() => {
 
     const conceptsList = profile.conceptsIntroduced.slice(-20).join(', ');
     const weakList = profile.weakAreas.join(', ');
-    const difficulty = isSettingsGate
-      ? 'harder than usual (this is a settings-gate challenge)'
-      : (DIFFICULTY_INSTRUCTIONS[scheduledDifficulty] || DIFFICULTY_INSTRUCTIONS.normal);
+    const difficulty = DIFFICULTY_INSTRUCTIONS[scheduledDifficulty] || DIFFICULTY_INSTRUCTIONS.normal;
 
     // Sub-concept coverage for current topic
     const topicConcepts = currentTopic.concepts || [];
@@ -320,7 +318,7 @@ IMPORTANT: The "filesystem" field must be a flat object mapping path strings to 
 
   // ── Generate via Claude API ────────────────────────────────────────────
 
-  async function generateFromClaude(profile, isSettingsGate, scheduledDifficulty, reinforceOnly) {
+  async function generateFromClaude(profile, scheduledDifficulty, reinforceOnly) {
     const currentTopic = TERMINAL_CURRICULUM[profile.currentTopicIndex] || TERMINAL_CURRICULUM[0];
     const useOpus = currentTopic.tier >= 5;
 
@@ -338,7 +336,7 @@ IMPORTANT: The "filesystem" field must be a flat object mapping path strings to 
       } catch {}
     }
 
-    const prompt = buildMentorPrompt(profile, isSettingsGate, crossCtx, scheduledDifficulty, reinforceOnly);
+    const prompt = buildMentorPrompt(profile, crossCtx, scheduledDifficulty, reinforceOnly);
 
     try {
       const response = await browser.runtime.sendMessage({
@@ -523,8 +521,8 @@ IMPORTANT: The "filesystem" field must be a flat object mapping path strings to 
 
   // ── Public API ────────────────────────────────────────────────────────
 
-  async function getChallenge(profile, isSettingsGate, scheduledDifficulty, reinforceOnly) {
-    const aiChallenge = await generateFromClaude(profile, isSettingsGate, scheduledDifficulty, reinforceOnly);
+  async function getChallenge(profile, scheduledDifficulty, reinforceOnly) {
+    const aiChallenge = await generateFromClaude(profile, scheduledDifficulty, reinforceOnly);
     if (aiChallenge) {
       return { challenge: aiChallenge, source: 'claude' };
     }

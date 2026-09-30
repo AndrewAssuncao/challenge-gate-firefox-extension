@@ -110,7 +110,7 @@
 
       <!-- Progress Section -->
       <section id="progress-section">
-        <div class="section-header">
+        <div class="section-header learning-header">
           <div id="progress-toggle">
             <button class="toggle-btn active" data-view="typing">typing</button>
             <button class="toggle-btn" data-view="python">quant coding</button>
@@ -118,6 +118,7 @@
             <button class="toggle-btn" data-view="math">quant math</button>
             <button class="toggle-btn" data-view="git">git</button>
           </div>
+          <div class="learning-actions"><button id="export-learning" class="dash-btn dash-btn-sm">Export quant learning record</button><p id="export-learning-error" role="alert"></p></div>
         </div>
 
         <div id="typing-speed-view">
@@ -126,8 +127,6 @@
         </div>
 
         <div id="quant-progress-view" class="hidden"></div>
-        <button id="export-learning" class="dash-btn">Export quant learning record</button>
-        <p id="export-learning-error" role="alert"></p>
         <div id="python-progress-view" class="hidden">
           <div id="learning-curriculum"></div>
           <div id="learning-stats"></div>
@@ -145,8 +144,15 @@
       </section>
 
       <!-- Knowledge Map -->
-      <section id="quant-knowledge-section"><h2>Quant skill tree</h2><p>Each skill lists every required prerequisite as a named link. Column order does not imply dependencies. Status comes from saved attempts; review due and prerequisite availability are shown separately. This map does not award progress.</p><div id="quant-knowledge-tree" style="overflow:auto"></div></section>
-      <section id="knowledge-section">
+      <section id="quant-knowledge-section" aria-labelledby="quant-tree-title">
+        <h2 id="quant-tree-title">Skill tree</h2>
+        <p class="tree-intro">Follow the connections. Select a skill to explore its progress and prerequisites.</p>
+        <div class="knowledge-legend" id="quant-legend"><span><i style="--track:#4a7eff"></i>Arithmetic</span><span><i style="--track:#9ece6a"></i>Probability</span><span><i style="--track:#e0af68"></i>Reasoning</span><span><i style="--track:#bb9af7"></i>Coding</span><span><i style="--track:#f7768e"></i>Trading &amp; Options</span></div>
+        <div class="tree-status-legend"><span>○ New</span><span>◐ Learning</span><span>● Practiced / retained</span><span>◎ Needs practice</span><span class="tree-scroll-note">Scroll the map to explore every track</span></div>
+        <div id="quant-tree-scroll" tabindex="0" aria-label="Skill tree, scroll horizontally to explore tracks"><div id="quant-knowledge-tree"><canvas id="quant-tree-canvas" aria-hidden="true"></canvas><div id="quant-tree-nodes"></div></div></div>
+        <div id="quant-skill-detail" aria-live="polite"></div>
+      </section>
+      <details id="legacy-knowledge"><summary>Previous programming knowledge map</summary><section id="knowledge-section">
         <h2>Legacy programming knowledge map</h2><p>Previous Python and Terminal records are preserved here. Quant progress is shown above and starts from evidence collected in the new curriculum.</p>
         <div id="knowledge-legend">
           <span class="legend-item"><span class="legend-dot" style="background:#4a7eff"></span>Python</span>
@@ -162,7 +168,7 @@
           <canvas id="knowledge-canvas"></canvas>
           <div id="knowledge-tooltip" class="hidden"></div>
         </div>
-      </section>
+      </section></details>
 
     </div><!-- /tab-learning -->
 
@@ -172,14 +178,6 @@
       <section id="settings-section">
         <div class="section-header">
           <h2>Settings</h2>
-          <div id="settings-lock-indicator">
-            <span id="settings-lock-text">Locked</span>
-            <button id="unlock-settings-btn" class="dash-btn dash-btn-sm">Unlock</button>
-          </div>
-        </div>
-
-        <div id="settings-overlay" class="settings-locked">
-          <div class="overlay-text">Settings are protected. Complete a challenge to edit.</div>
         </div>
 
         <div id="settings-form">
@@ -192,12 +190,6 @@
             <div class="setting-row">
               <label for="setting-idle-timeout">Idle timeout (seconds)</label>
               <input type="number" id="setting-idle-timeout" min="30" max="600" value="120">
-            </div>
-            <div class="setting-row">
-              <label>
-                <input type="checkbox" id="setting-protected" checked>
-                Protect settings with challenge
-              </label>
             </div>
           </div>
 
@@ -221,10 +213,6 @@
             <div class="setting-row">
               <label for="setting-typing-acc">Accuracy threshold (%)</label>
               <input type="number" id="setting-typing-acc" min="50" max="100" value="95">
-            </div>
-            <div class="setting-row">
-              <label for="setting-settings-wpm">Settings gate WPM (harder)</label>
-              <input type="number" id="setting-settings-wpm" min="10" max="200" value="100">
             </div>
           </div>
 
@@ -288,24 +276,26 @@
           <button class="arcade-type-btn" data-type="git">Git</button>
           <button class="arcade-type-btn" data-type="applied">Trading &amp; Options</button>
         </div>
+        <div id="arcade-level-row" hidden>
         <div id="arcade-difficulty-wrap">
-          <input type="range" id="arcade-difficulty" min="0" max="5" step="1" value="2" class="difficulty-slider arcade-slider">
+          <input aria-label="Challenge difficulty" type="range" id="arcade-difficulty" min="0" max="5" step="1" value="2" class="difficulty-slider arcade-slider">
           <div class="arcade-diff-labels">
             <span>Relaxed</span><span>Normal</span><span>Hard</span><span>Intense</span><span>Brutal</span><span>Marathon</span>
           </div>
         </div>
-        <span id="arcade-time-est" class="difficulty-time">~3-5 min</span><p>Quant lessons resume your saved step and use evidence to set the level. The difficulty slider applies to Git; quant gates stay brief.</p>
+        <span id="arcade-time-est" class="difficulty-time">~3-5 min</span>
+        </div><p id="arcade-note">Lessons resume your saved step. The level adapts to your learning progress.</p>
       </div>
       <div id="arcade-frame-wrap">
         <div id="arcade-start-screen">
-          <div class="arcade-start-text">Select challenge type and difficulty, then begin.</div>
+          <div class="arcade-start-text">Choose a challenge, then begin.</div>
           <button id="arcade-start-btn" class="dash-btn">Start Challenge</button>
         </div>
         <div id="arcade-regen-bar" class="hidden">
           <span>Settings changed.</span>
           <button id="arcade-regen-btn" class="dash-btn dash-btn-sm">Regenerate</button>
         </div>
-        <iframe id="arcade-frame" src="" frameborder="0" class="hidden"></iframe>
+        <iframe title="Practice challenge" id="arcade-frame" src="" frameborder="0" class="hidden"></iframe>
       </div>
     </div>
 

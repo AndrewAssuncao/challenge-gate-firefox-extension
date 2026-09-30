@@ -6,7 +6,6 @@ const Dashboard = (() => {
   let state = null;
   let quantState = QuantLearning.empty();
   let quantError = '';
-  let settingsUnlocked = false;
   let editingDomain = null;
   let refreshTimer = null;
   let activeProgressView = 'typing'; // 'typing', 'python', 'terminal', or 'git'
@@ -34,17 +33,12 @@ const Dashboard = (() => {
     cancelAddBtn: document.getElementById('cancel-add-btn'),
     usageBars: document.getElementById('usage-bars'),
     noUsage: document.getElementById('no-usage'),
-    settingsOverlay: document.getElementById('settings-overlay'),
-    settingsLockText: document.getElementById('settings-lock-text'),
-    unlockSettingsBtn: document.getElementById('unlock-settings-btn'),
     settingUnlockDuration: document.getElementById('setting-unlock-duration'),
     settingIdleTimeout: document.getElementById('setting-idle-timeout'),
-    settingProtected: document.getElementById('setting-protected'),
     settingWordCount: document.getElementById('setting-word-count'),
     settingWpm25: document.getElementById('setting-wpm-25'),
     settingWpm50: document.getElementById('setting-wpm-50'),
     settingTypingAcc: document.getElementById('setting-typing-acc'),
-    settingSettingsWpm: document.getElementById('setting-settings-wpm'),
     settingApiKey: document.getElementById('setting-api-key'),
     progressToggle: document.getElementById('progress-toggle'),
     typingSpeedView: document.getElementById('typing-speed-view'),
@@ -83,6 +77,10 @@ const Dashboard = (() => {
     await loadState();
     render();
     bindEvents();
+    document.getElementById("legacy-knowledge").addEventListener("toggle",renderKnowledgeTree);
+    updateArcadeControls();
+    if (new URLSearchParams(location.search).get("tab") === "settings") document.querySelector("[data-tab=settings]").click();
+    window.addEventListener("resize", () => { if (activeTab === "learning") renderKnowledgeTree(); });
     // Refresh every 15 seconds
     if (refreshTimer) clearInterval(refreshTimer);
     refreshTimer = setInterval(async () => {
@@ -632,7 +630,7 @@ const Dashboard = (() => {
 
     // Responsive: fit to container width
     const container = canvas.parentElement;
-    const availWidth = container ? container.clientWidth : 860;
+    const availWidth = Math.max(810, container ? container.clientWidth : 860);
     const step = Math.max(10, Math.floor((availWidth - padLeft - 4) / weeks));
     const cellSize = Math.max(7, step - 2);
     const gap = step - cellSize;
@@ -790,29 +788,15 @@ const Dashboard = (() => {
   };
 
   function renderQuantTree() {
-    const box=document.getElementById('quant-knowledge-tree');if(!box)return;
-    box.replaceChildren();if(quantError){box.textContent=quantError;return;}
-    const graph=QuantLearning.graph(quantState),tracks=['arithmetic','probability','reasoning','coding','applied'];
-    box.style.display='grid';box.style.gridTemplateColumns='repeat(5, minmax(230px, 1fr))';box.style.gap='16px';
-    for(const track of tracks){
-      const column=document.createElement('div'),heading=document.createElement('h3');heading.textContent=track==='applied'?'Trading & Options':track;column.appendChild(heading);
-      for(const node of graph.nodes.filter(n=>n.track===track)){
-        const e=node.evidence,card=document.createElement('article');card.id='skill-'+node.id;card.dataset.skillId=node.id;card.dataset.status=e.status;card.dataset.eligible=String(node.eligible);
-        card.style.cssText='border:1px solid #64748b;border-radius:8px;padding:12px;margin-bottom:12px;scroll-margin:20px';
-        const name=document.createElement('h4');name.textContent=node.name;card.appendChild(name);
-        const status=document.createElement('p');status.textContent=`${e.status} · ${e.novelIndependent} novel checks · ${e.reassessed} known-item reassessments`;card.appendChild(status);
-        const review=document.createElement('p');review.textContent=node.reviewDue?'Review due':e.dueAt?'Review '+new Date(e.dueAt).toLocaleDateString():'No review scheduled';card.appendChild(review);
-        const label=document.createElement('p');label.textContent=node.prerequisites.length?'Requires all:':'Prerequisites: none';card.appendChild(label);
-        if(node.prerequisites.length){const list=document.createElement('ul');for(const id of node.prerequisites){const item=document.createElement('li'),link=document.createElement('a');link.href='#skill-'+id;link.dataset.from=id;link.dataset.to=node.id;link.textContent=QuantCurriculum.get(id).name;item.appendChild(link);list.appendChild(item);}card.appendChild(list);}
-        const availability=document.createElement('p');availability.textContent=node.eligible?'Prerequisites ready':'Prerequisites pending';card.appendChild(availability);column.appendChild(card);
-      }
-      box.appendChild(column);
-    }
+    const box=document.getElementById('quant-knowledge-tree');if(!box || activeTab!=='learning')return;
+    if(quantError){document.getElementById('quant-skill-detail').textContent=quantError;return;}
+    renderCurriculumGraph(QuantLearning.graph(quantState));
   }
 
   function renderKnowledgeTree() {
     renderQuantTree();
     const canvas = els.knowledgeCanvas;
+    if (!document.getElementById('legacy-knowledge').open || activeTab!=='learning') return;
     if (!canvas || typeof buildKnowledgeNodes === 'undefined') return;
 
     const nodes = buildKnowledgeNodes(
@@ -830,7 +814,7 @@ const Dashboard = (() => {
     // Cross-discipline edges route BEHIND everything via wide bezier curves.
 
     const container = canvas.parentElement;
-    const availWidth = container ? container.clientWidth : 860;
+    const availWidth = Math.max(810, container ? container.clientWidth : 860);
     const colWidth = Math.floor(availWidth / 3);
     const nodeR = 6;
     const nodeRowH = 22; // vertical space per node within a tier
@@ -1080,26 +1064,12 @@ const Dashboard = (() => {
 
   function renderSettings() {
     const s = state.settings;
-    const isProtected = s.settingsProtected !== false;
-
-    if (isProtected && !settingsUnlocked) {
-      els.settingsOverlay.classList.add('settings-locked');
-      els.settingsLockText.textContent = 'Locked';
-      els.unlockSettingsBtn.classList.remove('hidden');
-    } else {
-      els.settingsOverlay.classList.remove('settings-locked');
-      els.settingsLockText.textContent = settingsUnlocked ? 'Unlocked' : '';
-      els.unlockSettingsBtn.classList.add('hidden');
-    }
-
     els.settingUnlockDuration.value = s.unlockDurationMinutes || 30;
     els.settingIdleTimeout.value = s.idleTimeoutSeconds || 120;
-    els.settingProtected.checked = isProtected;
     els.settingWordCount.value = s.typingWordCount || 25;
     els.settingWpm25.value = s.typingWpm25 || 90;
     els.settingWpm50.value = s.typingWpm50 || 80;
     els.settingTypingAcc.value = s.typingAccuracyThreshold || 95;
-    els.settingSettingsWpm.value = s.settingsTypingWpm || 100;
     els.settingApiKey.value = s.anthropicApiKey || '';
 
     // Difficulty schedule — sliders use numeric 0-3
@@ -1157,6 +1127,16 @@ const Dashboard = (() => {
   let arcadeDiffIdx = 2; // default: hard
   let arcadeLoaded = false; // whether a challenge has been loaded
 
+  function updateArcadeControls() {
+    const adjustable=arcadeType==='git';
+    document.getElementById('arcade-level-row').hidden=!adjustable;
+    document.getElementById('arcade-note').textContent=adjustable
+      ? 'Choose your difficulty. Practice here without unlocking a website.'
+      : arcadeType==='typing' ? 'Practice your typing with your saved word count and thresholds.'
+      : 'Lessons resume your saved step. The level adapts to your learning progress.';
+    document.querySelectorAll('.arcade-type-btn').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.type===arcadeType)));
+  }
+
   function loadArcadeChallenge() {
     if (!els.arcadeFrame) return;
     const diff = ARCADE_DIFF_LEVELS[arcadeDiffIdx] || 'hard';
@@ -1206,6 +1186,7 @@ const Dashboard = (() => {
 
   function bindEvents() {
     document.getElementById('export-learning').onclick=async()=>{
+      document.getElementById('export-learning-error').textContent='';
       try {
         const result=await browser.runtime.sendMessage({type:'quantCommand',command:{op:'export'}});
         if(result.error) throw Error(result.error);
@@ -1238,10 +1219,6 @@ const Dashboard = (() => {
 
     // Add site
     els.addSiteBtn.addEventListener('click', () => {
-      if (state.settings.settingsProtected !== false && !settingsUnlocked) {
-        promptSettingsUnlock();
-        return;
-      }
       els.addSiteForm.classList.toggle('hidden');
       if (!els.addSiteForm.classList.contains('hidden')) {
         els.newDomain.focus();
@@ -1267,9 +1244,6 @@ const Dashboard = (() => {
         renderProgress();
       });
     });
-
-    // Settings unlock
-    els.unlockSettingsBtn.addEventListener('click', promptSettingsUnlock);
 
     // Save settings
     els.saveSettingsBtn.addEventListener('click', saveSettings);
@@ -1331,6 +1305,7 @@ const Dashboard = (() => {
         document.querySelectorAll('.arcade-type-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         arcadeType = btn.dataset.type;
+        updateArcadeControls();
         if (arcadeLoaded) showArcadeRegen();
       });
     });
@@ -1359,23 +1334,6 @@ const Dashboard = (() => {
       if (e.target === els.editModal) closeEditModal();
     });
 
-    // Listen for settings unlock from gate window
-    let settingsLockTimeout = null;
-    window.addEventListener('message', (e) => {
-      // Only accept messages from our own extension origin
-      if (e.origin !== window.location.origin) return;
-      if (e.data?.type === 'settingsUnlocked') {
-        settingsUnlocked = true;
-        render();
-        // Auto-lock after 5 minutes (clear previous timer to prevent accumulation)
-        if (settingsLockTimeout) clearTimeout(settingsLockTimeout);
-        settingsLockTimeout = setTimeout(() => {
-          settingsLockTimeout = null;
-          settingsUnlocked = false;
-          render();
-        }, 5 * 60 * 1000);
-      }
-    });
   }
 
   async function addSite() {
@@ -1415,10 +1373,6 @@ const Dashboard = (() => {
   }
 
   function openEditModal(domain) {
-    if (state.settings.settingsProtected !== false && !settingsUnlocked) {
-      promptSettingsUnlock();
-      return;
-    }
 
     editingDomain = domain;
     const site = state.blockedSites.find(s => s.domain === domain);
@@ -1472,25 +1426,16 @@ const Dashboard = (() => {
     const s = {
       unlockDurationMinutes: parseInt(els.settingUnlockDuration.value) || 30,
       idleTimeoutSeconds: parseInt(els.settingIdleTimeout.value) || 120,
-      settingsProtected: els.settingProtected.checked,
       typingWordCount: parseInt(els.settingWordCount.value) || 25,
       typingWpm25: parseInt(els.settingWpm25.value) || 90,
       typingWpm50: parseInt(els.settingWpm50.value) || 80,
       typingAccuracyThreshold: parseInt(els.settingTypingAcc.value) || 95,
-      settingsTypingWpm: parseInt(els.settingSettingsWpm.value) || 100,
       anthropicApiKey: els.settingApiKey.value.trim(),
       difficultySchedule: collectDifficultySchedule()
     };
     await browser.runtime.sendMessage({ type: 'updateSettings', settings: s });
     await loadState();
     render();
-  }
-
-  function promptSettingsUnlock() {
-    // Open the gate page in settings-gate mode
-    const url = browser.runtime.getURL('gate/gate.html')
-      + '?settingsGate=1&challenge=typing&domain=settings';
-    window.open(url, 'settingsGate', 'width=800,height=600');
   }
 
   function formatTime(date) {

@@ -8,7 +8,6 @@ const Gate = (() => {
   const originalUrl = params.get('url') || '';
   const challengeType = params.get('challenge') || 'typing';
   const reason = params.get('reason') || '';
-  const isSettingsGate = params.get('settingsGate') === '1';
   const isArcade = params.get('arcade') === '1';
   const arcadeDifficulty = params.get('difficulty') || null;
   const reinforceOnly = params.get('reinforce') === '1';
@@ -16,6 +15,11 @@ const Gate = (() => {
   let continueListenerActive = false;
 
   function init() {
+    // Old settings-gate bookmarks now open the directly editable Settings tab.
+    if (params.get("settingsGate") === "1") {
+      location.replace(browser.runtime.getURL("dashboard/dashboard.html") + "?tab=settings");
+      return;
+    }
     if (isArcade) {
       // Arcade mode: hide domain/subtitle, show challenge directly
       document.getElementById('gate-domain').textContent = '';
@@ -33,11 +37,6 @@ const Gate = (() => {
     if (reason === 'cap') {
       showCapExceeded();
       return;
-    }
-
-    if (isSettingsGate) {
-      document.getElementById('gate-subtitle').textContent =
-        'Complete a harder challenge to modify settings.';
     }
 
     // Always show the toggle so user can switch between typing and python
@@ -114,7 +113,6 @@ const Gate = (() => {
     return {
       domain: isArcade ? 'Arcade' : domain,
       originalUrl,
-      isSettingsGate,
       isArcade,
       appliedTrack:isArcade && params.get('track')==='applied',
       arcadeDifficulty,
@@ -127,12 +125,6 @@ const Gate = (() => {
   function showContinuePrompt() {
     const el = document.getElementById('gate-continue');
     if (!el) return;
-
-    // Settings gate skips the continue prompt — just unlock immediately
-    if (isSettingsGate) {
-      onChallengeComplete();
-      return;
-    }
 
     const isMac = navigator.platform.toUpperCase().includes('MAC');
     const modKey = isMac ? '⌘' : 'Ctrl';
@@ -190,15 +182,9 @@ const Gate = (() => {
     }
   }
 
-  // ── Legacy direct-complete (for settings gate and bypasses) ───────────
+  // ── Direct challenge completion ───────────
 
   async function onChallengeComplete() {
-    if (isSettingsGate) {
-      window.opener?.postMessage({ type: 'settingsUnlocked' }, window.opener.origin || '*');
-      window.close();
-      return;
-    }
-
     const result = await browser.runtime.sendMessage({
       type: 'unlock',
       domain: domain
@@ -211,5 +197,5 @@ const Gate = (() => {
 
   queueMicrotask(init);
 
-  return { onChallengeComplete, showContinuePrompt, hideContinuePrompt, domain, isSettingsGate, isArcade };
+  return { onChallengeComplete, showContinuePrompt, hideContinuePrompt, domain, isArcade };
 })();

@@ -57,15 +57,13 @@ const TypingChallenge = (() => {
       const s = state.settings;
       // Use explicit override (from word count button), else settings default
       wordCount = overrideWordCount || s.typingWordCount || 25;
-      wpmThreshold = config.isSettingsGate
-        ? (s.settingsTypingWpm || 100)
-        : (wordCount === 25 ? (s.typingWpm25 || 90) : (s.typingWpm50 || 80));
-      accuracyThreshold = config.isSettingsGate ? 98 : (s.typingAccuracyThreshold || 95);
+      wpmThreshold = wordCount === 25 ? (s.typingWpm25 || 90) : (s.typingWpm50 || 80);
+      accuracyThreshold = s.typingAccuracyThreshold || 95;
       config._totalCompleted = state.progression.totalChallengesCompleted || 0;
     } catch {
       if (overrideWordCount) wordCount = overrideWordCount;
-      wpmThreshold = config.isSettingsGate ? 100 : 90;
-      accuracyThreshold = config.isSettingsGate ? 98 : 95;
+      wpmThreshold = 90;
+      accuracyThreshold = 95;
       config._totalCompleted = 0;
     }
 

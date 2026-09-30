@@ -16,13 +16,11 @@ let unlocks = {};
 let timeTracking = {};
 let settings = {
   unlockDurationMinutes: 30,
-  settingsProtected: true,
   idleTimeoutSeconds: 120,
   typingWordCount: 25,
   typingWpm25: 90,
   typingWpm50: 80,
   typingAccuracyThreshold: 95,
-  settingsTypingWpm: 100,
   anthropicApiKey: '',
   difficultySchedule: {
     weekdayDefault: 'normal',

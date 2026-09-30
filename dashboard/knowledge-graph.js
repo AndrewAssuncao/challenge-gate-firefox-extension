@@ -264,3 +264,123 @@ function getCrossDisciplineContext(discipline, topicId, allProfiles) {
 
   return `\n## Cross-Discipline Knowledge\nThis topic connects to concepts the user has studied in other disciplines. Leverage this existing knowledge when teaching:\n${lines.join('\n')}\n`;
 }
+
+/** Original connected-node visual language, fed only by the current curriculum DAG.
+ * The canvas paints connections/glow; real buttons supply labels, focus and detail.
+ * Availability and review timing are distinct from demonstrated skill status. */
+function renderCurriculumGraph(graph) {
+  const tree=document.getElementById('quant-knowledge-tree');
+  const canvas=document.getElementById('quant-tree-canvas');
+  const controls=document.getElementById('quant-tree-nodes');
+  const detail=document.getElementById('quant-skill-detail');
+  const tracks=['arithmetic','probability','reasoning','coding','applied'];
+  const labels=['Arithmetic','Probability','Reasoning','Coding','Trading & Options'];
+  const colors=['#4a7eff','#9ece6a','#e0af68','#bb9af7','#f7768e'];
+  const width=Math.max(810,tree.parentElement.clientWidth);
+  const lane=width/tracks.length, top=72;
+  const focused=document.activeElement?.closest('.skill-node')?.dataset.skillId;
+  const rankCounts=new Map();
+  for(const n of graph.nodes){const key=n.track+':'+n.rank;rankCounts.set(key,(rankCounts.get(key)||0)+1);}
+  const rankY=new Map();let y=top;
+  for(let rank=0;rank<=Math.max(...graph.nodes.map(n=>n.rank));rank++) {
+    rankY.set(rank,y);
+    y+=Math.max(...tracks.map(track=>rankCounts.get(track+':'+rank)||0))*60+28;
+  }
+  const positions=new Map(), occupied=new Map();
+  // Rank is the engine's actual prerequisite depth. Peers keep separate rows.
+  for(const node of graph.nodes) {
+    const column=tracks.indexOf(node.track), key=column+':'+node.rank;
+    const peer=occupied.get(key)||0;occupied.set(key,peer+1);
+    positions.set(node.id,{x:lane*(column+.5),y:rankY.get(node.rank)+peer*60,node,column});
+  }
+  const height=Math.max(...[...positions.values()].map(p=>p.y))+84;
+  tree.style.width=width+'px';tree.style.height=height+'px';
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=width*dpr;canvas.height=height*dpr;
+  canvas.style.width=width+'px';canvas.style.height=height+'px';
+  const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+  let selected=graph.nodes.find(n=>n.id===tree.dataset.selected)||graph.nodes[0];
+  controls.replaceChildren();
+  const buttons=new Map();
+  function paint(active) {
+    ctx.clearRect(0,0,width,height);
+    tracks.forEach((track,i)=>{
+      ctx.font='600 12px system-ui, sans-serif';ctx.textAlign='center';ctx.fillStyle=colors[i];
+      ctx.fillText(labels[i],lane*(i+.5),24);
+      ctx.font='italic 9px system-ui, sans-serif';ctx.fillStyle='#666';ctx.fillText('Foundations → deeper practice',lane*(i+.5),43);
+      ctx.beginPath();ctx.moveTo(lane*(i+.5),54);ctx.lineTo(lane*(i+.5),height-16);
+      ctx.strokeStyle=colors[i];ctx.globalAlpha=.08;ctx.lineWidth=1;ctx.stroke();ctx.globalAlpha=1;
+    });
+    // Every line corresponds to one true directed prerequisite. No neighbor lines.
+    graph.edges.forEach(edge=>{
+      const from=positions.get(edge.from),to=positions.get(edge.to);if(!from||!to)return;
+      const highlighted=active && (edge.from===active || edge.to===active);
+      ctx.beginPath();ctx.strokeStyle=highlighted?colors[to.column]:'#666';
+      ctx.globalAlpha=highlighted?.8:.18;ctx.lineWidth=highlighted?1.8:.9;
+      if(from.column===to.column) {
+        // Exit into the lane gutter so connections do not pass through peer nodes/labels.
+        const gutter=from.x+lane*.43;
+        ctx.moveTo(from.x+7,from.y);ctx.bezierCurveTo(gutter,from.y,gutter,to.y,to.x+7,to.y);
+      } else {
+        // Cross tracks through the empty row/lane gutters, never through another node.
+        const exitX=from.x+lane*.48,entryX=to.x+lane*.48,band=from.y+48;
+        ctx.moveTo(from.x+7,from.y);
+        ctx.bezierCurveTo(exitX,from.y,exitX,band,exitX,band);
+        ctx.lineTo(entryX,band);
+        ctx.lineTo(entryX,to.y-8);
+        ctx.quadraticCurveTo(entryX,to.y,to.x+7,to.y);
+      }
+      ctx.stroke();
+      // Arrowhead is at the actual destination node; unrelated crossings are not junctions.
+      ctx.beginPath();ctx.fillStyle=ctx.strokeStyle;
+      ctx.moveTo(to.x+7,to.y);ctx.lineTo(to.x+12,to.y-3);ctx.lineTo(to.x+12,to.y+3);
+      ctx.closePath();ctx.fill();ctx.globalAlpha=1;
+    });
+    for(const pos of positions.values()) {
+      const n=pos.node, status=n.evidence.status, color=colors[pos.column];
+      const ready=n.evidence.practiced || n.evidence.retained;
+      const practicing=n.evidence.attempts>0;
+      if(ready||n.id===active){ctx.beginPath();ctx.arc(pos.x,pos.y,11,0,Math.PI*2);ctx.fillStyle=color;ctx.globalAlpha=ready?.23:.15;ctx.fill();ctx.globalAlpha=1;}
+      ctx.beginPath();ctx.arc(pos.x,pos.y,6,0,Math.PI*2);
+      ctx.fillStyle=color;ctx.globalAlpha=ready?.9:practicing?.45:.08;ctx.fill();ctx.globalAlpha=1;
+      ctx.strokeStyle=color;ctx.globalAlpha=n.eligible?.75:.3;ctx.lineWidth=1.2;ctx.stroke();ctx.globalAlpha=1;
+      if(status==='needs practice') {
+        ctx.beginPath();ctx.arc(pos.x,pos.y,9,0,Math.PI*2);ctx.strokeStyle='#e0af68';ctx.lineWidth=1.5;ctx.stroke();
+      }
+    }
+  }
+  function showDetail(node) {
+    selected=node;tree.dataset.selected=node.id;
+    buttons.forEach((b,id)=>b.setAttribute('aria-pressed',String(id===node.id)));
+    detail.replaceChildren();
+    const heading=document.createElement('h3');heading.textContent=node.name;detail.appendChild(heading);
+    const status=document.createElement('p');status.className='skill-detail-status';
+    status.textContent=`${node.evidence.status} · ${node.evidence.novelIndependent} novel checks · ${node.evidence.reassessed} known-item reassessments`;
+    detail.appendChild(status);
+    const objective=document.createElement('p');objective.textContent=node.objective;detail.appendChild(objective);
+    const availability=document.createElement('p');availability.textContent=(node.eligible?'Prerequisites ready':'Prerequisites pending')+' · '+(node.reviewDue?'Review due':node.evidence.dueAt?'Review '+new Date(node.evidence.dueAt).toLocaleDateString():'No review scheduled');detail.appendChild(availability);
+    const required=document.createElement('p');required.textContent=node.prerequisites.length?'Requires all:':'Prerequisites: none';detail.appendChild(required);
+    const list=document.createElement('ul');
+    for(const id of node.prerequisites) {
+      const li=document.createElement('li'),a=document.createElement('a');a.href='#skill-'+id;
+      a.dataset.from=id;a.dataset.to=node.id;a.textContent=positions.get(id).node.name;
+      a.onclick=e=>{e.preventDefault();buttons.get(id).focus();buttons.get(id).scrollIntoView({block:'nearest',inline:'nearest'});};
+      li.appendChild(a);list.appendChild(li);
+    }
+    detail.appendChild(list);paint(node.id);
+  }
+  for(const pos of positions.values()) {
+    const node=pos.node,b=document.createElement('button');
+    b.type='button';b.className='skill-node';b.id='skill-'+node.id;b.dataset.skillId=node.id;
+    b.dataset.status=node.evidence.status;b.dataset.eligible=String(node.eligible);b.dataset.reviewDue=String(node.reviewDue);
+    b.dataset.practiced=String(node.evidence.practiced || node.evidence.retained);
+    b.dataset.prerequisites=JSON.stringify(node.prerequisites);
+    b.style.left=pos.x+'px';b.style.top=(pos.y-8)+'px';b.textContent=node.name;
+    b.setAttribute('aria-label',`${node.name}: ${node.evidence.status}. ${node.eligible?'Prerequisites ready':'Prerequisites pending'}. ${node.reviewDue?'Review due. ':''}${node.prerequisites.length?'Requires '+node.prerequisites.map(id=>positions.get(id).node.name).join(', '):'No prerequisites'}.`);
+    b.onclick=()=>showDetail(node);b.onfocus=()=>showDetail(node);
+    b.onmouseenter=()=>paint(node.id);b.onmouseleave=()=>paint(selected.id);
+    controls.appendChild(b);buttons.set(node.id,b);
+  }
+  showDetail(selected);
+  if(focused && buttons.has(focused))buttons.get(focused).focus({preventScroll:true});
+}

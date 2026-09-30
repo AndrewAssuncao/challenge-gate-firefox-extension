@@ -227,6 +227,11 @@ html, body {
   border-color: var(--border);
 }
 
+.challenge-helpers { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.gate-btn:disabled { opacity:.4; cursor:default; }
+.gate-btn:disabled:hover { border-color:var(--border); background:var(--bg-input); }
+.gate-btn-ghost:disabled:hover { border-color:transparent; background:transparent; }
+
 /* Loading animation */
 .loading-text {
   font-family: var(--mono);

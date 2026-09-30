@@ -63,12 +63,15 @@
       <div id="quant-teaching" hidden><p id="quant-ai-label" hidden>Personalized AI explanation — assessment uses the local answer key.</p><p id="quant-objective"></p><p id="quant-explanation"></p><p id="quant-contrast"></p><h3>Worked example</h3><pre id="quant-example"></pre><p id="quant-connection"></p><p id="quant-next-step"></p></div>
       <button id="quant-next" class="gate-btn" hidden>Try guided practice</button>
       <div id="quant-question"><p id="quant-prompt"></p><p id="quant-hints"></p></div>
-      <label id="quant-reason-label" for="quant-reason-choice" hidden>Why does that answer follow?</label><select id="quant-reason-choice" hidden></select>
-      <label id="quant-construction-label" for="quant-construction" hidden></label><input id="quant-construction" hidden autocomplete="off" inputmode="numeric">
-      <form id="quant-form"><label for="quant-answer">Your answer (exact fraction or rounded to 4 decimal places) </label><input id="quant-answer" autocomplete="off" inputmode="decimal"><button class="gate-btn" type="submit">Check</button></form>
-      <div id="quant-actions"><button id="quant-hint" class="gate-btn gate-btn-ghost">Hint</button><button id="quant-learn" class="gate-btn gate-btn-ghost">I don’t know — teach me</button></div>
-      <button id="quant-tutor" class="gate-btn gate-btn-ghost">Personalize explanation with AI</button>
-      <p id="quant-error" role="alert"></p><button id="quant-reload" class="gate-btn" hidden>Reload saved lesson</button>
+      <form id="quant-form">
+        <div class="quant-field" id="quant-reason-field"><label id="quant-reason-label" for="quant-reason-choice" hidden>Why does that answer follow?</label><select id="quant-reason-choice" hidden></select></div>
+        <div class="quant-field" id="quant-construction-field"><label id="quant-construction-label" for="quant-construction" hidden></label><input id="quant-construction" hidden autocomplete="off" inputmode="numeric"></div>
+        <div class="quant-field"><label for="quant-answer">Your answer <span class="quant-field-note">exact fraction or rounded to 4 decimal places</span></label><div class="quant-answer-row"><input id="quant-answer" autocomplete="off" inputmode="decimal"><button class="gate-btn" type="submit">Check</button></div></div>
+      </form>
+      <div id="quant-footer">
+        <div id="quant-actions" class="challenge-helpers"><button id="quant-hint" class="gate-btn gate-btn-ghost">Hint</button><button id="quant-learn" class="gate-btn gate-btn-ghost">Teach me</button><button id="quant-tutor" class="gate-btn gate-btn-ghost" title="Personalize the explanation with your configured AI tutor">Help</button></div>
+        <p id="quant-error" role="alert"></p><button id="quant-reload" class="gate-btn" hidden>Reload saved lesson</button>
+      </div>
     </section>
     <!-- Python challenge -->
     <div id="python-challenge" class="challenge-panel hidden">
@@ -83,15 +86,13 @@
         <textarea id="python-editor" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
         <pre id="python-highlight" aria-hidden="true"></pre>
       </div>
-      <div id="python-actions">
+      <div id="python-actions" class="challenge-helpers">
         <button id="python-run" class="gate-btn">Run</button>
-        <button id="python-hint" class="gate-btn gate-btn-ghost">Hint</button>
-        <button id="python-help" class="gate-btn gate-btn-ghost">Help</button>
-        <button id="python-skip" class="gate-btn gate-btn-ghost">Skip</button>
       </div>
       <div id="python-output" class="hidden">
         <div id="python-test-results"></div>
       </div>
+      <div id="python-helpers" class="challenge-helpers"><button id="python-hint" class="gate-btn gate-btn-ghost">Hint</button><button id="python-help" class="gate-btn gate-btn-ghost">Help</button><button id="python-skip" class="gate-btn gate-btn-ghost">Skip</button></div>
       <div id="python-help-chat" class="help-chat hidden">
         <div id="python-help-messages" class="help-messages"></div>
         <div class="help-input-row">
@@ -121,7 +122,7 @@
           <input id="terminal-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         </div>
       </div>
-      <div id="terminal-actions">
+      <div id="terminal-actions" class="challenge-helpers">
         <button id="terminal-hint" class="gate-btn gate-btn-ghost">Hint</button>
         <button id="terminal-help" class="gate-btn gate-btn-ghost">Help</button>
         <button id="terminal-skip" class="gate-btn gate-btn-ghost">Skip</button>
@@ -163,7 +164,7 @@
           <input id="git-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
         </div>
       </div>
-      <div id="git-actions">
+      <div id="git-actions" class="challenge-helpers">
         <button id="git-hint" class="gate-btn gate-btn-ghost">Hint</button>
         <button id="git-help" class="gate-btn gate-btn-ghost">Help</button>
         <button id="git-skip" class="gate-btn gate-btn-ghost">Skip</button>

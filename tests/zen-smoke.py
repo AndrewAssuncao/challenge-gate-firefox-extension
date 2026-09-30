@@ -56,6 +56,10 @@ class Zen:
    except RuntimeError:pass
    time.sleep(.25)
   raise AssertionError('Timed out: '+script)
+ def keys(self,selector,text):
+  element=self.call('WebDriver:FindElement',{'using':'css selector','value':selector})['value']
+  key=element.get('element-6066-11e4-a52e-4f735466cecf') or element.get('ELEMENT')
+  self.call('WebDriver:ElementSendKeys',{'id':key,'text':text})
  def install(self):assert self.call('Addon:Install',{'path':ROOT,'temporary':True})['value']=='challenge-gate@extension'
  def stop(self):
   try:self.call('Marionette:Quit',{'flags':['eAttemptQuit']})
@@ -86,14 +90,28 @@ try:
  # Temporary add-ons are removed on shutdown; reloading the same ID is required.
  z.install();z.navigate(BASE+'dashboard/dashboard.html')
  z.wait('return typeof browser !== "undefined" && !!document.querySelector("#tab-overview")')
+ z.js('document.querySelector("[data-tab=learning]").click()')
  tree=z.js('return [...document.querySelectorAll("#quant-knowledge-tree [data-skill-id]")].map(n=>({id:n.dataset.skillId,status:n.dataset.status}))')
  assert len(tree)==26,tree
- links=z.js('return [...document.querySelectorAll("#quant-knowledge-tree a[data-from]")].map(a=>({from:a.dataset.from,to:a.dataset.to,target:a.hash,label:a.textContent}))')
+ links=z.js('return [...document.querySelectorAll("#quant-knowledge-tree [data-skill-id]")].flatMap(n=>JSON.parse(n.dataset.prerequisites).map(from=>({from,to:n.dataset.skillId})))')
  expected=json.loads(subprocess.check_output(['node','-e','console.log(JSON.stringify(require("./learning/engine").graph(require("./learning/engine").empty()).edges))'],cwd=ROOT,text=True))
  assert sorted((e['from'],e['to']) for e in links)==sorted((e['from'],e['to']) for e in expected)
- assert all(e['target']=='#skill-'+e['from'] and e['label'] for e in links)
- print('PASS: every visible prerequisite link exactly matches the curriculum DAG',flush=True)
+ z.js('document.querySelector("#skill-code-ev").focus()')
+ named=z.js('return [...document.querySelectorAll("#quant-skill-detail a[data-from]")].map(a=>({from:a.dataset.from,target:a.hash,label:a.textContent}))')
+ assert named and all(e['target']=='#skill-'+e['from'] and e['label'] for e in named)
+ print('PASS: graph nodes and every prerequisite exactly match curriculum DAG; focused node reveals named prerequisite links',flush=True)
  assert next(n for n in tree if n['id']=='code-pnl')['status']=='learning'
+ # Legacy saved protection cannot block Settings, Add or Edit. Old links redirect directly.
+ z.js('return browser.runtime.sendMessage({type:"updateSettings",settings:{settingsProtected:true,settingsTypingWpm:200}})')
+ z.navigate(BASE+'gate/gate.html?settingsGate=1&challenge=typing&domain=settings')
+ z.wait('return location.pathname.endsWith("dashboard.html") && !document.querySelector("#tab-settings").classList.contains("hidden")')
+ assert z.js('return !document.querySelector("#settings-overlay") && !document.querySelector("#setting-protected")')
+ z.js('document.querySelector("[data-tab=overview]").click();document.querySelector("#add-site-btn").click()')
+ assert z.js('return !document.querySelector("#add-site-form").classList.contains("hidden")')
+ z.js('document.querySelector("#cancel-add-btn").click();document.querySelector(".action-edit").click()')
+ assert z.js('return !document.querySelector("#edit-modal").classList.contains("hidden")')
+ z.js('document.querySelector("#edit-cancel-btn").click()')
+ print('PASS: Settings and site Add/Edit are accessible with old protected settings; old gate URL opens Settings directly',flush=True)
  persisted=z.js('return browser.storage.local.get(["quantLearner","blockedSites"])')
  assert persisted['quantLearner']['events']==events,persisted
  assert persisted['blockedSites']==saved['blockedSites']
@@ -135,6 +153,32 @@ try:
   else:assert any(e.get('passed') for e in history[mode+'LearningProfile']['recentChallenges']),history
   z.navigate(target);z.wait('return document.title === "Local test destination"')
   print('PASS: '+mode+' exercise, saved completion and actual destination unlock',flush=True)
+
+ # Genuine incremental Gecko keyboard events must retain focus/caret during draft saves.
+ z.navigate(BASE+'gate/gate.html?challenge=math&arcade=1')
+ z.wait('return document.querySelector("#quant-answer")?.getClientRects().length && !document.querySelector("#quant-answer").disabled')
+ z.js('document.querySelector("#quant-answer").value=""')
+ for digit in '123':
+  z.keys('#quant-answer',digit);time.sleep(.25)
+  assert z.js('return document.activeElement.id==="quant-answer" && !document.querySelector("#quant-answer").disabled')
+ assert z.js('return document.querySelector("#quant-answer").value==="123" && document.querySelector("#quant-answer").selectionStart===3')
+ z.keys('#quant-answer','\ue003');time.sleep(.25)
+ z.keys('#quant-answer','\ue012');z.keys('#quant-answer','9');time.sleep(.25)
+ assert z.js('return document.querySelector("#quant-answer").value==="192" && document.querySelector("#quant-answer").selectionStart===2 && document.activeElement.id==="quant-answer"')
+ # Use the browser insertion/input path for paste and IME; do not alter the user's clipboard.
+ z.js('const e=document.querySelector("#quant-answer");e.setSelectionRange(0,e.value.length);e.setRangeText("456",0,e.value.length,"end");e.dispatchEvent(new InputEvent("input",{inputType:"insertFromPaste",data:"456",bubbles:true}));')
+ z.wait('return browser.storage.local.get("quantLearner").then(d=>d.quantLearner.lessons["math:arithmetic:practice"].draft==="456")')
+ z.js('const e=document.querySelector("#quant-answer");e.dispatchEvent(new CompositionEvent("compositionstart",{data:"",bubbles:true}));e.value="789";e.setSelectionRange(3,3);e.dispatchEvent(new InputEvent("input",{isComposing:true,inputType:"insertCompositionText",data:"789",bubbles:true}));')
+ time.sleep(.3)
+ assert z.js('return browser.storage.local.get("quantLearner").then(d=>d.quantLearner.lessons["math:arithmetic:practice"].draft==="456")')
+ z.js('document.querySelector("#quant-answer").dispatchEvent(new CompositionEvent("compositionend",{data:"789",bubbles:true}))')
+ z.wait('return browser.storage.local.get("quantLearner").then(d=>d.quantLearner.lessons["math:arithmetic:practice"].draft==="789")')
+ assert z.js('return document.activeElement.id==="quant-answer" && document.querySelector("#quant-answer").selectionStart===3 && !document.querySelector("#quant-answer").disabled')
+ # A submit immediately following a draft must be ordered after that save without revision conflicts.
+ z.keys('#quant-answer','0');z.js('document.querySelector("#quant-form").requestSubmit()')
+ z.wait('return document.querySelector("#quant-status").textContent.startsWith("teach")')
+ assert z.js('return !document.querySelector("#quant-error").textContent && !document.querySelector("#quant-answer").disabled')
+ print('PASS: real paused keyboard typing, backspace/caret insertion, paste input, composition draft deferral and immediate submit queue',flush=True)
 
  z.navigate(BASE+'dashboard/dashboard.html');z.wait('return typeof browser !== "undefined" && !!document.querySelector("[data-type=applied]")')
  unlockBefore=z.js('return browser.storage.local.get("unlocks")')
