@@ -1807,7 +1807,7 @@ ${lastOutput ? `Last output: ${lastOutput.slice(0, 300)}` : ''}`;
     if (!config.arcadeDifficulty) {
       try { scheduledDifficulty = (await browser.runtime.sendMessage({ type: 'getCurrentDifficulty' })).difficulty; } catch {}
     }
-    const { challenge: ch, source } = await GitChallengeProvider.getChallenge(profile, config.isSettingsGate, scheduledDifficulty, config.reinforceOnly);
+    const { challenge: ch, source } = await GitChallengeProvider.getChallenge(profile, scheduledDifficulty, config.reinforceOnly);
 
     if (!ch) {
       appendOutput('<span class="term-error">Failed to load challenge. Falling back to typing.</span>');

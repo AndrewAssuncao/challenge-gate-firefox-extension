@@ -1,7 +1,7 @@
 /* Shared lesson UI: local teaching and assessment; optional personalized tutor. */
 'use strict';
 const QuantChallenge = (() => {
-  let config, mode, track, lesson, state, generation=0, busy=false, pending=null, actions=Promise.resolve();
+  let config, mode, track, lesson, state, generation=0, busy=false, pending=null, actions=Promise.resolve(), answerComposition=null;
   const panel=document.getElementById('quant-challenge');
   const el=id=>document.getElementById(id);
   const text=(id,value)=>{el(id).textContent=value;};
@@ -33,7 +33,10 @@ const QuantChallenge = (() => {
     el('quant-next').onclick=()=>act(async()=>{await mutate({op:'continue'});});
     el('quant-tutor').onclick=()=>act(tutor);
     el('quant-form').onsubmit=e=>{e.preventDefault();act(()=>attempt(false));};
-    el('quant-answer').oninput=()=>{const value=el('quant-answer').value;act(()=>mutate({op:'draft',value},false));};
+    const saveAnswer=()=>{const value=el('quant-answer').value;act(()=>mutate({op:'draft',value},false),true);};
+    el('quant-answer').oninput=e=>{if(!e.isComposing)saveAnswer();};
+    answerComposition=saveAnswer;
+    el('quant-answer').addEventListener('compositionend',answerComposition);
     await begin(true);
   }
   async function begin(fresh=true) {
@@ -42,17 +45,21 @@ const QuantChallenge = (() => {
     PythonChallenge.destroyWorker();
     document.getElementById('python-challenge').classList.add('hidden');
     try {
-      const r=await send({op:'begin',mode,track,settingsGate:config.isSettingsGate,practice:config.isArcade,fresh});
+      const r=await send({op:'begin',mode,track,practice:config.isArcade,fresh});
       if(token!==generation) return;
       lesson=r.lesson;state=r.state; await render();
     } catch(e){error(e);}
   }
-  function act(fn) {
+  function act(fn, draft=false) {
     const token=generation;
     const work=actions.then(async()=>{
       if(token!==generation) return;
-      busy=true;panel.setAttribute('aria-busy','true');
-      try {text('quant-error','');await fn();}catch(e){error(e);}finally{busy=false;panel.removeAttribute('aria-busy');}
+      // Autosave shares the ordered mutation queue but never disables or redraws inputs.
+      // Disabling a focused field during op:draft drops focus/caret in Gecko.
+      if(!draft){busy=true;panel.setAttribute('aria-busy','true');syncControls();}
+      try {if(!draft)text('quant-error','');await fn();}catch(e){error(e);}finally{
+        if(!draft){busy=false;panel.removeAttribute('aria-busy');syncControls();}
+      }
     });
     actions=work.catch(()=>{});
     return work;
@@ -108,21 +115,34 @@ const QuantChallenge = (() => {
       for(const option of q.reasonOptions){const o=document.createElement('option');o.value=option.value;o.textContent=option.label;choice.appendChild(o);}}
 
     text('quant-hints',lesson.hints?q.hints.slice(0,lesson.hints).join('\n'):(lesson.stage==='guided'?q.hints[0]:''));
-    el('quant-actions').hidden=!assessing;
+    el('quant-actions').hidden=lesson.stage==='done';
+    el('quant-hint').hidden=!assessing;
+    el('quant-learn').hidden=!assessing;
     el('quant-hint').disabled=(lesson.hints || 0)>=q.hints.length;
     el('quant-form').hidden=!assessing || q.kind==='code';
     el('quant-answer').value=lesson.draft || '';
     el('quant-tutor').hidden=lesson.stage==='done';
     const py=document.getElementById('python-challenge');
     py.classList.toggle('hidden',!assessing || q.kind!=='code');
+    py.classList.toggle('quant-code',assessing && q.kind==='code');
+    // One helper row follows the active exercise, including the coding editor/output.
+    (assessing && q.kind==='code' ? py : panel).appendChild(el('quant-footer'));
     if(assessing && q.kind==='code') {
-      await PythonChallenge.init({...config,quantChallenge:q,quantDraft:lesson.draft,onQuantResult:correct=>act(()=>attempt(false,correct)),onQuantDraft:value=>act(()=>mutate({op:'draft',value},false))});
+      await PythonChallenge.init({...config,quantChallenge:q,quantDraft:lesson.draft,onQuantResult:correct=>act(()=>attempt(false,correct)),onQuantDraft:value=>act(()=>mutate({op:'draft',value},false),true)});
     } else PythonChallenge.destroyWorker();
+    syncControls();
     if(lesson.stage==='done') {
       text('quant-reason','Progress saved. This check is evidence of practice; readiness requires varied independent work, and retention is checked after at least seven days.');
       Gate.showContinuePrompt();
     }
   }
-  function destroy() {generation++;busy=false;pending=null;if(panel)panel.classList.add('hidden');PythonChallenge.destroyWorker();}
+  function syncControls() {
+    if (!lesson) return;
+    const q=QuantLearning.question(lesson);
+    ['quant-learn','quant-tutor','quant-next','quant-track','quant-answer','quant-construction','quant-reason-choice'].forEach(id=>{el(id).disabled=busy;});
+    el('quant-hint').disabled=busy || (lesson.hints || 0)>=q.hints.length;
+    const check=el('quant-form').querySelector('button');if(check)check.disabled=busy;
+  }
+  function destroy() {generation++;busy=false;pending=null;if(answerComposition){el('quant-answer').removeEventListener('compositionend',answerComposition);answerComposition=null;}if(panel){panel.appendChild(el('quant-footer'));panel.classList.add('hidden');}PythonChallenge.destroyWorker();}
   return {init,destroy};
 })();
