@@ -1,8 +1,7 @@
 # Completed implementation checkpoint
 
 Branch: quant-learning. Base: 78641a4.
-Checkout: /Users/andre/Documents/Codex/2026-09-30/task-3/challenge-gate
-Original /Users/andre/dev/FirefexExtension remains unchanged.
+Work was performed in an isolated checkout; the original checkout remains unchanged.
 
 Implemented: five modes, 21-skill foundation curriculum, prerequisite-aware
 selection, diagnostic/teach/guided/independent/transfer/review flow, structured

@@ -1,10 +1,10 @@
 # Quant curriculum — implemented foundation
 
-This is a foundation curriculum, not a complete quant interview syllabus. The retained Typing and Git modes remain separate. Advanced statistics, algorithms, stochastic processes and realistic market making are future units. Options are an applied coding unit after P&L and expected value.
+This is a foundation curriculum, not a complete quant interview syllabus. The retained Typing and Git modes remain separate. Advanced statistics, algorithms, stochastic processes and realistic market making are future units. Options appear in a coding unit after P&L and expected value and in the separate simulated Trading & Options Arcade track.
 
 ## Learning contract
 
-Each skill has a diagnostic, local explanation and worked example, explicit common-error contrast, guided practice with hints, an independent check, a structurally different transfer family, repair after error, and spaced review. Numerical swaps do not count as a transfer family. Readiness is a transparent heuristic: at least five recent unassisted first-try assessments, at least four correct, across two completed lesson IDs, plus valid independent evidence from both families including transfer. Transfer qualification is evaluated from durable, non-invalidated evidence rather than only the last five answers; recent accuracy remains a separate condition. Retention additionally requires successful delayed retrieval at least seven days after initial independent evidence. No mastery is inferred from exposure, hints, model claims or prerequisite relationships.
+Each skill has a diagnostic, local explanation and worked example, explicit common-error contrast, guided practice with hints, an independent check, a structurally different transfer family, repair after error, and spaced review. Numerical swaps do not count as a transfer family. Readiness is a transparent heuristic: at least five recent unassisted first-try assessments, at least four correct, across two lesson IDs, plus valid independent evidence from both families including transfer. Transfer qualification is evaluated from durable, non-invalidated evidence rather than only the last five answers; recent accuracy remains a separate condition. Retention additionally requires successful delayed retrieval at least seven days after initial independent evidence. No mastery is inferred from exposure, hints, model claims or prerequisite relationships.
 
 If every local item has been seen, the learner can use an explicit independent reassessment at least seven days after its last attempt or exposure. A reassessment replaces the evidence for that same item; it does not create an additional distinct item or a novel pass. The same four-of-five accuracy rule across five distinct items, two lesson IDs and both families still applies. Recovery through known items is labelled **practiced (reassessed)** and may satisfy prerequisites, while novel checks and known-item reassessments are counted separately. Immediate repetitions and assisted reassessments cannot qualify. The UI gives the earliest reassessment date; further exposure restarts the interval for that item.
 
@@ -50,7 +50,7 @@ The gate is a bounded micro-lesson or retrieval check; Arcade continues saved le
 
 - Mode / track: math / probability
 - Prerequisites: none
-- Objective: Use an exhaustive partition without confusing disjoint and independent events.
+- Objective: Use an exhaustive partition to find a missing probability.
 - Explanation: An event and its complement partition all outcomes. Their probabilities sum to 1.
 - Worked example: If a failure has probability 0.2, success has probability 0.8.
 - Common error: Subtracting from 100 when the answer is expressed as a probability.
@@ -91,7 +91,7 @@ The gate is a bounded micro-lesson or retrieval check; Arcade continues saved le
 - Worked example: Among 100 cases, 10 are true. A signal catches 8 true cases and flags 9 false cases. Given a signal, probability of truth is 8/17, not 80%.
 - Common error: Ignoring false positives or base rates.
 - Foundation example: 4 true events and 6 false alarms produce a signal. Given a signal, what is the probability of a true event?
-- Transfer example: A condition affects 10 of 100 people. A test flags 8 affected people and 9 unaffected people. What is P(condition | flagged)?
+- Transfer example: A condition has prevalence 10%. A test flags 80% of affected people and 10% of unaffected people. What is P(condition | flagged)?
 - Repair: revisit the worked example, use a guided variation, then retry without hints.
 
 ## prob-ev: Expected value
@@ -150,16 +150,16 @@ The gate is a bounded micro-lesson or retrieval check; Arcade continues saved le
 - Explanation: A balance comparison has three outcomes: left heavy, right heavy, equal. With a known heavier odd coin, balanced groups can divide the remaining candidates into three sets.
 - Worked example: Among 9 coins with one known heavier, weigh 3 against 3. Each outcome leaves 3 candidates; a second weighing identifies the coin.
 - Common error: Stating a bound without an achievable comparison strategy.
-- Foundation example: Among 81 identical-looking coins, exactly one is heavier. Using a balance scale, what is the minimum number of weighings needed in the worst case?
+- Foundation example: Among 28 identical-looking coins, exactly one is heavier. Using a balance scale, what is the minimum number of weighings needed in the worst case?
 - Transfer example: A balance gives three outcomes per weighing. With 4 weighings, at most how many candidate positions can be distinguished for a coin known to be heavier?
 - Repair: revisit the worked example, use a guided variation, then retry without hints.
 
-## brain-invariant: Parity invariants
+## brain-invariant: Residue invariants
 
 - Mode / track: brainteasers / reasoning
 - Prerequisites: brain-balance
 - Objective: Identify a preserved residue to rule out an unreachable state.
-- Explanation: An invariant is a property an allowed operation cannot change. Removing two items preserves whether a count is odd or even.
+- Explanation: An invariant is a property an allowed operation cannot change. Removing a fixed number k preserves the remainder modulo k; parity is the special case k = 2.
 - Worked example: Starting with 11 tokens and removing pairs can leave 1 token, but never 0.
 - Common error: Tracking examples without identifying what the operation preserves.
 - Foundation example: Start with 8 tokens and remove exactly 2 each time. What is the smallest possible remainder?

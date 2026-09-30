@@ -3,8 +3,9 @@
 ## Scope
 
 Local branch `quant-learning`, based on `78641a4d66bda1c6673925037619afab774a43c8`.
-The source checkout `/Users/andre/dev/FirefexExtension` is unchanged. No push,
-publication, deployment, credential change, paid model call, or Erevno edit.
+The original source checkout is unchanged. No deployment, credential change,
+in-extension paid model call, or unrelated project edit was performed. Separately
+authorized Claude Code reviews use the existing local CLI account.
 
 Five visible modes: Typing, Git, Quant Coding, Brainteasers and Quant Math.
 Math separates arithmetic and probability records. Terminal implementation and

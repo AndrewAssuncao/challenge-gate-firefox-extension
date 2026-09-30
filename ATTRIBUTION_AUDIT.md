@@ -1,6 +1,6 @@
 # Local attribution/provenance audit
 
-Scope: isolated challenge-gate branch through 0a75fd4; compared tracked changes against original extension baseline 78641a4d66bda1c6673925037619afab774a43c8. No code was sent externally for this audit itself. A separately authorized Claude review receives only a prepared extension source/test/curriculum bundle.
+Scope: isolated challenge-gate implementation branch; compared tracked changes against original extension baseline 78641a4d66bda1c6673925037619afab774a43c8. No code was sent externally for this audit itself. A separately authorized Claude review receives only a prepared extension source/test/curriculum bundle.
 
 ## Finding
 
@@ -14,4 +14,6 @@ ATTRIBUTION.md already names Amos Blomqvist, pins the inspected Learn revision, 
 
 Reviewed the changed-file inventory, dependency/manifest changes, the original new-file commit and subsequent fixes, attribution statements, and repository-wide references to Learn/Pi/Amos. Only documentation references to Learn were found. No cached copy of the original Learn source was available in this workspace for an automated verbatim comparison. Therefore this is a provenance and tracked-content audit, not a certification of exhaustive textual dissimilarity or a legal license opinion. Any newly copied upstream code or prompts must be identified and assessed separately before publication.
 
-Original checkout /Users/andre/dev/FirefexExtension remained clean when checked. No publication was performed by this audit.
+The original checkout remained clean when checked. No publication was performed by this audit.
+
+Final independent review additionally compared the three pinned Learn sources referenced in ATTRIBUTION.md. It reported no imported files/dependencies or matching 16-word sequences in the reviewed material. This limited comparison strengthens the provenance finding but is not an exhaustive similarity or license certification.

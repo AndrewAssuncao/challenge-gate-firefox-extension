@@ -59,7 +59,18 @@ test('conditional quote explanations format complements and retain semantic iden
  for(let seed=0;seed<18;seed++)for(const level of [0,1]){
   const q=C.question('market-quote',seed,false,level);
   assert.ok(!q.solution.includes('999999999'));
-  assert.ok(q.solution.includes(level?'0.8 ×':'0.2 ×'));
+  assert.match(q.solution,/conditional value = [0-9.]+ ×/);
   assert.ok(q.familyId && q.semanticKey);
  }
+});
+
+test('applied variants require checking conditional rates, profit signs and put moneyness',()=>{
+ for(const id of ['market-quote','market-execution']){
+  const answers=Array.from({length:9},(_,seed)=>C.question(id,seed,false,1).answer);
+  assert.ok(answers.some(x=>x>0)&&answers.some(x=>x<0),id);
+ }
+ const puts=Array.from({length:9},(_,seed)=>C.question('market-options',seed,false,1).scenario);
+ assert.ok(puts.some(s=>s.spot<s.strike)&&puts.some(s=>s.spot>s.strike));
+ const posteriors=new Set(Array.from({length:9},(_,seed)=>{const s=C.question('market-quote',seed).scenario;return s.buyHigh/(s.buyHigh+s.buyLow);}));
+ assert.ok(posteriors.size>=3);
 });

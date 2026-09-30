@@ -226,10 +226,10 @@ test('conditional and Bayes transfer hints derive from the same parameters as an
  for(const harder of [false,true])for(let seed=1;seed<=18;seed++){
   const n=seed%9+2+(harder?5:0),conditional=C.question('prob-conditional',seed,harder,1),bayes=C.question('prob-bayes',seed,harder,1);
   assert.equal(conditional.answer,n/(n+1));assert.ok(conditional.hints.join(' ').includes(`${n} of those ${n+1}`));
-  assert.equal(bayes.answer,(n+4)/(n+13));assert.ok(bayes.hints.join(' ').includes(`${n+4}+9 = ${n+13}`));
+  const prior=(n+6)/100,expected=prior*.8/(prior*.8+(1-prior)*.1);assert.ok(Math.abs(bayes.answer-expected)<1e-12);assert.ok(bayes.hints.join(' ').includes(`${8*(n+6)} true flags and ${100-(n+6)} false flags`));
  }
 });
-test('natural brainteaser selector recovers balance after mistakes or hints and a delayed session',()=>{
+test('natural brainteaser selector recovers ordinary balance mistakes without a week-long wait',()=>{
  for(const mode of ['fail','hint']){
   const h=session('brainteasers','');let interventions=0;
   const step=()=>{h.begin();if(h.lesson.stage==='teach')h.run({op:'continue'});
@@ -239,11 +239,8 @@ test('natural brainteaser selector recovers balance after mistakes or hints and 
   };
   for(let i=0;i<150;i++)step();
   assert.equal(interventions,mode==='fail'?2:3);
-  assert.equal(E.evidence(h.state,'brain-balance').practiced,false);
-  const before=E.evidence(h.state,'brain-balance').novelIndependent;
-  h.time=8*DAY;
-  for(let i=0;i<200;i++)step();
-  const after=E.evidence(h.state,'brain-balance');assert.equal(after.practiced,true);assert.equal(after.novelIndependent,before);assert.ok(after.reassessed);
+  const after=E.evidence(h.state,'brain-balance');assert.equal(after.practiced,true);assert.ok(after.novelIndependent>=4);assert.equal(after.reassessed,0);
+  assert.equal(E.evidence(h.state,'brain-invariant').practiced,true);
  }
 });
 test('retention uses earliest valid qualifying baseline, not latest per-item retests',()=>{
@@ -285,7 +282,7 @@ test('reasoning variants require reading changing invariants, capacities and rel
   assert.ok(new Set(questions.map(q=>q.answer)).size>=2,skill+' has a constant answer');
  }
  for(let seed=1;seed<=18;seed++){
-  for(const level of [0,1]){const q=C.question('brain-invariant',seed,false,level),step=level?3+seed%3:2;assert.equal(q.answer,seed%step);assert.equal(q.construction.answer,step);assert.match(q.hints.join(' '),new RegExp('modulo '+step));}
+  for(const level of [0,1]){const q=C.question('brain-invariant',seed,false,level),step=level?3+seed%3:2;assert.equal(q.answer,seed%step);assert.equal(q.construction.answer,(Number(q.prompt.match(/^Start with (\d+)/)[1])-q.answer)/step);assert.match(q.hints.join(' '),new RegExp('modulo '+step));}
  }
 });
 
@@ -299,4 +296,21 @@ test('table construction remainder matches each seating problem',()=>{
   assert.ok(q.solution.includes(`remaining ${remaining} people`));
   assert.equal(q.answer,q.construction.answer+1);
  }
+});
+
+test('balance bounds include non-powers and an attaining balanced split',()=>{
+ const items=Array.from({length:9},(_,seed)=>C.question('brain-balance',seed));
+ assert.equal(new Set(items.map(q=>q.semanticKey)).size,9);
+ assert.ok(items.some(q=>q.prompt.startsWith('Among 10 ')));
+ for(const q of items){
+  const coins=Number(q.prompt.match(/^Among (\d+)/)[1]),k=q.answer;
+  assert.ok(3**(k-1)<coins && coins<=3**k);
+  assert.equal(q.construction.answer,Math.ceil(coins/3));
+  const pan=Math.round(coins/3),groups=[pan,pan,coins-2*pan];
+  assert.ok(groups.every(n=>n>=0 && n<=3**(k-1)));
+  assert.equal(Math.max(...groups),q.construction.answer);
+ }
+});
+test('numeric precision is visible in the actual answer form',()=>{
+ assert.match(fs.readFileSync(path.join(__dirname,'../gate/gate.html'),'utf8'),/exact fraction or rounded to 4 decimal places/);
 });
