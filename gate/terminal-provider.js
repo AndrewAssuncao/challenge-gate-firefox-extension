@@ -342,7 +342,7 @@ IMPORTANT: The "filesystem" field must be a flat object mapping path strings to 
       const response = await browser.runtime.sendMessage({
         type: 'claudeGenerate',
         prompt: prompt,
-        model: useOpus ? 'claude-opus-4-20250514' : undefined,
+        model: useOpus ? 'claude-opus-4-8' : undefined,
         maxTokens: useOpus ? 2048 : undefined
       });
 

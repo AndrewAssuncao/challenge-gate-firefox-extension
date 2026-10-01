@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const root=path.join(__dirname,'..');
-async function create(initial={},base='http://127.0.0.1/') {
+async function create(initial={},base='http://127.0.0.1/',options={}) {
  let saved=structuredClone(initial), fail=false;
  const event=()=>({listeners:[],addListener(fn){this.listeners.push(fn);}});
  const changed=event(),messages=event(),requests=event();
@@ -10,7 +10,7 @@ async function create(initial={},base='http://127.0.0.1/') {
   runtime:{onMessage:messages,onStartup:event(),onInstalled:event(),getURL:p=>base+p},
   webRequest:{onBeforeRequest:requests},tabs:{query:async()=>[],onActivated:event(),onUpdated:event()},windows:{onFocusChanged:event(),WINDOW_ID_NONE:-1},idle:{setDetectionInterval(){},onStateChanged:event()}
  };
- const ctx=vm.createContext({browser,self:{addEventListener(){}},console:{log(){},error(){}},Date,URL,AbortController,setTimeout,clearTimeout,setInterval:()=>1,clearInterval(){},fetch:async()=>{throw Error('Network disabled in tests');}});
+ const ctx=vm.createContext({browser,self:{addEventListener(){}},console:options.console || {log(){},error(){}},Date,URL,AbortController,setTimeout:options.setTimeout || setTimeout,clearTimeout:options.clearTimeout || clearTimeout,setInterval:()=>1,clearInterval(){},fetch:options.fetch || (async()=>{throw Error('Network disabled in tests');})});
  const manifest=JSON.parse(fs.readFileSync(path.join(root,'manifest.json')));
  for(const script of manifest.background.scripts)vm.runInContext(fs.readFileSync(path.join(root,script),'utf8'),ctx,{filename:script});
  await new Promise(resolve=>setImmediate(resolve));

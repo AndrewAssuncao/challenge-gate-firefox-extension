@@ -517,9 +517,9 @@ const messageHandlers = {
       return { error: 'No API key configured' };
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -529,7 +529,8 @@ const messageHandlers = {
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: msg.model || 'claude-sonnet-4-20250514',
+          // Anthropic's replacement for Sonnet 4, retired June 15, 2026.
+          model: msg.model || 'claude-sonnet-4-6',
           max_tokens: msg.maxTokens || 1024,
           messages: [
             { role: 'user', content: msg.prompt }
@@ -537,20 +538,43 @@ const messageHandlers = {
         }),
         signal: controller.signal
       });
-      clearTimeout(timeoutId);
-
       if (!response.ok) {
-        const errText = await response.text();
-        console.error('[Challenge Gate] Claude API error:', response.status, errText);
-        return { error: `API error: ${response.status}` };
+        // Never echo or log response bodies: they may contain request content.
+        const errors = {
+          400: 'Anthropic rejected the tutor request (400). Check API access and spend limits in Claude Console.',
+          401: 'Anthropic could not authenticate the saved API key (401). Check the key in Settings.',
+          402: 'Anthropic billing needs attention (402). Check payment details in Claude Console.',
+          403: 'Anthropic denied access to this tutor model (403). Check workspace permissions in Claude Console.',
+          404: 'The tutor model is unavailable (404). Update the extension or check model access in Claude Console.',
+          413: 'The tutor request is too large (413). Try a shorter request.',
+          429: 'Anthropic reached a rate or spend limit (429). Wait before retrying and check limits in Claude Console.',
+          504: 'Anthropic timed out (504). Try Help again.',
+          529: 'Anthropic is temporarily overloaded (529). Try Help again later.'
+        };
+        const error = errors[response.status] || (response.status >= 500
+          ? `Anthropic is temporarily unavailable (${response.status}). Try Help again later.`
+          : `Anthropic rejected the tutor request (${response.status}). Check API access in Claude Console.`);
+        return { error, status: response.status };
       }
 
       const data = await response.json();
-      const content = data.content?.[0]?.text || '';
+      const content = Array.isArray(data.content)
+        ? data.content.filter(block => block.type === 'text').map(block => block.text).join('\n')
+        : '';
+      if (!content.trim()) {
+        return { error: 'The tutor returned no text. Try Help again.' };
+      }
       return { content };
     } catch (err) {
-      console.error('[Challenge Gate] Claude API fetch failed:', err);
-      return { error: err.message };
+      if (err.name === 'AbortError') {
+        return { error: 'The tutor request timed out. Try Help again.' };
+      }
+      if (err.name === 'SyntaxError') {
+        return { error: 'The tutor returned an unreadable response. Try Help again.' };
+      }
+      return { error: 'Could not reach Anthropic. Check your connection and try Help again.' };
+    } finally {
+      clearTimeout(timeoutId);
     }
   },
 
