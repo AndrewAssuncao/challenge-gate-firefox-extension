@@ -20,10 +20,17 @@ and help work without this technical/interaction sharing, using the current
 exercise, code/commands and chat. No crash reports or device metadata are sent.
 
 Settings offers consent review and an off switch. Firefox 140+ additionally
-requires personal data permissions for AI and a separate technical permission for history, checked before each request. Firefox 102–139
-uses separate local personal/history choices. Saving a key alone never grants consent. Declining leaves local
+requires personal data permissions for AI and a separate technical permission for history, checked before each request. Firefox 140.0+ is required;
+older versions cannot load this release's manifest. Saving a key alone never grants consent. Declining leaves local
 teaching, challenges and Python available. Clearing the key deletes the stored
 credential; revoking consent cannot recall previously sent data.
+
+For generated Python exercises, AI supplies descriptions, literal test data and
+feedback. The executable starter and its function signature are supplied from a
+fixed local catalog; remote executable starter/signature/default fields are
+rejected. Cached legacy AI objects cannot authorize execution. Learner-written
+editor contents run only when the learner presses Run. AI code-review samples and
+tutor examples are displayed rather than automatically run.
 
 Backups are user-initiated local JSON downloads. API-key settings, consent and
 rollback snapshots are excluded; the currently configured key and recognizable

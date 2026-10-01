@@ -2,11 +2,13 @@
 
 The local combined implementation was independently reviewed at
 `a79b18006311e3dfe2af48f55fb631c07e45a2a9`, combining release `72bc71a` and
-curriculum `ef6295a`. The publication candidate keeps its product, learner and test
-code byte-identical. A new commit/history omits private review artifacts and removes
+curriculum `ef6295a`. Publication commit 7aa7366 kept its product, learner and test
+code byte-identical. Its clean history omits private review artifacts and removes
 local paths, browser/process identifiers and machine observations from public docs.
 The enclosing publication commit (`git rev-parse HEAD`) is the upload identity.
 The original reviewed branches remain local and unchanged.
+The approved follow-up changes only the legacy Python executable-start boundary,
+minimum Firefox version and associated tests/docs; it requires a new exact review.
 
 Two historical curriculum commits (`999d0b7`, `c57b081`) are retained because the
 unchanged regression tests load their authored content by exact Git identity. Both
@@ -16,15 +18,16 @@ history. Remote main remains the verified `a4bc4f5` base; no main merge is inclu
 
 ## Verified implementation
 
-- 142 tests passed, zero failed/skipped, including 105 executable CPython oracle
+- Current static suite: 154 tests passed, zero failed/skipped, including twelve new
+  local-starter/cache/input tests, 105 executable CPython oracle
   cases and all 30 fully exposed-bank recovery cases.
-- Authentic Zen 1.22.3b release smoke: all 13 checks passed. Separate default-off
+- Prior approved implementation's authentic Zen 1.22.3b release smoke: all 13 checks passed. Separate default-off
   history consent/decline, blocked local destination, packaged Python gate, fresh
   denied-network worker with 105 oracle cases/stdlib, new optional curriculum fields
   and method spoof no-write, malformed rejection, full loss/recovery, invalidation,
   legacy progress, file preview, idle observer, controlled restart and disposable
   removal/reinstall. Fake keys and owned disposable processes only.
-- Authentic curriculum smoke: six groups passed at measured 1200px/390px, including
+- Prior approved implementation's authentic curriculum smoke: six groups passed at measured 1200px/390px, including
   keyboard/caret, teaching/guided/independent flows, accessible transfer tables,
   three-field draft persistence/composition/queue, supported repair feedback,
   all 30 skills, exact 35 edges and controlled full restart persistence.
@@ -66,11 +69,19 @@ Local linting/review is not Mozilla policy certification.
 
 ## Remaining gates
 
-Retained editable, user-triggered AI-generated Python needs explicit Mozilla policy
-assessment before AMO submission. Authentic native permission acceptance popup,
-Firefox 102, physical sleep and signed temporary-to-signed transition remain
-unverified. Minimum 102 is preserved; current-signature root-certificate caveats
-are in SIGNING.md. No prior disappearance cause is established.
+The approved follow-up removes remote executable Python starters/signatures/defaults
+and requires Firefox 140.0+. Native deny/accept/history/revoke checks passed in owned
+Zen before local browser testing stopped. Independent cloud checks accepted the
+preceding manifest on official Firefox 140 and 157; Firefox 102 rejected it. The
+revised exact candidate requires independent cloud recheck; no Mac browser launch
+is authorized. New negative unit cases cover executable response metadata, cached
+legacy objects, descriptor mutation and literal-only worker input parsing.
+The source review identified a legacy access-grant path for rejected test/signature
+inputs. It now reports a retryable error with no grant, invalidation or progress
+write. A conservative provider literal grammar rejects expression/call input data
+before the worker; the independent worker ast.literal_eval check remains.
+Physical sleep and a genuine temporary-to-signed transition remain unverified;
+local tests do not establish AMO approval or a prior disappearance cause.
 
 The source is prepared for a draft PR, with bounded publication equivalence/privacy
 recheck before push. No AMO upload/signing, normal-profile installation, main merge

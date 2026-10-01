@@ -1,12 +1,13 @@
 # Signing and installation gates
 
 This branch prepares an **unsigned candidate**, not an approved or signed add-on.
-It retains `challenge-gate@extension`, MV2 persistent background and minimum 102.0.
-Firefox 102 is not installed here; fallback consent is unit-tested, not claimed as
-an authentic Firefox 102 test. Signed releases cannot be relied on for Firefox 102 because of the 2025
-root-certificate expiration. Mozilla identifies ESR 115.13+ or Firefox 128+ for
-recognizing current signatures. The minimum is preserved as requested; this is
-a code/consent compatibility claim, not a promise that a signed XPI installs on 102.
+It retains `challenge-gate@extension` and MV2 persistent background, and requires
+Firefox 140.0+. Independent cloud testing found that Firefox 102 rejects the data
+permission declaration before loading. Official Firefox 140 accepted the preceding
+candidate's same declaration and passed native consent checks. Raising the minimum
+was explicitly approved. Retained fallback consent code is defensive; it does not
+provide support for older browsers. The revised exact candidate still needs its
+bounded independent cloud recheck. No browser testing is authorized on the user's Mac.
 
 ## Local preparation
 
@@ -35,8 +36,8 @@ and licenses, never browser data, credentials, test profiles or local logs.
 ## Exact AMO self-distribution steps (requires separate user approval)
 
 1. Review the final commit, verification report, privacy notice, runtime ZIP and
-   reviewer source ZIP. Decide whether to submit this independent branch alone or
-   first combine the separately reviewed curriculum work and rerun all checks.
+   reviewer source ZIP. This branch already includes the separately reviewed
+   curriculum; recheck the exact candidate after the approved signing changes.
 2. In the [AMO Developer Hub](https://addons.mozilla.org/developers/), sign in with
    the user's chosen existing Mozilla account. Creating credentials or accepting
    the Firefox Add-on Distribution Agreement requires the user's own approval.
@@ -49,14 +50,16 @@ and licenses, never browser data, credentials, test profiles or local logs.
    because the bundled runtime contains minified JS and WASM. Explain that the
    library is the unchanged released Pyodide 0.25.1, point to provenance/build
    instructions, and describe deliberate user-triggered Python evaluation in the worker. Legacy
-   AI-generated starter code remains editable in the Python editor; generated
-   test arguments are parsed as literals, never eval’ed. This feature needs an
-   explicit Mozilla policy assessment before treating the candidate as ready
-   for submission: the self-contained policy has no confirmed exception here
-   for user-triggered AI-generated code. Disabling that existing feature would
-   require a user product decision; it has not been removed in this branch. Provide the
+   AI exercise descriptions, literal test data, explanations and feedback remain.
+   Executable starters, names and signatures come from a fixed packaged catalog;
+   returned executable metadata/default expressions are rejected, not interpolated.
+   Serialized legacy AI objects have no trusted executable identity and cannot run.
+   The learner writes editor code and deliberately presses Run; displayed AI review
+   samples/examples are not automatically executed. Generated test arguments use
+   ast.literal_eval, never eval. This removes the former remote-starter route but
+   does not claim Mozilla policy approval or an impermeable Python sandbox. Provide the
    privacy notice and reviewer notes about default-off Anthropic consent, separate optional history sharing, and the
-   Firefox 102 fallback. Do not claim `none` for all optional transmission: the
+   Firefox 140 minimum. Do not claim `none` for all optional transmission: the
    manifest declares optional authentication, communications and interaction data.
 5. Resolve all review/validation issues before requesting signing. Submission,
    agreement acceptance and any resulting publication/signing are not performed

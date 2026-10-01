@@ -145,6 +145,12 @@ const PythonChallenge = (() => {
   function renderChallenge() {
     let html = '';
     const isCodeReview = challenge.type === 'code_review';
+    const executable=isCodeReview?null:(config.quantChallenge?challenge:ChallengeProvider.getExecutable(challenge));
+    if(!isCodeReview && !executable) {
+      editorEl.value='';runBtn.disabled=true;
+      promptEl.textContent='This saved exercise needs reloading before it can run. Your learning progress is retained.';
+      return;
+    }
 
     // Teaching note (when Claude introduces a new concept)
     if (challenge.teachingNote) {
@@ -165,6 +171,11 @@ const PythonChallenge = (() => {
     }
 
     promptEl.innerHTML = html;
+    if(challengeSource==='claude' && !isCodeReview) {
+      const note=document.createElement('div');note.className='concept-tag';
+      note.textContent='The starter function is provided locally. AI supplies the exercise and feedback; write your solution below.';
+      promptEl.appendChild(note);
+    }
 
     // Code review mode: show code to review + text area
     const reviewCodeEl = document.getElementById('python-review-code');
@@ -180,7 +191,7 @@ const PythonChallenge = (() => {
       editorEl.placeholder = '';
       editorEl.style.minHeight = '';
       runBtn.textContent = 'Run';
-      editorEl.value = challenge.starterCode || '';
+      editorEl.value = executable.starterCode;
     }
 
     updateHighlight();
@@ -384,6 +395,7 @@ const PythonChallenge = (() => {
 
   async function runCode() {
     if (challengeResolved) return;
+    if (!challenge) return;
 
     // Code review mode: send text to Claude for validation
     if (challenge.type === 'code_review') {
@@ -391,7 +403,12 @@ const PythonChallenge = (() => {
       return;
     }
 
-    if (!challenge) return;
+    const executable=config.quantChallenge?challenge:ChallengeProvider.getExecutable(challenge);
+    if(!executable) {
+      runBtn.disabled=true;outputEl.classList.remove('hidden');
+      resultsEl.textContent='Reload this saved exercise before running it. No code was executed.';
+      return;
+    }
     if (!pyodideReady) { initPyodide(); return; }
 
     runBtn.disabled = true;
@@ -406,8 +423,8 @@ const PythonChallenge = (() => {
     worker.postMessage({
       type: 'run',
       code: editorEl.value,
-      testCases: challenge.testCases,
-      functionName: challenge.functionName
+      testCases: executable.testCases,
+      functionName: executable.functionName
     });
   }
 
@@ -514,7 +531,9 @@ Respond with ONLY valid JSON:
 
     if (lastRunDiagnostics?.unrecoverableChallengeIssue) {
       const issueText = buildChallengeIssueText(lastRunDiagnostics);
-      void bypassChallengeForIssue(issueText);
+      if(config.quantChallenge) {void bypassChallengeForIssue(issueText);return;}
+      lastErrorOutput=issueText;
+      resultsEl.textContent="Test inputs could not be applied. Check that your function signature matches the starter, then retry; reload for a fresh exercise if needed. Your progress was not changed.";
       return;
     }
 

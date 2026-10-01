@@ -8,7 +8,7 @@ test('saved keys and old settings cannot bypass explicit consent',async()=>{
  await h.send({type:'updateSettings',settings:{aiConsent:true}});
  assert.match((await h.send({type:'claudeGenerate',prompt:'fixture',promptWithoutHistory:'fixture'})).error,/transmission is off/);assert.equal(calls,0);
 });
-test('Firefox 102 fallback requires local opt-in and can be revoked',async()=>{
+test('defensive fallback without native permission metadata requires local opt-in and can be revoked',async()=>{
  const h=await create(key);
  assert.equal((await h.send({type:'getAiConsent'})).allowed,false);
  await h.send({type:'setAiConsent',allowed:true});assert.equal((await h.send({type:'getAiConsent'})).allowed,true);

@@ -3,6 +3,7 @@
 A Firefox extension that blocks distracting sites until a short challenge is
 completed. This branch keeps the existing blocker, Typing, Git, Python editor,
 dashboard and optional Anthropic relay, and adds durable quant learning.
+Requires Firefox 140.0 or newer, including a compatible current Zen build.
 
 Visible modes: **Typing, Git, Quant Coding, Brainteasers, Quant Math**. Quant Math
 has separate arithmetic and probability tracks. Existing Terminal-configured sites
@@ -28,6 +29,10 @@ execution uses the packaged Pyodide 0.25.1 runtime and works offline.
 **Personalize explanation with AI** uses a configured Anthropic key after explicit data consent
 when clicked. Saving a key alone does not enable transmission. The current exercise is supplied as context; a separate default-off choice controls learning-history sharing. The model does not select mastery or change assessment answer keys.
 Git's existing AI behavior is retained. No API key is shipped in the repository.
+Legacy Python AI exercises keep generated descriptions, explanations and feedback;
+their starter functions come from a packaged local catalog. The learner writes the
+solution and presses Run. Remote starter code, function signatures and defaults
+are rejected; old serialized AI challenges must be reloaded before running.
 
 The Learning tab displays independent evidence and review dates. Settings exports a full
 backup excluding API-key settings and redacting known keys, previews and validates restore, and offers local rollback.

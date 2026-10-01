@@ -15,7 +15,8 @@ main/remote merge is authorized.
 2. Declare optional authentication, personal communication and interaction data
    for Anthropic. Require explicit local consent plus Firefox optional data
    permissions when supported. Show install/update consent in a focused extension
-   page, support Firefox 102 fallback, and recheck consent before every request.
+   page and recheck consent before every request. The approved follow-up requires
+   Firefox140 after cloud verification; Firefox102 rejects the declaration.
 3. Add a versioned full backup with explicit settings allowlist and no credentials
    or transmission consent. Include quant learner, legacy profiles/progression,
    typing history, daily counts, time totals, site policies and unlocks. Validate
@@ -35,6 +36,11 @@ main/remote merge is authorized.
 6. Collect only currently accessible target add-on/PID/path metadata; prepare a
    read-only future snapshot procedure. Do not add lifecycle permissions, alter
    security/debug settings or enable normal-profile automation without approval.
+7. Approved signing follow-up: replace remote Python starter/signature/default
+   routes with packaged local stubs, reject serialized legacy AI execution, retain
+   generated descriptions/feedback and learner-written Run, add adversarial tests,
+   and freeze the exact candidate for independent cloud review before any PR update.
+   No further browser launches on the user's Mac.
 
 Acceptance requires passing core suite and isolated release smoke, secret-free
 backup/rollback, no remote executable fetch, checked package contents and clean

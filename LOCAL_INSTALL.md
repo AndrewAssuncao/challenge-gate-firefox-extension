@@ -1,6 +1,8 @@
 # Run the local build
 
 Use a new disposable Firefox or Zen profile so the same-ID development extension does not replace the extension in your everyday profile. Keep the original checkout unchanged.
+Firefox 140.0+ is required. Release browser verification currently runs on a
+separate cloud host; do not launch local desktop browser tests during this task.
 
 1. Extract the supplied ZIP, or use this checkout directly.
 2. In the disposable browser profile, open `about:debugging`.

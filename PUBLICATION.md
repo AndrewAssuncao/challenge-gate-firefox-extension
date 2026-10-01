@@ -3,8 +3,10 @@
 The implementation reviewed locally at `a79b18006311e3dfe2af48f55fb631c07e45a2a9`
 remains preserved in a private local checkout. This public branch starts from
 verified remote main `a4bc4f5d701ec5a22d54aac899d6b5af31ee0472` and carries
-byte-identical runtime, learning, scripts, test, vendor and pinned-source content.
-Only repository hygiene/public documentation and omitted private artifacts differ.
+initially byte-identical runtime, learning, scripts, test, vendor and pinned-source
+content at publication commit 7aa7366. The subsequently approved signing follow-up
+changes the legacy Python provider/editor, minimum Firefox version and their
+tests/docs. Curriculum, backup, consent and bundled runtime code stay unchanged.
 
 Private verification logs/raw review reports are absent from every newly reachable
 commit. Machine home/temp paths, actual browser PID/start observations and local
@@ -19,12 +21,13 @@ are not ancestors of this publication branch. Adding a cleanup commit to the
 private branch would have retained old private blobs; this clean history avoids it.
 
 The publication hash differs because of this documentation/artifact hygiene.
-Product behavior and all test code remain the independently reviewed source.
+The original publication preserved the independently reviewed source. Follow-up
+behavior changes require bounded independent review of the new exact commit.
 Full tests are rerun in the clean publication checkout; archive content, provenance,
 sealed-source reproduction and every new reachable tree are rechecked. Local
 publication equivalence/privacy signoff does not certify AMO policy or signatures.
 
-See VERIFICATION.md and SIGNING.md for test scope and the unresolved generated-
-Python policy, authentic native permission acceptance, Firefox 102, physical sleep
-and signed-transition gates. Publication is a draft PR only; no main merge,
+See VERIFICATION.md and SIGNING.md for test scope, the trusted local Python starter
+change, Firefox140 requirement and outstanding cloud/AMO, physical sleep and signed
+transition gates. Publication is a draft PR only; no main merge,
 normal-profile installation or AMO upload/signing is included.
