@@ -158,7 +158,13 @@ const ChallengeProvider = (() => {
     marathon: 'Generate an extensive, multi-part challenge that tests deep mastery. Require sustained focus, architectural thinking, thorough edge case handling, and clean code organization. This should feel like a real interview problem or production task (~20-40 minutes).'
   };
 
-  function buildMentorPrompt(profile, crossDisciplineContext, scheduledDifficulty, reinforceOnly) {
+  function buildMentorPrompt(profile, crossDisciplineContext, scheduledDifficulty, reinforceOnly, includeEvidence=true) {
+    if(!includeEvidence) {
+      const publicProfile={...defaultProfile(),currentTopicIndex:profile.currentTopicIndex,totalSessions:-1};
+      return buildMentorPrompt(publicProfile,'','normal',false,true)
+        .replace(/^Curriculum position:.*$|^Total challenge attempts:.*$/gm,'')
+        .replace(/\n## What the User Knows[\s\S]*?\n## Instructions/,'\n## Instructions');
+    }
     const currentTopic = CURRICULUM[profile.currentTopicIndex] || CURRICULUM[0];
     const tier = currentTopic.tier;
 
@@ -520,6 +526,7 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
       const response = await browser.runtime.sendMessage({
         type: 'claudeGenerate',
         prompt: prompt,
+        promptWithoutHistory:buildMentorPrompt(profile,'',scheduledDifficulty,reinforceOnly,false),
         model: useOpus ? 'claude-opus-4-8' : undefined,
         maxTokens: useOpus ? 2048 : undefined
       });

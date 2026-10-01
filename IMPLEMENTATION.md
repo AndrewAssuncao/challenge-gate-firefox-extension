@@ -79,7 +79,7 @@ CHROME_EXECUTABLE=/path/to/chrome node tests/browser-smoke.cjs
 
 The browser harness loads the actual UI and background code, but substitutes the
 WebExtension transport and Python execution worker. It does not prove Firefox's
-webRequest integration or the CDN-hosted Pyodide runtime. A normal Firefox build
+webRequest integration or the packaged Pyodide runtime. A normal Firefox build
 was not available in this environment; the installed Tor bundle is not treated
 as a supported extension test target. Screenshots are in `output/playwright/`.
 
@@ -89,3 +89,13 @@ Load this checkout's manifest into a disposable Firefox profile. Confirm real
 redirect/unlock/cap behavior, real Pyodide load and code execution, reload/resume,
 and no changes to existing extension data. Do not use paid AI until explicitly
 approved. This is a foundation curriculum, not a full quant interview course.
+
+
+## Signing/recovery candidate
+
+See `RELEASE_PLAN.md`, `SIGNING.md`, `PRIVACY.md` and `DIAGNOSIS.md` for the
+current offline runtime, versioned backup/restore, default-off Anthropic consent,
+disposable Zen checks and signing boundaries. The verification counts above
+refer to the older curriculum implementation; current results are recorded in
+`VERIFICATION.md`. No everyday-profile installation or Mozilla submission is part
+of this candidate. No cause is assigned to the earlier sleep disappearance.

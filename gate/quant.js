@@ -1,7 +1,8 @@
 /* Shared lesson UI: local teaching and assessment; optional personalized tutor. */
 'use strict';
 const QuantChallenge = (() => {
-  let config, mode, track, lesson, state, generation=0, busy=false, pending=null, actions=Promise.resolve(), answerComposition=null;
+  let config, mode, track, lesson, state, generation=0, busy=false, pending=null, actions=Promise.resolve(), answerComposition=null, constructionComposition=null;
+  const composing=new Set();
   const panel=document.getElementById('quant-challenge');
   const el=id=>document.getElementById(id);
   const text=(id,value)=>{el(id).textContent=value;};
@@ -33,9 +34,14 @@ const QuantChallenge = (() => {
     el('quant-next').onclick=()=>act(async()=>{await mutate({op:'continue'});});
     el('quant-tutor').onclick=()=>act(tutor);
     el('quant-form').onsubmit=e=>{e.preventDefault();act(()=>attempt(false));};
-    const saveAnswer=()=>{const value=el('quant-answer').value;act(()=>mutate({op:'draft',value},false),true);};
+    const saveAnswer=()=>{if(composing.size)return;const value=el('quant-answer').value,construction=el('quant-construction').value,reason=el('quant-reason-choice').value;act(()=>mutate({op:'draft',value,construction,reason},false),true);};
     el('quant-answer').oninput=e=>{if(!e.isComposing)saveAnswer();};
-    answerComposition=saveAnswer;
+    answerComposition=e=>{composing.delete(e.currentTarget.id);saveAnswer();};
+    constructionComposition=answerComposition;
+    ['quant-answer','quant-construction'].forEach(id=>{el(id).oncompositionstart=()=>composing.add(id);});
+    el('quant-construction').oninput=e=>{if(!e.isComposing)saveAnswer();};
+    el('quant-reason-choice').onchange=()=>{text('quant-reason-preview',el('quant-reason-choice').selectedOptions[0]?.textContent || '');saveAnswer();};
+    el('quant-construction').addEventListener('compositionend',constructionComposition);
     el('quant-answer').addEventListener('compositionend',answerComposition);
     await begin(true);
   }
@@ -79,10 +85,12 @@ const QuantChallenge = (() => {
     // Only a validated, durably saved teaching response counts as assistance.
     const token=generation;
     text('quant-error','Asking your configured tutor…');
-    const r=await browser.runtime.sendMessage({type:'claudeGenerate',prompt:QuantLearning.prompt(state,lesson),maxTokens:1600});
+    const r=await browser.runtime.sendMessage({type:'claudeGenerate',prompt:QuantLearning.prompt(state,lesson),promptWithoutHistory:QuantLearning.prompt(state,lesson,false),maxTokens:1600});
     if(token!==generation) return;
     if(r.error) throw Error(r.error+' — the local lesson remains available.');
-    const value=QuantLearning.validateTeaching(r.content,lesson);
+    const response=JSON.parse(r.content);
+    if(response.stage==='lesson')response.stage=lesson.stage;
+    const value=QuantLearning.validateTeaching(response,lesson);
     await mutate({op:'teaching',value});
   }
   async function render() {
@@ -118,11 +126,13 @@ const QuantChallenge = (() => {
       data.setAttribute('tabindex','0');data.setAttribute('role','region');data.setAttribute('aria-label',q.table.caption);
     }
     el('quant-construction').hidden=!assessing || !q.construction;el('quant-construction-label').hidden=!assessing || !q.construction;
-    text('quant-construction-label',q.construction?.prompt || '');el('quant-construction').value='';
+    text('quant-construction-label',q.construction?.prompt || '');el('quant-construction').value=lesson.constructionDraft || '';
     const choice=el('quant-reason-choice');choice.replaceChildren();
     choice.hidden=!assessing || !q.reasonOptions;el('quant-reason-label').hidden=choice.hidden;
     if(q.reasonOptions){const blank=document.createElement('option');blank.value='';blank.textContent='Choose a reason';choice.appendChild(blank);
       for(const option of q.reasonOptions){const o=document.createElement('option');o.value=option.value;o.textContent=option.label;choice.appendChild(o);}}
+    choice.value=lesson.reasonDraft || '';
+    text('quant-reason-preview',choice.value?choice.selectedOptions[0]?.textContent || '':'');
 
     text('quant-hints',lesson.hints?q.hints.slice(0,lesson.hints).join('\n'):(lesson.stage==='guided'?q.hints[0]:''));
     el('quant-actions').hidden=lesson.stage==='done';
@@ -153,6 +163,6 @@ const QuantChallenge = (() => {
     el('quant-hint').disabled=busy || (lesson.hints || 0)>=q.hints.length;
     const check=el('quant-form').querySelector('button');if(check)check.disabled=busy;
   }
-  function destroy() {generation++;busy=false;pending=null;if(answerComposition){el('quant-answer').removeEventListener('compositionend',answerComposition);answerComposition=null;}if(panel){panel.appendChild(el('quant-footer'));panel.classList.add('hidden');}PythonChallenge.destroyWorker();}
+  function destroy() {generation++;busy=false;pending=null;composing.clear();if(answerComposition){el('quant-answer').removeEventListener('compositionend',answerComposition);answerComposition=null;}if(constructionComposition){el('quant-construction').removeEventListener('compositionend',constructionComposition);constructionComposition=null;}['quant-answer','quant-construction'].forEach(id=>{el(id).oncompositionstart=null;});if(panel){panel.appendChild(el('quant-footer'));panel.classList.add('hidden');}PythonChallenge.destroyWorker();}
   return {init,destroy};
 })();

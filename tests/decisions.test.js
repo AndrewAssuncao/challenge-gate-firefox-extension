@@ -7,10 +7,10 @@ function permutations(xs){if(xs.length===1)return [xs];const result=[];for(let i
 function valid(order,rule){const [type,a,b]=rule,x=order.indexOf(a),y=order.indexOf(b);switch(type){case 'before':return x<y;case 'immediate':return y-x===1;case 'apart':return Math.abs(y-x)>1;case 'first':return x===0;case 'last':return x===order.length-1;case 'notFirst':return x>0;default:throw Error(type);}}
 function oracle(q){
  const s=q.scenario;
- if(s.type==='counts'){const rows=q.table.rows.filter(r=>r[0].endsWith('live'));return [100*rows.reduce((n,r)=>n+r[2],0)/rows.reduce((n,r)=>n+r[1],0),rows.reduce((n,r)=>n+r[1],0)];}
- if(s.type==='time'){const rows=q.table.rows.filter(r=>r[0].startsWith('Current'));const work=rows.reduce((n,r)=>n+r[1]*r[2],0);return [work/rows.reduce((n,r)=>n+r[1],0),work];}
- if(s.type==='aggregate'){const rows=q.table.rows.filter(r=>r[0].startsWith('Paid')),before=rows.reduce((n,r)=>n+r[1],0),after=rows.reduce((n,r)=>n+r[2],0);return [100*(after-before)/before,before];}
- if(s.type==='reverse'){const rows=q.table.rows.filter(r=>r[0].startsWith('Paid')),before=rows.map(r=>r[1]*100/(100+r[2]));return [before[0]+before[1],before[0]];}
+ if(s.type==='counts'){const rows=q.table.rows.filter(r=>r[1]==='Live');return [100*rows.reduce((n,r)=>n+r[3],0)/rows.reduce((n,r)=>n+r[2],0),rows.reduce((n,r)=>n+r[2],0)];}
+ if(s.type==='time'){const rows=q.table.rows.filter(r=>r[1]==='Current');const work=rows.reduce((n,r)=>n+r[2]*r[3],0);return [work/rows.reduce((n,r)=>n+r[2],0),work];}
+ if(s.type==='aggregate'){const rows=q.table.rows.filter(r=>r[1]==='Paid'),before=rows.reduce((n,r)=>n+r[2],0),after=rows.reduce((n,r)=>n+r[3],0);return [100*(after-before)/before,before];}
+ if(s.type==='reverse'){const rows=q.table.rows.filter(r=>r[1]==='Paid'),before=rows.map(r=>r[2]*100/(100+r[3]));return [before[0]+before[1],before[0]];}
  if(s.type==='orders'){const feasible=permutations(s.labels).filter(order=>s.rules.every(rule=>valid(order,rule))),witness=feasible.filter(order=>valid(order,s.claim));return [witness.length,feasible.length,witness.length===0?'impossible':witness.length===feasible.length?'must':'could'];}
  if(s.type==='independent')return [s.pA*s.pB,s.pB,'independent'];
  if(s.type==='without'){
@@ -27,11 +27,11 @@ function oracle(q){
  // is represented by a size-P(B) subset of this population.
  const kA=Math.round(s.pA*10),kB=Math.round(s.pB*10),rates=[];
  for(let mask=0;mask<1024;mask++)if(mask.toString(2).replace(/0/g,'').length===kB){let overlap=0;for(let i=0;i<kA;i++)if(mask&(1<<i))overlap++;rates.push(overlap/(s.type==='conditional-bounds'?kB:10));}
- return [Math.max(...rates),Math.min(...rates),'insufficient'];
+ return [Math.max(...rates),s.type==='joint-bounds'?Math.min(...rates)/s.pA:Math.min(...rates),'insufficient'];
 }
 function attempt(state,id,seed,level,now,overrides={},stage='check'){
  const serial=state.serial+1,lesson={id:'d'+serial,key:'test',skillId:id,mode:C.get(id).mode,track:C.get(id).track,seed,level,stage,revision:0,assisted:false,checks:0,required:1,stepStartedAt:now};state.lessons.test=lesson;state.serial=serial;
- const q=E.question(lesson);return E.apply(state,{op:'attempt',lessonId:lesson.id,revision:0,eventId:'e'+serial,answer:q.answer,reason:q.correctReason,construction:q.construction.answer,...overrides},now);
+ const q=E.question(lesson);return E.apply(state,{op:'attempt',lessonId:lesson.id,revision:0,eventId:'e'+serial,answer:q.answer,reason:q.correctReason,construction:q.construction?.answer,correct:true,...overrides},now);
 }
 test('every new item agrees with independent table, permutation and sample-space oracles',()=>{
  for(const id of ids)for(const level of [0,1])for(let seed=0;seed<18;seed++)for(const harder of [false,true]){
@@ -39,7 +39,7 @@ test('every new item agrees with independent table, permutation and sample-space
   assert.ok(q.explanation&&q.workedExample&&q.hints.length===2&&q.solution&&q.reasonOptions);assert.equal(q.transfer,!!level);
   assert.ok(q.reasonOptions.some(o=>o.value===q.correctReason));
   if(q.table){assert.ok(q.table.caption&&q.table.headers.length);assert.ok(q.table.rows.length>=2);assert.ok(q.table.rows.every(r=>r.length===q.table.headers.length));}
-  if(q.scenario.type==='counts')for(const row of q.table.rows){assert.ok(Number.isInteger(row[1])&&Number.isInteger(row[2]));assert.ok(row[2]<=row[1]);}
+  if(q.scenario.type==='counts')for(const row of q.table.rows){assert.ok(Number.isInteger(row[2])&&Number.isInteger(row[3]));assert.ok(row[3]<=row[2]);}
  }
 });
 test('transfer changes the calculation or constraint structure, and method coverage is explicit',()=>{
@@ -76,7 +76,7 @@ test('feedback diagnoses only an observed intermediate mismatch, with consistent
   for(const rule of q.feedbackRules||[]){assert.ok(Math.abs(rule.intermediate-q.construction.answer)>q.tolerance);const wrong=attempt(E.empty(),id,seed,level,1000,{construction:rule.intermediate});assert.equal(wrong.lesson.feedback.diagnosis,rule.message);assert.equal(wrong.lesson.stage,'teach');assert.equal(wrong.state.events.at(-1).construction,rule.intermediate);}
   const arbitrary=attempt(E.empty(),id,seed,level,1000,{construction:999999});assert.equal(arbitrary.lesson.feedback.diagnosis,null);
  }
- const q=C.question('prob-method',4);assert.match(C.diagnose(q,q.feedbackRules[0].intermediate),/6 remaining reds out of 9 tokens/);
+ const q=C.question('prob-method',4);assert.match(C.diagnose(q,q.feedbackRules[0].intermediate),/6 remaining reds out of 10 tokens/);
  const base=C.question('data-base',2);assert.ok(C.diagnose(base,base.scenario.laterA+base.scenario.laterB).includes(String(base.scenario.a+base.scenario.b)));
 });
 test('a method/classification cannot be skipped when qualifying practice; invalidation removes coverage',()=>{
@@ -99,12 +99,12 @@ test('new teaching/error/hint paths survive reload and do not turn assistance in
   const independent=E.question(r.lesson);r=E.apply(r.state,{op:'assist',lessonId:r.lesson.id,revision:r.lesson.revision},1000);r=E.apply(r.state,{op:'attempt',lessonId:r.lesson.id,revision:r.lesson.revision,eventId:'hinted',answer:independent.answer,reason:independent.correctReason,construction:independent.construction.answer},1000);assert.equal(E.evidence(r.state,id).independent,0);
  }
 });
-test('canonical identity includes table data but is independent of seed and choice order',()=>{
+test('canonical authored identity is independent of wording, seed and choice order',()=>{
  for(const id of ids)for(const level of [0,1])for(let seed=0;seed<9;seed++){
   const q=C.question(id,seed,false,level);assert.equal(q.semanticKey,C.question(id,seed+9,true,level).semanticKey);
-  if(q.table)assert.ok(q.semanticKey.includes(JSON.stringify(q.table)));
+  assert.ok(q.semanticKey.includes(q.skillId));
  }
- // Preserve every original canonical key; prose labels and new optional fields must
+ // Sample original canonical keys across multiple residues; prose labels and new optional fields must
  // not silently invalidate lifetime evidence for existing content.
  const old=new Module(path.resolve(__dirname,'../learning/old-curriculum.js'));old.filename=path.resolve(__dirname,'../learning/old-curriculum.js');old.paths=module.paths;
  old._compile(execFileSync('git',['show','a4bc4f5:learning/curriculum.js'],{encoding:'utf8'}),old.filename);
@@ -147,4 +147,97 @@ test('exhausted failed or hinted method banks recover with full coverage and no 
   for(const level of [0,1])for(let seed=0;seed<9;seed++)if(C.question(id,seed,false,level).methodTag===missing)state=attempt(JSON.parse(JSON.stringify(state)),id,seed,level,8*DAY).state;
   const e=E.evidence(state,id);assert.equal(e.practiced,true);assert.equal(e.recovered,true);assert.equal(e.novelIndependent,0);assert.equal(e.independent,18);
  }
+});
+test('pre-follow-up candidate exposure aliases cannot become fake novel evidence',()=>{
+ for(const ref of ['999d0b7','c57b081']){
+ const filename=path.resolve(__dirname,'../learning/legacy-candidate-'+ref+'.js'),old=new Module(filename);old.filename=filename;old.paths=module.paths;old._compile(execFileSync('git',['show',ref+':learning/curriculum.js'],{encoding:'utf8'}),filename);
+ for(const id of ids)for(const level of [0,1])for(let seed=0;seed<9;seed++){
+  const previous=old.exports.question(id,seed,false,level),q=C.question(id,seed,false,level);assert.equal(C.canonicalKey(previous.semanticKey),q.semanticKey);
+  const state=E.empty();state.events.push({id:'prior-exposure',kind:'exposure',skillId:id,semanticKey:previous.semanticKey,at:1000});
+  const r=attempt(state,id,seed,level,2000);assert.equal(r.state.events.at(-1).firstTry,false);assert.equal(r.state.events.at(-1).retest,false);assert.equal(E.evidence(r.state,id).independent,0);assert.equal(r.state.events[0].semanticKey,previous.semanticKey,'raw history retained');
+  const delayed=attempt(state,id,seed,level,8*DAY);assert.equal(delayed.state.events.at(-1).retest,true);assert.equal(E.evidence(delayed.state,id).novelIndependent,0);
+ }
+ let state=E.empty();for(const level of [0,1])for(let seed=0;seed<9;seed++)state=attempt(state,'prob-method',seed,level,1000).state;
+ for(const e of state.events){const parts=e.variant.split(':');e.semanticKey=old.exports.question(e.skillId,Number(parts[1]),false,Number(parts[2])).semanticKey;}
+ assert.equal(E.evidence(state,'prob-method').practiced,true);const initial=E.evidence(state,'prob-method').independent;
+ state=attempt(state,'prob-method',0,0,8*DAY).state;assert.equal(E.evidence(state,'prob-method').independent,initial,'old and new aliases replace one item');
+ }
+});
+test('new prose improvements cannot create additional authored items',()=>{
+ const filename=path.resolve(__dirname,'../learning/prose-edit.js'),edited=new Module(filename);edited.filename=filename;edited.paths=module.paths;
+ edited._compile(fs.readFileSync(require.resolve('../learning/curriculum'),'utf8').replace('Service requests this week. Each request belongs to one row.','Service request counts. Rows are disjoint.').replace('what percentage of requests completed?','what percentage was completed?'),filename);
+ for(const level of [0,1])for(let seed=0;seed<9;seed++)assert.equal(edited.exports.question('data-weighted',seed,false,level).semanticKey,C.question('data-weighted',seed,false,level).semanticKey);
+});
+test('human-rounded new answers and intermediates satisfy their explicit precision contract',()=>{
+ for(const id of ids)for(const level of [0,1])for(let seed=0;seed<9;seed++){
+  const q=C.question(id,seed,false,level);assert.match(q.prompt,/4 decimal places/);
+  const r=attempt(E.empty(),id,seed,level,1000,{answer:q.answer.toFixed(4),construction:q.construction.answer.toFixed(4)});assert.equal(r.state.events.at(-1).correct,true,q.id);
+ }
+});
+test('guided repair and the next check preserve the failed method/classification family',()=>{
+ for(const id of ['prob-method','brain-order'])for(const level of [0,1])for(let seed=0;seed<9;seed++){
+  let r=attempt(E.empty(),id,seed,level,1000,{construction:99999}),original=C.question(id,seed,false,level);
+  r=E.apply(JSON.parse(JSON.stringify(r.state)),{op:'continue',lessonId:r.lesson.id,revision:r.lesson.revision},1000);
+  assert.equal(E.question(r.lesson).familyId,original.familyId);assert.equal(r.lesson.stage,'guided');const q=E.question(r.lesson);
+  r=E.apply(r.state,{op:'attempt',lessonId:r.lesson.id,revision:r.lesson.revision,eventId:'guided-repair',answer:q.answer,construction:q.construction.answer,reason:q.correctReason},1000);
+  assert.equal(E.question(r.lesson).familyId,original.familyId);assert.equal(r.lesson.stage,'check');assert.equal(E.evidence(r.state,id).independent,0);
+ }
+});
+test('all three drafts persist through hints/teaching/resume and clear only for a new question',()=>{
+ let r=E.apply(E.empty(),{op:'begin',mode:'math',track:'arithmetic'},1000),lesson=r.lesson;
+ r=E.apply(r.state,{op:'draft',lessonId:lesson.id,revision:lesson.revision,value:'12',construction:'42',reason:'counts'},1000);
+ r=E.apply(r.state,{op:'assist',lessonId:lesson.id,revision:r.lesson.revision},1000);
+ r=E.apply(JSON.parse(JSON.stringify(r.state)),{op:'begin',mode:'math',track:'arithmetic'},1000);
+ assert.equal(r.lesson.draft,'12');assert.equal(r.lesson.constructionDraft,'42');assert.equal(r.lesson.reasonDraft,'counts');assert.equal(r.lesson.assisted,true);
+ const value={skillId:r.lesson.skillId,stage:r.lesson.stage,explanation:'Explanation',workedExample:'Different example',connection:'Connection',nextStep:'Guided practice'};
+ r=E.apply(r.state,{op:'teaching',lessonId:lesson.id,revision:r.lesson.revision,value},1000);assert.equal(r.lesson.constructionDraft,'42');assert.equal(r.lesson.reasonDraft,'counts');
+ r=E.apply(r.state,{op:'attempt',lessonId:lesson.id,revision:r.lesson.revision,eventId:'draft-failure',dontKnow:true},1000);assert.equal(r.lesson.draft,'12');assert.equal(r.lesson.constructionDraft,'42');assert.equal(r.lesson.reasonDraft,'counts');assert.equal(r.lesson.stage,'teach');
+ r=E.apply(JSON.parse(JSON.stringify(r.state)),{op:'continue',lessonId:r.lesson.id,revision:r.lesson.revision},1000);assert.equal(r.lesson.draft,'');assert.equal(r.lesson.constructionDraft,'');assert.equal(r.lesson.reasonDraft,'');
+});
+test('new engine retains exactly the prior engine evidence for original saved skills',()=>{
+ const filename=path.resolve(__dirname,'../learning/old-engine.js'),old=new Module(filename);old.filename=filename;old.paths=module.paths;old._compile(execFileSync('git',['show','a4bc4f5:learning/engine.js'],{encoding:'utf8'}),filename);
+ const saved=JSON.parse(JSON.stringify(require('./graph-fixture.cjs').state));
+ for(const skill of C.skills.filter(s=>!ids.includes(s.id)))assert.deepEqual(E.evidence(saved,skill.id),old.exports.evidence(saved,skill.id));
+});
+test('both earlier candidate versions normalize every exposure and attempt identity',()=>{
+ for(const ref of ['999d0b7','c57b081']){
+  const filename=path.resolve(__dirname,'../learning/legacy-'+ref+'.js'),old=new Module(filename);old.filename=filename;old.paths=module.paths;old._compile(execFileSync('git',['show',ref+':learning/curriculum.js'],{encoding:'utf8'}),filename);
+  for(const id of ids)for(const level of [0,1])for(let seed=0;seed<9;seed++){
+   const previous=old.exports.question(id,seed,false,level),q=C.question(id,seed,false,level);assert.equal(C.canonicalKey(previous.semanticKey),q.semanticKey);
+   const event={kind:'attempt',skillId:id,variant:previous.id,semanticKey:previous.semanticKey,familyId:previous.familyId,methodTag:previous.methodTag??null,isTransfer:previous.transfer};assert.equal(C.validateItemIdentity(event),true);
+  }
+ }
+});
+test('method choices make distinct claims and every item uses the same uncertainty protocol',()=>{
+ for(const level of [0,1])for(let seed=0;seed<9;seed++){
+  const q=C.question('prob-method',seed,false,level);assert.match(q.prompt,/If the requested probability is not uniquely determined, enter its largest possible value/);assert.match(q.construction.prompt,/If multiple values fit the stated facts, enter the smallest/);
+  assert.match(q.reasonOptions.find(o=>o.value==='conditional').label,/conditional rate differs from its marginal/);
+  const r=attempt(E.empty(),'prob-method',seed,level,1000,{reason:q.correctReason==='independent'?'conditional':'independent'});assert.equal(r.state.events.at(-1).correct,false);
+  if(q.scenario.type==='replacement'){assert.doesNotMatch(q.prompt,/independen/i);assert.match(q.prompt,/choose uniformly from all \d+ tokens in the restored bag/);assert.match(q.hints[0],/depend on the first color/);}
+ }
+ for(const [seed,expected] of [[2,0],[5,.5],[8,.25]])close(C.question('prob-method',seed,false,0).construction.answer,expected);
+});
+test('cross-key and invalidated repairs use the actual affected method family',()=>{
+ for(const id of ['prob-method','brain-order'])for(const level of [0,1])for(let seed=0;seed<9;seed++){
+  let state=E.empty();
+  const prerequisites=new Set();function add(skill){for(const p of C.get(skill).prerequisites)if(!prerequisites.has(p)){prerequisites.add(p);add(p);}}add(id);
+  for(const p of prerequisites)for(const level of [0,1])for(let seed=0;seed<9;seed++)state=attempt(state,p,seed,level,1000).state;
+  let r=attempt(state,id,seed,level,1000,{construction:9999}),failed=E.question(r.lesson);
+  r=E.apply(r.state,{op:'begin',mode:C.get(id).mode,track:C.get(id).track,settingsGate:true},1000);assert.equal(r.lesson.stage,'teach');assert.equal(E.question(r.lesson).familyId,failed.familyId);
+  r=E.apply(r.state,{op:'continue',lessonId:r.lesson.id,revision:r.lesson.revision},1000);assert.equal(E.question(r.lesson).familyId,failed.familyId);
+  r=attempt(E.empty(),id,seed,level,1000);const target=r.state.events.at(-1);r=E.apply(r.state,{op:'invalidate',target:target.id,lessonId:target.lessonId},1000);assert.equal(E.question(r.lesson).familyId,target.familyId);
+ }
+});
+test('supported method-tag spoof and inconsistent imported item metadata cannot qualify evidence',()=>{
+ let state=E.empty();for(const level of [0,1])for(let seed=0;seed<9;seed++)if(C.question('prob-method',seed,false,level).methodTag!=='insufficient')state=attempt(state,'prob-method',seed,level,1000).state;
+ assert.equal(E.evidence(state,'prob-method').practiced,false);const e=state.events.find(e=>e.correct&&e.methodTag==='independent');assert.equal(C.validateItemIdentity(e),true);
+ e.methodTag='insufficient';assert.equal(C.validateItemIdentity(e),false);assert.equal(E.evidence(state,'prob-method').practiced,false);
+ const q=C.question('prob-method',2,false,0);Object.assign(e,{methodTag:q.methodTag,familyId:q.familyId,semanticKey:q.semanticKey});assert.equal(C.validateItemIdentity(e),false,'variant must agree, too');
+ const valid=attempt(E.empty(),'prob-method',2,0,1000).state.events.at(-1);for(const mutation of [{variant:'prob-method:9:0'},{familyId:'unrelated'},{isTransfer:true},{semanticKey:'fake'},{methodTag:'independent'}])assert.equal(C.validateItemIdentity({...valid,...mutation}),false);
+ assert.equal(C.validateItemIdentity({...valid,skillId:'prob-independent',methodTag:'conditional'}),false);
+});
+test('authored content guard detects changes to math, constraints and visible table data',()=>{
+ const snapshot=require('./decision-bank-snapshot.json');assert.equal(snapshot.items.length,72);
+ const items=[];for(const id of ids)for(const level of [0,1])for(let seed=0;seed<9;seed++){const q=C.question(id,seed,false,level);items.push({key:q.semanticKey,scenario:q.scenario,answer:q.answer,intermediate:q.construction.answer,rows:q.table?.rows||null,headers:q.table?.headers||null,method:q.correctReason});}
+ assert.deepEqual(items,snapshot.items,'A math/data change requires explicit identity and historical-evidence review, not an unnoticed prose edit.');
 });

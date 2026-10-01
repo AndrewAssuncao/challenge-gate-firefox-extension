@@ -447,6 +447,7 @@ Respond with ONLY valid JSON:
       const response = await browser.runtime.sendMessage({
         type: 'claudeGenerate',
         prompt: validationPrompt,
+        promptWithoutHistory:validationPrompt,
         model: 'claude-opus-4-8',
         maxTokens: 1024
       });
@@ -644,7 +645,7 @@ Respond with ONLY valid JSON:
   // ── Help chat system ───────────────────────────────────────────────
   let helpConversation = []; // array of { role: 'user'|'assistant', content }
 
-  function buildHelpSystemPrompt() {
+  function buildHelpSystemPrompt(includeEvidence=true) {
     const userCode = editorEl.value;
     return `You are a Python tutor helping a student who is stuck on a coding challenge in a browser extension. Your job is to TEACH, not just diagnose.
 
@@ -668,7 +669,7 @@ Student's current code:
 ${userCode}
 \`\`\`
 
-${lastErrorOutput ? `Latest errors/failures:\n${lastErrorOutput}` : 'No run output yet.'}`;
+${includeEvidence && lastErrorOutput ? `Latest errors/failures:\n${lastErrorOutput}` : 'No run output yet.'}`;
   }
 
   async function askForHelp(userQuestion) {
@@ -715,6 +716,7 @@ ${lastErrorOutput ? `Latest errors/failures:\n${lastErrorOutput}` : 'No run outp
       const response = await browser.runtime.sendMessage({
         type: 'claudeGenerate',
         prompt: fullPrompt,
+        promptWithoutHistory:buildHelpSystemPrompt(false)+'\n\nHelp the student with this code.'+(helpConversation.length?'\nConversation:\n'+helpConversation.map(m=>m.role+': '+m.content).join('\n'):''),
         maxTokens: 1024
       });
 

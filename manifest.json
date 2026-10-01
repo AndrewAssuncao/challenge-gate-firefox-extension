@@ -1,12 +1,22 @@
 {
   "manifest_version": 2,
   "name": "Challenge Gate",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Practice typing, Git, quant coding, brainteasers and quant mathematics before browsing.",
   "browser_specific_settings": {
     "gecko": {
       "id": "challenge-gate@extension",
-      "strict_min_version": "102.0"
+      "strict_min_version": "102.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ],
+        "optional": [
+          "authenticationInfo",
+          "personalCommunications",
+          "technicalAndInteraction"
+        ]
+      }
     }
   },
   "permissions": [
@@ -24,11 +34,13 @@
       "gate/git-provider.js",
       "gate/terminal-provider.js",
       "learning/applied.js",
-    "learning/curriculum.js",
+      "learning/curriculum.js",
       "learning/engine.js",
       "learning/store.js",
+      "background/backup.js",
       "background/background.js"
-    ]
+    ],
+    "persistent": true
   },
   "browser_action": {
     "default_icon": {
@@ -63,9 +75,10 @@
     "gate/quant.js",
     "gate/quant.css"
   ],
-  "content_security_policy": "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; object-src 'self';",
+  "content_security_policy": "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self' https://api.anthropic.com;",
   "icons": {
     "48": "icons/icon-48.svg",
     "96": "icons/icon-96.svg"
-  }
+  },
+  "incognito": "not_allowed"
 }

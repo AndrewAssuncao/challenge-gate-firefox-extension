@@ -1064,6 +1064,9 @@ const Dashboard = (() => {
 
   function renderSettings() {
     const s = state.settings;
+    browser.runtime.sendMessage({type:'getAiConsent'}).then(r=>{
+      document.getElementById('ai-consent-status').textContent=r.allowed?(r.technicalAllowed?'AI is enabled with learning history.':'AI is enabled without learning history.'):'AI transmission is off.';
+    });
     els.settingUnlockDuration.value = s.unlockDurationMinutes || 30;
     els.settingIdleTimeout.value = s.idleTimeoutSeconds || 120;
     els.settingWordCount.value = s.typingWordCount || 25;
@@ -1185,15 +1188,7 @@ const Dashboard = (() => {
   }
 
   function bindEvents() {
-    document.getElementById('export-learning').onclick=async()=>{
-      document.getElementById('export-learning-error').textContent='';
-      try {
-        const result=await browser.runtime.sendMessage({type:'quantCommand',command:{op:'export'}});
-        if(result.error) throw Error(result.error);
-        const url=URL.createObjectURL(new Blob([JSON.stringify(result.state,null,2)],{type:'application/json'}));
-        const a=document.createElement('a');a.href=url;a.download='quant-learning.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-      } catch(e){document.getElementById('export-learning-error').textContent=e.message;}
-    };
+
 
     // Dashboard tabs
     document.querySelectorAll('.dash-tab').forEach(tab => {
@@ -1448,5 +1443,6 @@ const Dashboard = (() => {
     return d.innerHTML;
   }
 
+  document.addEventListener('gate-restored',async()=>{await loadState();render();});
   init();
 })();

@@ -118,7 +118,7 @@
             <button class="toggle-btn" data-view="math">quant math</button>
             <button class="toggle-btn" data-view="git">git</button>
           </div>
-          <div class="learning-actions"><button id="export-learning" class="dash-btn dash-btn-sm">Export quant learning record</button><p id="export-learning-error" role="alert"></p></div>
+          <div class="learning-actions"><button id="export-learning" class="dash-btn dash-btn-sm">Export full backup</button><p id="export-learning-error" role="alert"></p></div>
         </div>
 
         <div id="typing-speed-view">
@@ -254,9 +254,29 @@
               <label for="setting-api-key">Anthropic API key</label>
               <input type="password" id="setting-api-key" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
             </div>
-            <div class="setting-hint">Powers the Claude mentor. Without a key, uses local problem bank. Key stored locally in extension storage only.</div>
+            <div class="setting-hint">Powers the Claude mentor. Without a key, uses local problem bank. Key stored locally and sent to Anthropic only while AI transmission is enabled.</div>
           </div>
 
+          <div class="settings-group">
+            <div class="settings-group-label">AI data choice</div>
+            <p id="ai-consent-status" role="status">AI transmission is off until you consent.</p>
+            <button id="review-ai-consent" class="dash-btn dash-btn-sm">Review AI consent</button>
+            <button id="disable-ai" class="dash-btn dash-btn-sm">Turn AI off</button>
+            <a href="privacy.html">Privacy notice</a>
+          </div>
+          <div class="settings-group">
+            <div class="settings-group-label">Backup and restore</div>
+            <p class="setting-hint">Back up learning, legacy progress, site rules and settings before changing installations. API keys and AI consent are excluded. Drafts and domains may be personal; keep backups private.</p>
+            <button id="export-backup" class="dash-btn dash-btn-sm">Download full backup</button>
+            <button id="export-recovery" class="dash-btn dash-btn-sm">Download recognized-field recovery copy</button>
+            <button id="export-rollback" class="dash-btn dash-btn-sm">Download previous local copy</button>
+            <label for="backup-file">Choose a backup JSON file</label>
+            <input id="backup-file" type="file" accept=".json,application/json">
+            <p id="backup-preview"></p>
+            <button id="import-backup" class="dash-btn dash-btn-sm" disabled>Restore previewed backup</button>
+            <button id="rollback-backup" class="dash-btn dash-btn-sm">Restore previous local copy</button>
+            <p id="backup-status" role="status" aria-live="polite"></p>
+          </div>
           <div class="setting-actions">
             <button id="save-settings-btn" class="dash-btn">Save settings</button>
           </div>
@@ -343,5 +363,6 @@
   <script src="../learning/curriculum.js"></script>
   <script src="../learning/engine.js"></script>
   <script src="dashboard.js"></script>
+<script src="recovery.js"></script>
 </body>
 </html>

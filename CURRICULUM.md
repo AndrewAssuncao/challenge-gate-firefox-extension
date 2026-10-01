@@ -6,7 +6,7 @@ This is a foundation curriculum, not a complete quant interview syllabus. The re
 
 Each skill has a diagnostic, local explanation and worked example, explicit common-error contrast, guided practice with hints, an independent check, a structurally different transfer family, repair after error, and spaced review. Numerical swaps do not count as a transfer family. Readiness is a transparent heuristic: at least five recent unassisted assessments of distinct items (first exposure or qualifying delayed reassessment), at least four correct, across two lesson IDs, plus valid independent evidence from multiple families including transfer. New method-selection units additionally require every specified method/classification. Transfer qualification is evaluated from durable, non-invalidated evidence rather than only the last five answers; recent accuracy remains a separate condition. Retention additionally requires successful delayed retrieval at least seven days after initial independent evidence. No mastery is inferred from exposure, hints, model claims or prerequisite relationships.
 
-If every local item has been seen, the learner can use an explicit independent reassessment at least seven days after its last attempt or exposure. A reassessment replaces the evidence for that same item; it does not create an additional distinct item or a novel pass. The same four-of-five accuracy rule across five distinct items, two lesson IDs and both families still applies. Recovery through known items is labelled **practiced (reassessed)** and may satisfy prerequisites, while novel checks and known-item reassessments are counted separately. Immediate repetitions and assisted reassessments cannot qualify. The UI gives the earliest reassessment date; further exposure restarts the interval for that item.
+If every local item has been seen, the learner can use an explicit independent reassessment at least seven days after its last attempt or exposure. A reassessment replaces the evidence for that same item; it does not create an additional distinct item or a novel pass. The same four-of-five accuracy rule across five distinct items, two lesson IDs, multiple families including transfer, and the unit’s specified method coverage still applies. Recovery through known items is labelled **practiced (reassessed)** and may satisfy prerequisites, while novel checks and known-item reassessments are counted separately. Immediate repetitions and assisted reassessments cannot qualify. The UI gives the earliest reassessment date; further exposure restarts the interval for that item.
 
 The gate is a bounded micro-lesson or retrieval check; Arcade continues saved lessons. Probability and coding are not graded by speed. Arithmetic elapsed time is recorded as fluency evidence, separately from readiness. Cross-track prerequisites trigger their own diagnostic/practice and are never auto-credited.
 
@@ -62,7 +62,7 @@ The gate is a bounded micro-lesson or retrieval check; Arcade continues saved le
 
 - Mode / track: math / probability
 - Prerequisites: prob-complement
-- Objective: Construct the conditioned sample space and its denominator.
+- Objective: Identify the conditioned denominator and calculate the probability.
 - Explanation: Conditioning changes the set of possible outcomes. Count favorable outcomes within the condition, then divide by the size of that condition.
 - Worked example: Among 20 selected cases, 5 succeed. The conditional success probability is 5 / 20 = 0.25.
 - Common error: Keeping the unconditional denominator.
@@ -134,7 +134,7 @@ The gate is a bounded micro-lesson or retrieval check; Arcade continues saved le
 
 - Mode / track: brainteasers / reasoning
 - Prerequisites: none
-- Objective: Construct a worst case and identify the first guaranteed repetition.
+- Objective: Calculate a worst-case avoiding count and identify the first guaranteed repetition.
 - Explanation: A guarantee must hold for the least favorable arrangement. Find how long that arrangement can avoid the target, then add one.
 - Worked example: With three sock colors, three draws could all differ. Four draws guarantee a matching color.
 - Common error: Giving a possible result instead of a worst-case guarantee.
@@ -359,3 +359,11 @@ This slice improves model selection; it does not close the larger quant syllabus
 5. **Longer independent production:** full argument/tree construction, larger tables/charts, multi-step modeling and transfer beyond a finite authored bank. Decide rubric, accessibility, response format and what evidence can justify progression. Do not upgrade practiced labels to interview-ready or generate cosmetic seed variants to simulate unlimited novelty.
 
 No existing prerequisite was changed. New prerequisite edges attach four bounded units to the existing graph. Optional coverage metadata is confined to those new units; larger graph/rubric architecture and broad syllabus expansion remain product decisions.
+
+### Review corrections and identity compatibility
+
+All three numeric/reason fields persist through hints, teaching and reload, with ordered draft submission and composition deferral. Inputs reset when a new variation starts. Assistance remains recorded even when partial work is retained. Guided repair in the new method/classification units stays in the failed family before a fresh independent check. Data tables use status/type/period columns so the learner must select relevant rows; the prompt specifies the requested population without premarking excluded rows.
+
+New units have stable authored item identities (unit, family, slot and transfer level), rather than keys built from prose. Wording edits do not invent a new item. A numerical/scenario/response change requires explicit compatibility review; a snapshot guards the answers, intermediates, table rows/headers, scenarios and methods. Aliases for the 72 exposed items in local candidates `999d0b7`/`c57b081` normalize evidence and exposure at read time, preserve raw history and prevent repeated credit. Both historical sets are tested. Existing 26 units retain their original identities. This is compatibility within the bounded bank, not a claim that new numbers constitute a new concept.
+
+Every probability-method item states the same response protocol: when a requested probability is undetermined, enter its largest possible value; when an intermediate has several attainable values, enter the smallest. The protocol itself does not identify the correct method. Method choices distinguish whether the conditional rate equals the marginal under independence, differs because conditioning changes the population, or remains undetermined from marginals alone. Cross-key and invalidation repair use the actual affected family. The shared identity validator and backup integration limits are documented in [CURRICULUM_INTEGRATION.md](CURRICULUM_INTEGRATION.md).

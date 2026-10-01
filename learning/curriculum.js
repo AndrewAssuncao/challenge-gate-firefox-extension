@@ -46,7 +46,7 @@ const QuantCurriculum = (() => {
       requiredMethods:['must','could','impossible']},
     {id:'prob-method',mode:'math',track:'probability',name:'Choose a probability method',prerequisites:['prob-independent'],
       objective:'Choose independent or conditional multiplication, and identify when marginal rates leave a joint or conditional probability undetermined.',
-      explanation:'Always P(A and B) = P(A) × P(B | A) when P(A)>0. Independence permits replacing P(B | A) with P(B); marginals alone do not. Drawing without replacement changes the second denominator and favorable count. If only marginals are known, max(0, P(A)+P(B)−1) ≤ P(A and B) ≤ min(P(A),P(B)). The overlap cannot exceed either event. Since the union has probability at most 1, the overlap is at least P(A)+P(B)−1 and cannot be negative. These bounds describe several possible dependencies, not one exact probability. Divide joint bounds by P(B)>0 to bound P(A | B).',
+      explanation:'Always P(A and B) = P(A) × P(B | A) when P(A)>0. Independence permits replacing P(B | A) with P(B); marginals alone do not. Drawing without replacement changes the second denominator and favorable count. If only marginals are known, max(0, P(A)+P(B)−1) ≤ P(A and B) ≤ min(P(A),P(B)). The overlap cannot exceed either event. Since the union has probability at most 1, the overlap is at least P(A)+P(B)−1 and cannot be negative. These bounds describe several possible dependencies, not one exact probability. Divide joint bounds by P(B)>0 to bound P(A | B), or by P(A)>0 to bound P(B | A).',
       example:'Bag: 3 red, 2 blue. Without replacement, two reds have probability (3/5)×(2/4)=3/10; with replacement and independent uniform draws, (3/5)²=9/25. With only P(A)=.6 and P(B)=.5, imagine 100 equally likely cases: 60 are in A and 50 in B. At least 10 must overlap to fit in 100, and at most all 50 B cases can overlap. Thus joint probability ranges .1 to .5: .3 is possible but is not determined.',
       commonError:'Multiplying marginals without independence, or claiming an exact probability from bounds.',
       requiredMethods:['independent','conditional','insufficient']}
@@ -55,8 +55,8 @@ const QuantCurriculum = (() => {
   const mod9=seed=>((seed%9)+9)%9;
   const fmt=n=>String(Number(n.toFixed(6)));
   const methodOptions=[
-    {value:'independent',label:'Independence is explicit: multiply marginal probabilities.'},
-    {value:'conditional',label:'Use the supplied or updated conditional probability for the second event.'},
+    {value:'independent',label:'Independence makes the second factor equal to its marginal probability.'},
+    {value:'conditional',label:'The first event changes the counts or restricts the row; the conditional rate differs from its marginal.'},
     {value:'insufficient',label:'The exact probability is undetermined; only attainable bounds follow from the marginals.'}
   ];
   function orders(labels) {
@@ -84,8 +84,8 @@ const QuantCurriculum = (() => {
       q.familyId=`${id}:${level?'time':'counts'}`;
       if(!level) {
         const a=200+100*v,b=50+10*v,sa=Math.round(a*(.7+.05*(v%3))),sb=Math.round(b*(.2+.1*(v%3))),pilot=40+10*v;
-        q.table={caption:'Service requests this week. Each request belongs to one row.',headers:['Group','Requests','Completed','Cost per request'],rows:[['North live',a,sa,4],['South live',b,sb,9],['Pilot (excluded)',pilot,pilot,2]]};
-        q.prompt='For the LIVE groups only, what percentage of requests completed? Enter the percentage without %. Cost is not part of this calculation.';
+        q.table={caption:'Service requests this week. Each request belongs to one row.',headers:['Group','Status','Requests','Completed','Cost per request'],rows:[['North','Live',a,sa,4],['South','Live',b,sb,9],['West','Pilot',pilot,pilot,2]]};
+        q.prompt='For the live groups only, what percentage of requests completed? Enter the percentage without %.';
         q.answer=100*(sa+sb)/(a+b);intermediate('How many live requests form the denominator?',a+b);
         q.scenario={type:'counts',a,b,sa,sb,pilot};
         q.solution=`Relevant totals: ${fmt(sa+sb)} completed / ${a+b} requests. Overall = ${fmt(q.answer)}%. Group percentages have different denominators; exclude the pilot.`;
@@ -94,8 +94,8 @@ const QuantCurriculum = (() => {
         q.hints=['Mark the two live rows; costs and the pilot do not answer the question.','Add completed counts and request counts separately, then divide and convert to %.'];
       } else {
         const hoursA=2+v%3,hoursB=5+v%2,rateA=12+2*v,rateB=4+v;
-        q.table={caption:'Shift summary. Rates are constant within each listed interval.',headers:['Interval','Hours','Jobs per hour','Break minutes (already excluded from hours)'],rows:[['Current morning',hoursA,rateA,10],['Current afternoon',hoursB,rateB,20],['Previous day (excluded)',8,30,15]]};
-        q.prompt='What was the overall throughput in jobs per hour across the two CURRENT intervals? The listed hours already exclude breaks.';
+        q.table={caption:'Shift summary. Rates are constant within each interval; hours are worked hours.',headers:['Interval','Period','Hours worked','Jobs per hour','Break minutes'],rows:[['Morning','Current',hoursA,rateA,10],['Afternoon','Current',hoursB,rateB,20],['Morning','Previous',8,30,15]]};
+        q.prompt='What was the overall throughput in jobs per hour across the current intervals?';
         const jobs=hoursA*rateA+hoursB*rateB;q.answer=jobs/(hoursA+hoursB);intermediate('How many jobs were completed across the current intervals?',jobs);
         q.scenario={type:'time',hoursA,hoursB,rateA,rateB};
         q.solution=`Jobs = ${hoursA}×${rateA} + ${hoursB}×${rateB} = ${jobs}. Hours = ${hoursA+hoursB}. Throughput = ${fmt(q.answer)} jobs/hour. Do not subtract breaks twice or average rates equally.`;
@@ -107,9 +107,9 @@ const QuantCurriculum = (() => {
       q.familyId=`${id}:${level?'reverse-segments':'aggregate-change'}`;
       const a=100+20*v,b=80+20*v,trial=60+10*v;
       if(!level) {
-        const changeA=20+5*v,changeB=-(10+v*2),laterA=a+changeA,laterB=b+changeB;
-        q.table={caption:'Units shipped in two consecutive months. Paid segments are disjoint.',headers:['Segment','Earlier units','Later units','Later revenue'],rows:[['Paid A',a,laterA,500],['Paid B',b,laterB,900],['Trial (excluded)',trial,trial*2,0]]};
-        q.prompt='For PAID units in total, what was the percentage change from the earlier month to the later month? Enter the signed percentage without %. Use unit counts, not revenue.';
+        const changeA=(v%2?-1:1)*(20+5*v),changeB=(v%3===0?1:-1)*(10+v*2),laterA=a+changeA,laterB=b+changeB;
+        q.table={caption:'Units shipped in two consecutive months. Paid segments are disjoint.',headers:['Segment','Type','Earlier units','Later units','Later revenue'],rows:[['A','Paid',a,laterA,500],['B','Paid',b,laterB,900],['C','Trial',trial,trial*2,0]]};
+        q.prompt='For paid units in total, what was the percentage change from the earlier month to the later month? Enter the signed percentage without %.';
         q.answer=100*(changeA+changeB)/(a+b);intermediate('What starting unit count is the percentage base?',a+b);
         q.scenario={type:'aggregate',a,b,laterA,laterB,trial};
         q.solution=`Earlier paid base ${a+b}; later paid total ${laterA+laterB}. Change = (${laterA+laterB}−${a+b})/${a+b}×100 = ${fmt(q.answer)}%.`;
@@ -119,8 +119,8 @@ const QuantCurriculum = (() => {
         q.hints=['Select paid rows and the unit columns for both months.','Subtract earlier from later; divide by earlier paid units, then multiply by 100.'];
       } else {
         const changeA=[20,-20,50][v%3],changeB=[-10,25,-50][v%3],laterA=a*(1+changeA/100),laterB=b*(1+changeB/100);
-        q.table={caption:'Later month counts and each segment’s change from its own earlier count.',headers:['Segment','Later units','Change from earlier (%)','Later revenue'],rows:[['Paid A',laterA,changeA,600],['Paid B',laterB,changeB,800],['Trial (excluded)',trial,100,0]]};
-        q.prompt='Reconstruct the TOTAL EARLIER paid unit count. Each segment percentage uses its own earlier count. Enter units, not a percentage.';
+        q.table={caption:'Later month counts and each segment’s change from its own earlier count.',headers:['Segment','Type','Later units','Change from earlier (%)','Later revenue'],rows:[['A','Paid',laterA,changeA,600],['B','Paid',laterB,changeB,800],['C','Trial',trial,100,0]]};
+        q.prompt='Reconstruct the total earlier paid unit count. Each segment percentage uses its own earlier count. Enter units, not a percentage.';
         q.answer=a+b;intermediate('How many earlier units were in Paid A?',a);
         q.scenario={type:'reverse',a,b,laterA,laterB,changeA,changeB};
         q.solution=`Earlier A = ${fmt(laterA)}/${fmt(1+changeA/100)} = ${a}; earlier B = ${fmt(laterB)}/${fmt(1+changeB/100)} = ${b}. Total earlier paid units = ${a+b}. Reverse each segment before adding.`;
@@ -160,50 +160,57 @@ const QuantCurriculum = (() => {
       q.correctReason=classification;q.reasonOptions=[{value:'must',label:'Must: every feasible order satisfies it.'},{value:'could',label:'Could but need not: some feasible orders satisfy it and some do not.'},{value:'impossible',label:'Impossible: no feasible order satisfies it.'}];
       q.solution=`All feasible orders: ${valid.map(o=>o.join('')).join(', ')}. Statement holds in ${witness.length} of ${valid.length}: ${classification==='could'?'could but need not':classification}.${classification==='could'?` Witness ${witness[0].join('')}; counterexample ${valid.find(o=>!orderRule(o,claim)).join('')}.`:''}`;
       diagnose(24,'Your intermediate is 4! = 24 unrestricted orders. Filter by every rule before evaluating the statement.');
+      const omitted=new Map();
+      rules.forEach((rule,i)=>{const count=orders(['A','B','C','D']).filter(o=>rules.filter((_,j)=>j!==i).every(r=>orderRule(o,r))).length;if(count!==valid.length&&count!==24){const matches=omitted.get(count)||[];matches.push(`omitting ${ruleText(rule)}`);omitted.set(count,matches);}});
+      rules.forEach((rule,i)=>{if(rule[0]==='immediate'){const relaxed=rules.map((r,j)=>j===i?['before',r[1],r[2]]:r),count=orders(['A','B','C','D']).filter(o=>relaxed.every(r=>orderRule(o,r))).length;if(count!==valid.length){const matches=omitted.get(count)||[];matches.push(`relaxing ${ruleText(rule)} to ${rule[1]} before ${rule[2]}`);omitted.set(count,matches);}}});
+      for(const [count,clauses] of omitted)diagnose(count,`Your intermediate ${count} also counts orders allowed by these possible rule changes: ${clauses.join('; ')}. That number alone does not identify which rule you missed. Recheck all rules; ${valid.length} orders obey them all.`);
       q.hints=['Enumerate by first slot, removing any partial order that violates a rule. Keep adjacency rules active.','Count all feasible orders first, then statement witnesses: all means must, some but not all means could but need not, zero means impossible.'];
     } else if(id==='prob-method') {
       const type=v%3;let method;
       q.reasonOptions=methodOptions.map(o=>({...o}));
       if((!level&&type===0)||(level&&type===1)) {
-        method='independent';const red=3+v,blue=2+v%3;
+        method='independent';const red=3+v,blue=[3,4,2][Math.floor(v/3)];
         if(level) {
-          const p=red/(red+blue);q.prompt=`A bag has ${red} red and ${blue} blue tokens. Draw uniformly, REPLACE the token, remix, then draw uniformly again, independently of the first draw. What is P(two reds)?`;
+          const p=red/(red+blue);q.prompt=`A bag has ${red} red and ${blue} blue tokens. Draw one token uniformly from the bag, replace it, and remix. On the second draw, choose uniformly from all ${red+blue} tokens in the restored bag. What is P(two reds)?`;
           q.answer=p*p;intermediate('What is P(second red | first red)?',p);q.scenario={type:'replacement',red,blue};
-          q.solution=`Replacement restores the ${red+blue} tokens, and independence is stated. Second-red probability ${red}/${red+blue}; joint = (${red}/${red+blue})² = ${fmt(q.answer)}.`;
+          q.solution=`Replacement restores the ${red+blue} tokens. The second uniform draw therefore has red probability ${red}/${red+blue} after either first color: the red events are independent. Joint = (${red}/${red+blue})² = ${fmt(q.answer)}.`;
           diagnose((red-1)/(red+blue-1),'Your conditional rate removes the first token. With replacement, both the red count and total return to their original values.');
         } else {
-          const pA=(2+v)/10,pB=(3+v%3)/10;q.prompt=`Events A and B are explicitly independent, with P(A)=${pA} and P(B)=${pB}. What is P(A and B)?`;
+          const pA=(2+v)/10,pB=[.3,.5,.7][Math.floor(v/3)];q.prompt=`Events A and B are explicitly independent, with P(A)=${pA} and P(B)=${pB}. What is P(A and B)?`;
           q.answer=pA*pB;intermediate('What is P(B | A)?',pB);q.scenario={type:'independent',pA,pB};
           q.solution=`Independence gives P(B | A)=P(B)=${pB}. Joint = ${pA}×${pB} = ${fmt(q.answer)}.`;
           diagnose(pA,`Your conditional intermediate equals P(A)=${pA}. Independence leaves P(B | A) equal to the stated P(B)=${pB}.`);
         }
-        q.hints=['Find the explicit independence assumption; replacement alone should not be silently assumed to imply independent sampling.','Under the stated independent sampling, the second conditional rate equals its marginal rate. Multiply once.'];
+        q.hints=level?['After replacement and remixing, count the red and total tokens available on the second uniform draw. Does either count depend on the first color?','The second conditional rate equals the original red fraction; multiply it by the first red fraction.']:['Check the stated relationship between A and B.','Independence gives P(B | A)=P(B); use P(A) × P(B | A).'];
       } else if((!level&&type===1)||(level&&type===0)) {
         method='conditional';
         if(!level) {
-          const red=3+v,blue=2+v%3,total=red+blue;q.prompt=`A bag has ${red} red and ${blue} blue tokens. Draw two uniformly WITHOUT replacement. What is P(two reds)?`;
+          const red=3+v,blue=[3,4,2][Math.floor(v/3)],total=red+blue;q.prompt=`A bag has ${red} red and ${blue} blue tokens. Draw two uniformly without replacement. What is P(two reds)?`;
           q.answer=red/total*(red-1)/(total-1);intermediate('What is P(second red | first red)?',(red-1)/(total-1));q.scenario={type:'without',red,blue};
           q.solution=`First red ${red}/${total}; given that red, ${red-1} reds remain among ${total-1} tokens. Joint = ${red}/${total}×${red-1}/${total-1} = ${fmt(q.answer)}.`;
           diagnose(red/total,`Your second conditional rate is the original ${red}/${total}. After a red is removed, use ${red-1} remaining reds out of ${total-1} tokens.`);
         } else {
-          const totalA=40+10*v,totalOther=60+10*v,successA=10+5*v,successOther=20+v;
+          const totalA=40+10*v,totalOther=60+10*v,successA=10+5*v,successOther=20+2*v;
           q.table={caption:'Disjoint observed groups. A is membership in Group A; B is a success.',headers:['Group','Successes','Failures'],rows:[['A',successA,totalA-successA],['Not A',successOther,totalOther-successOther]]};
-          q.prompt='A record is selected uniformly from this table. What is P(A and B), meaning Group A AND success? Do not assume independence.';
+          q.prompt='A record is selected uniformly from this table. What is P(A and B), meaning Group A AND success? ';
           q.answer=successA/(totalA+totalOther);intermediate('What is P(B | A)?',successA/totalA);q.scenario={type:'conditional-table',totalA,totalOther,successA,successOther};
           q.solution=`P(B | A)=${successA}/${totalA}; P(A)=${totalA}/${totalA+totalOther}. Joint = ${successA}/${totalA+totalOther} = ${fmt(q.answer)}. The conditional row, not the marginal success rate, controls the second factor.`;
           diagnose((successA+successOther)/(totalA+totalOther),`Your intermediate is the whole-table success rate. Conditioning on A restricts the denominator to ${totalA} Group A records and the numerator to ${successA} successes.`);
         }
         q.hints=['Condition on the first event: what denominator and favorable outcomes remain?','Use P(A) × P(B | A). Without replacement update both counts; a table condition restricts the row.'];
       } else {
-        method='insufficient';const pA=(level?6:2)+Math.floor(v/3),pB=level?7:5,pa=pA/10,pb=pB/10,low=Math.max(0,pa+pb-1),high=Math.min(pa,pb);
-        q.prompt=`Only P(A)=${pa} and P(B)=${pb} are given; their dependence is unknown. Select whether the exact ${level?'conditional P(A | B)':'joint P(A and B)'} is determined, then enter its LARGEST possible value consistent with these marginals.`;
-        q.answer=level?high/pb:high;intermediate(`What is the SMALLEST possible ${level?'P(A | B)':'P(A and B)'}?`,level?low/pb:low);q.scenario={type:level?'conditional-bounds':'joint-bounds',pA:pa,pB:pb};
-        q.solution=`Joint bounds: max(0,${pa}+${pb}−1)=${fmt(low)} to min(${pa},${pb})=${fmt(high)}.${level?` Divide both by P(B)=${pb}: conditional bounds ${fmt(low/pb)} to ${fmt(high/pb)}.`:''} Both extremes are attainable, so the exact probability is undetermined.`;
-        diagnose(level?pa:pa*pb,`Your lower-bound intermediate equals the ${level?'independent conditional rate':'product of the marginals'}. Independence is not supplied. Use the attainable overlap bounds${level?' and divide by P(B)':''}.`);
-        q.hints=['Several joint distributions have these marginals. Do not invent independence.','Joint overlap is at least max(0, P(A)+P(B)−1) and at most min(P(A),P(B)). For P(A | B), divide overlap bounds by the positive P(B).'];
+        method='insufficient';const index=Math.floor(v/3),pa=(level?[.6,.7,.8]:[.2,.6,.8])[index],pb=(level?[.7,.5,.9]:[.5,.7,.4])[index],low=Math.max(0,pa+pb-1),high=Math.min(pa,pb);
+        q.prompt=`P(A)=${pa} and P(B)=${pb} are supplied. No other relationship is specified. Find ${level?'P(A | B)':'P(A and B)'}.`;
+        q.answer=level?high/pb:high;intermediate(`What is ${level?'P(A | B)':'P(B | A)'}?`,level?low/pb:low/pa);q.scenario={type:level?'conditional-bounds':'joint-bounds',pA:pa,pB:pb};
+        q.solution=`Joint bounds: max(0,${pa}+${pb}−1)=${fmt(low)} to min(${pa},${pb})=${fmt(high)}.${level?` Divide both by P(B)=${pb}: conditional bounds ${fmt(low/pb)} to ${fmt(high/pb)}.`:` For the intermediate P(B | A), divide by P(A)=${pa}: smallest ${fmt(low/pa)}.`} Both extremes are attainable, so the exact probability is undetermined.`;
+        diagnose(level?pa:pb,`Your lower-bound intermediate equals the independent conditional rate. Independence is not supplied. Use the attainable overlap bounds and divide by ${level?'P(B)':'P(A)'}.`);
+        q.hints=['Several joint distributions have these marginals. Do not invent independence.',`Joint overlap is at least max(0, P(A)+P(B)−1) and at most min(P(A),P(B)). For the intermediate ${level?'P(A | B)':'P(B | A)'}, divide overlap bounds by the positive ${level?'P(B)':'P(A)'}.`];
       }
       q.correctReason=method;q.methodTag=method;q.familyId=`${id}:${level?'transfer':'foundation'}:${method}`;
     } else throw Error('Unknown decision skill');
+    if(id==='prob-method'){q.prompt+=' If the requested probability is not uniquely determined, enter its largest possible value. Choose the justified method.';q.construction.prompt+=' If multiple values fit the stated facts, enter the smallest.';}
+    if((id==='data-weighted'||id==='data-base')&&!level)q.prompt+=' Round the percentage itself (e.g. 12.345678% becomes 12.3457).';
+    q.prompt+=' Enter exact fractions or numbers rounded to 4 decimal places.';
     // Rotate choices without changing the actual problem identity or answer key.
     if(v%2)q.reasonOptions.reverse();
     return q;
@@ -350,13 +357,314 @@ const QuantCurriculum = (() => {
     if(q.kind==='number')q.tolerance=0.00005;
     // Content identity is independent of generation IDs, seeds and presentation order.
     q.semanticKey=JSON.stringify([1,q.skillId,q.familyId,q.prompt,q.functionName || null,q.testCases || null,q.answer ?? null,q.solution,q.construction || null]);
-    if(decisionSkills.some(s=>s.id===id))q.semanticKey=JSON.stringify([1,q.skillId,q.familyId,q.prompt,q.table || null,q.answer,q.solution,q.construction,q.correctReason]);
+    if(decisionSkills.some(s=>s.id===id))q.semanticKey=JSON.stringify(['decision:1',q.skillId,q.familyId,mod9(seed),level?1:0]);
     return q;
   }
   function diagnose(q,intermediate) {
     if(intermediate===null)return null;
     return q.feedbackRules?.find(rule=>Math.abs(intermediate-rule.intermediate)<=q.tolerance)?.message || null;
   }
-  return {skills,get,question,diagnose};
+  // Compatibility with local pre-release candidates 999d0b7/c57b081. Raw history is
+  // retained; normalization prevents a prose/key fix from inventing new exposure.
+  const legacyDecisionKeys=new Map([
+ [
+  "[1,\"data-weighted\",\"data-weighted:counts\",\"For the LIVE groups only, what percentage of requests completed? Enter the percentage without %. Cost is not part of this calculation.\",{\"caption\":\"Service requests this week. Each request belongs to one row.\",\"headers\":[\"Group\",\"Requests\",\"Completed\",\"Cost per request\"],\"rows\":[[\"North live\",200,140,4],[\"South live\",50,10,9],[\"Pilot (excluded)\",40,40,2]]},60,\"Relevant totals: 150 completed / 250 requests. Overall = 60%. Group percentages have different denominators; exclude the pilot.\",{\"prompt\":\"How many live requests form the denominator?\",\"answer\":250},\"counts\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",0,0]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:counts\",\"For the LIVE groups only, what percentage of requests completed? Enter the percentage without %. Cost is not part of this calculation.\",{\"caption\":\"Service requests this week. Each request belongs to one row.\",\"headers\":[\"Group\",\"Requests\",\"Completed\",\"Cost per request\"],\"rows\":[[\"North live\",300,225,4],[\"South live\",60,18,9],[\"Pilot (excluded)\",50,50,2]]},67.5,\"Relevant totals: 243 completed / 360 requests. Overall = 67.5%. Group percentages have different denominators; exclude the pilot.\",{\"prompt\":\"How many live requests form the denominator?\",\"answer\":360},\"counts\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",1,0]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:counts\",\"For the LIVE groups only, what percentage of requests completed? Enter the percentage without %. Cost is not part of this calculation.\",{\"caption\":\"Service requests this week. Each request belongs to one row.\",\"headers\":[\"Group\",\"Requests\",\"Completed\",\"Cost per request\"],\"rows\":[[\"North live\",400,320,4],[\"South live\",70,28,9],[\"Pilot (excluded)\",60,60,2]]},74.04255319148936,\"Relevant totals: 348 completed / 470 requests. Overall = 74.042553%. Group percentages have different denominators; exclude the pilot.\",{\"prompt\":\"How many live requests form the denominator?\",\"answer\":470},\"counts\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",2,0]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:counts\",\"For the LIVE groups only, what percentage of requests completed? Enter the percentage without %. Cost is not part of this calculation.\",{\"caption\":\"Service requests this week. Each request belongs to one row.\",\"headers\":[\"Group\",\"Requests\",\"Completed\",\"Cost per request\"],\"rows\":[[\"North live\",500,350,4],[\"South live\",80,16,9],[\"Pilot (excluded)\",70,70,2]]},63.10344827586207,\"Relevant totals: 366 completed / 580 requests. Overall = 63.103448%. Group percentages have different denominators; exclude the pilot.\",{\"prompt\":\"How many live requests form the denominator?\",\"answer\":580},\"counts\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",3,0]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:counts\",\"For the LIVE groups only, what percentage of requests completed? Enter the percentage without %. Cost is not part of this calculation.\",{\"caption\":\"Service requests this week. Each request belongs to one row.\",\"headers\":[\"Group\",\"Requests\",\"Completed\",\"Cost per request\"],\"rows\":[[\"North live\",600,450,4],[\"South live\",90,27,9],[\"Pilot (excluded)\",80,80,2]]},69.1304347826087,\"Relevant totals: 477 completed / 690 requests. Overall = 69.130435%. Group percentages have different denominators; exclude the pilot.\",{\"prompt\":\"How many live requests form the denominator?\",\"answer\":690},\"counts\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",4,0]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:counts\",\"For the LIVE groups only, what percentage of requests completed? Enter the percentage without %. Cost is not part of this calculation.\",{\"caption\":\"Service requests this week. Each request belongs to one row.\",\"headers\":[\"Group\",\"Requests\",\"Completed\",\"Cost per request\"],\"rows\":[[\"North live\",700,560,4],[\"South live\",100,40,9],[\"Pilot (excluded)\",90,90,2]]},75,\"Relevant totals: 600 completed / 800 requests. Overall = 75%. Group percentages have different denominators; exclude the pilot.\",{\"prompt\":\"How many live requests form the denominator?\",\"answer\":800},\"counts\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",5,0]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:counts\",\"For the LIVE groups only, what percentage of requests completed? Enter the percentage without %. Cost is not part of this calculation.\",{\"caption\":\"Service requests this week. Each request belongs to one row.\",\"headers\":[\"Group\",\"Requests\",\"Completed\",\"Cost per request\"],\"rows\":[[\"North live\",800,560,4],[\"South live\",110,22,9],[\"Pilot (excluded)\",100,100,2]]},63.956043956043956,\"Relevant totals: 582 completed / 910 requests. Overall = 63.956044%. Group percentages have different denominators; exclude the pilot.\",{\"prompt\":\"How many live requests form the denominator?\",\"answer\":910},\"counts\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",6,0]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:counts\",\"For the LIVE groups only, what percentage of requests completed? Enter the percentage without %. Cost is not part of this calculation.\",{\"caption\":\"Service requests this week. Each request belongs to one row.\",\"headers\":[\"Group\",\"Requests\",\"Completed\",\"Cost per request\"],\"rows\":[[\"North live\",900,675,4],[\"South live\",120,36,9],[\"Pilot (excluded)\",110,110,2]]},69.70588235294117,\"Relevant totals: 711 completed / 1020 requests. Overall = 69.705882%. Group percentages have different denominators; exclude the pilot.\",{\"prompt\":\"How many live requests form the denominator?\",\"answer\":1020},\"counts\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",7,0]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:counts\",\"For the LIVE groups only, what percentage of requests completed? Enter the percentage without %. Cost is not part of this calculation.\",{\"caption\":\"Service requests this week. Each request belongs to one row.\",\"headers\":[\"Group\",\"Requests\",\"Completed\",\"Cost per request\"],\"rows\":[[\"North live\",1000,800,4],[\"South live\",130,52,9],[\"Pilot (excluded)\",120,120,2]]},75.39823008849558,\"Relevant totals: 852 completed / 1130 requests. Overall = 75.39823%. Group percentages have different denominators; exclude the pilot.\",{\"prompt\":\"How many live requests form the denominator?\",\"answer\":1130},\"counts\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",8,0]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:time\",\"What was the overall throughput in jobs per hour across the two CURRENT intervals? The listed hours already exclude breaks.\",{\"caption\":\"Shift summary. Rates are constant within each listed interval.\",\"headers\":[\"Interval\",\"Hours\",\"Jobs per hour\",\"Break minutes (already excluded from hours)\"],\"rows\":[[\"Current morning\",2,12,10],[\"Current afternoon\",5,4,20],[\"Previous day (excluded)\",8,30,15]]},6.285714285714286,\"Jobs = 2×12 + 5×4 = 44. Hours = 7. Throughput = 6.285714 jobs/hour. Do not subtract breaks twice or average rates equally.\",{\"prompt\":\"How many jobs were completed across the current intervals?\",\"answer\":44},\"time\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",0,1]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:time\",\"What was the overall throughput in jobs per hour across the two CURRENT intervals? The listed hours already exclude breaks.\",{\"caption\":\"Shift summary. Rates are constant within each listed interval.\",\"headers\":[\"Interval\",\"Hours\",\"Jobs per hour\",\"Break minutes (already excluded from hours)\"],\"rows\":[[\"Current morning\",3,14,10],[\"Current afternoon\",6,5,20],[\"Previous day (excluded)\",8,30,15]]},8,\"Jobs = 3×14 + 6×5 = 72. Hours = 9. Throughput = 8 jobs/hour. Do not subtract breaks twice or average rates equally.\",{\"prompt\":\"How many jobs were completed across the current intervals?\",\"answer\":72},\"time\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",1,1]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:time\",\"What was the overall throughput in jobs per hour across the two CURRENT intervals? The listed hours already exclude breaks.\",{\"caption\":\"Shift summary. Rates are constant within each listed interval.\",\"headers\":[\"Interval\",\"Hours\",\"Jobs per hour\",\"Break minutes (already excluded from hours)\"],\"rows\":[[\"Current morning\",4,16,10],[\"Current afternoon\",5,6,20],[\"Previous day (excluded)\",8,30,15]]},10.444444444444445,\"Jobs = 4×16 + 5×6 = 94. Hours = 9. Throughput = 10.444444 jobs/hour. Do not subtract breaks twice or average rates equally.\",{\"prompt\":\"How many jobs were completed across the current intervals?\",\"answer\":94},\"time\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",2,1]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:time\",\"What was the overall throughput in jobs per hour across the two CURRENT intervals? The listed hours already exclude breaks.\",{\"caption\":\"Shift summary. Rates are constant within each listed interval.\",\"headers\":[\"Interval\",\"Hours\",\"Jobs per hour\",\"Break minutes (already excluded from hours)\"],\"rows\":[[\"Current morning\",2,18,10],[\"Current afternoon\",6,7,20],[\"Previous day (excluded)\",8,30,15]]},9.75,\"Jobs = 2×18 + 6×7 = 78. Hours = 8. Throughput = 9.75 jobs/hour. Do not subtract breaks twice or average rates equally.\",{\"prompt\":\"How many jobs were completed across the current intervals?\",\"answer\":78},\"time\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",3,1]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:time\",\"What was the overall throughput in jobs per hour across the two CURRENT intervals? The listed hours already exclude breaks.\",{\"caption\":\"Shift summary. Rates are constant within each listed interval.\",\"headers\":[\"Interval\",\"Hours\",\"Jobs per hour\",\"Break minutes (already excluded from hours)\"],\"rows\":[[\"Current morning\",3,20,10],[\"Current afternoon\",5,8,20],[\"Previous day (excluded)\",8,30,15]]},12.5,\"Jobs = 3×20 + 5×8 = 100. Hours = 8. Throughput = 12.5 jobs/hour. Do not subtract breaks twice or average rates equally.\",{\"prompt\":\"How many jobs were completed across the current intervals?\",\"answer\":100},\"time\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",4,1]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:time\",\"What was the overall throughput in jobs per hour across the two CURRENT intervals? The listed hours already exclude breaks.\",{\"caption\":\"Shift summary. Rates are constant within each listed interval.\",\"headers\":[\"Interval\",\"Hours\",\"Jobs per hour\",\"Break minutes (already excluded from hours)\"],\"rows\":[[\"Current morning\",4,22,10],[\"Current afternoon\",6,9,20],[\"Previous day (excluded)\",8,30,15]]},14.2,\"Jobs = 4×22 + 6×9 = 142. Hours = 10. Throughput = 14.2 jobs/hour. Do not subtract breaks twice or average rates equally.\",{\"prompt\":\"How many jobs were completed across the current intervals?\",\"answer\":142},\"time\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",5,1]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:time\",\"What was the overall throughput in jobs per hour across the two CURRENT intervals? The listed hours already exclude breaks.\",{\"caption\":\"Shift summary. Rates are constant within each listed interval.\",\"headers\":[\"Interval\",\"Hours\",\"Jobs per hour\",\"Break minutes (already excluded from hours)\"],\"rows\":[[\"Current morning\",2,24,10],[\"Current afternoon\",5,10,20],[\"Previous day (excluded)\",8,30,15]]},14,\"Jobs = 2×24 + 5×10 = 98. Hours = 7. Throughput = 14 jobs/hour. Do not subtract breaks twice or average rates equally.\",{\"prompt\":\"How many jobs were completed across the current intervals?\",\"answer\":98},\"time\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",6,1]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:time\",\"What was the overall throughput in jobs per hour across the two CURRENT intervals? The listed hours already exclude breaks.\",{\"caption\":\"Shift summary. Rates are constant within each listed interval.\",\"headers\":[\"Interval\",\"Hours\",\"Jobs per hour\",\"Break minutes (already excluded from hours)\"],\"rows\":[[\"Current morning\",3,26,10],[\"Current afternoon\",6,11,20],[\"Previous day (excluded)\",8,30,15]]},16,\"Jobs = 3×26 + 6×11 = 144. Hours = 9. Throughput = 16 jobs/hour. Do not subtract breaks twice or average rates equally.\",{\"prompt\":\"How many jobs were completed across the current intervals?\",\"answer\":144},\"time\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",7,1]"
+ ],
+ [
+  "[1,\"data-weighted\",\"data-weighted:time\",\"What was the overall throughput in jobs per hour across the two CURRENT intervals? The listed hours already exclude breaks.\",{\"caption\":\"Shift summary. Rates are constant within each listed interval.\",\"headers\":[\"Interval\",\"Hours\",\"Jobs per hour\",\"Break minutes (already excluded from hours)\"],\"rows\":[[\"Current morning\",4,28,10],[\"Current afternoon\",5,12,20],[\"Previous day (excluded)\",8,30,15]]},19.11111111111111,\"Jobs = 4×28 + 5×12 = 172. Hours = 9. Throughput = 19.111111 jobs/hour. Do not subtract breaks twice or average rates equally.\",{\"prompt\":\"How many jobs were completed across the current intervals?\",\"answer\":172},\"time\"]",
+  "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",8,1]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:aggregate-change\",\"For PAID units in total, what was the percentage change from the earlier month to the later month? Enter the signed percentage without %. Use unit counts, not revenue.\",{\"caption\":\"Units shipped in two consecutive months. Paid segments are disjoint.\",\"headers\":[\"Segment\",\"Earlier units\",\"Later units\",\"Later revenue\"],\"rows\":[[\"Paid A\",100,120,500],[\"Paid B\",80,70,900],[\"Trial (excluded)\",60,120,0]]},5.555555555555555,\"Earlier paid base 180; later paid total 190. Change = (190−180)/180×100 = 5.555556%.\",{\"prompt\":\"What starting unit count is the percentage base?\",\"answer\":180},\"base\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",0,0]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:aggregate-change\",\"For PAID units in total, what was the percentage change from the earlier month to the later month? Enter the signed percentage without %. Use unit counts, not revenue.\",{\"caption\":\"Units shipped in two consecutive months. Paid segments are disjoint.\",\"headers\":[\"Segment\",\"Earlier units\",\"Later units\",\"Later revenue\"],\"rows\":[[\"Paid A\",120,145,500],[\"Paid B\",100,88,900],[\"Trial (excluded)\",70,140,0]]},5.909090909090909,\"Earlier paid base 220; later paid total 233. Change = (233−220)/220×100 = 5.909091%.\",{\"prompt\":\"What starting unit count is the percentage base?\",\"answer\":220},\"base\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",1,0]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:aggregate-change\",\"For PAID units in total, what was the percentage change from the earlier month to the later month? Enter the signed percentage without %. Use unit counts, not revenue.\",{\"caption\":\"Units shipped in two consecutive months. Paid segments are disjoint.\",\"headers\":[\"Segment\",\"Earlier units\",\"Later units\",\"Later revenue\"],\"rows\":[[\"Paid A\",140,170,500],[\"Paid B\",120,106,900],[\"Trial (excluded)\",80,160,0]]},6.153846153846154,\"Earlier paid base 260; later paid total 276. Change = (276−260)/260×100 = 6.153846%.\",{\"prompt\":\"What starting unit count is the percentage base?\",\"answer\":260},\"base\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",2,0]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:aggregate-change\",\"For PAID units in total, what was the percentage change from the earlier month to the later month? Enter the signed percentage without %. Use unit counts, not revenue.\",{\"caption\":\"Units shipped in two consecutive months. Paid segments are disjoint.\",\"headers\":[\"Segment\",\"Earlier units\",\"Later units\",\"Later revenue\"],\"rows\":[[\"Paid A\",160,195,500],[\"Paid B\",140,124,900],[\"Trial (excluded)\",90,180,0]]},6.333333333333333,\"Earlier paid base 300; later paid total 319. Change = (319−300)/300×100 = 6.333333%.\",{\"prompt\":\"What starting unit count is the percentage base?\",\"answer\":300},\"base\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",3,0]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:aggregate-change\",\"For PAID units in total, what was the percentage change from the earlier month to the later month? Enter the signed percentage without %. Use unit counts, not revenue.\",{\"caption\":\"Units shipped in two consecutive months. Paid segments are disjoint.\",\"headers\":[\"Segment\",\"Earlier units\",\"Later units\",\"Later revenue\"],\"rows\":[[\"Paid A\",180,220,500],[\"Paid B\",160,142,900],[\"Trial (excluded)\",100,200,0]]},6.470588235294118,\"Earlier paid base 340; later paid total 362. Change = (362−340)/340×100 = 6.470588%.\",{\"prompt\":\"What starting unit count is the percentage base?\",\"answer\":340},\"base\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",4,0]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:aggregate-change\",\"For PAID units in total, what was the percentage change from the earlier month to the later month? Enter the signed percentage without %. Use unit counts, not revenue.\",{\"caption\":\"Units shipped in two consecutive months. Paid segments are disjoint.\",\"headers\":[\"Segment\",\"Earlier units\",\"Later units\",\"Later revenue\"],\"rows\":[[\"Paid A\",200,245,500],[\"Paid B\",180,160,900],[\"Trial (excluded)\",110,220,0]]},6.578947368421052,\"Earlier paid base 380; later paid total 405. Change = (405−380)/380×100 = 6.578947%.\",{\"prompt\":\"What starting unit count is the percentage base?\",\"answer\":380},\"base\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",5,0]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:aggregate-change\",\"For PAID units in total, what was the percentage change from the earlier month to the later month? Enter the signed percentage without %. Use unit counts, not revenue.\",{\"caption\":\"Units shipped in two consecutive months. Paid segments are disjoint.\",\"headers\":[\"Segment\",\"Earlier units\",\"Later units\",\"Later revenue\"],\"rows\":[[\"Paid A\",220,270,500],[\"Paid B\",200,178,900],[\"Trial (excluded)\",120,240,0]]},6.666666666666667,\"Earlier paid base 420; later paid total 448. Change = (448−420)/420×100 = 6.666667%.\",{\"prompt\":\"What starting unit count is the percentage base?\",\"answer\":420},\"base\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",6,0]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:aggregate-change\",\"For PAID units in total, what was the percentage change from the earlier month to the later month? Enter the signed percentage without %. Use unit counts, not revenue.\",{\"caption\":\"Units shipped in two consecutive months. Paid segments are disjoint.\",\"headers\":[\"Segment\",\"Earlier units\",\"Later units\",\"Later revenue\"],\"rows\":[[\"Paid A\",240,295,500],[\"Paid B\",220,196,900],[\"Trial (excluded)\",130,260,0]]},6.739130434782608,\"Earlier paid base 460; later paid total 491. Change = (491−460)/460×100 = 6.73913%.\",{\"prompt\":\"What starting unit count is the percentage base?\",\"answer\":460},\"base\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",7,0]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:aggregate-change\",\"For PAID units in total, what was the percentage change from the earlier month to the later month? Enter the signed percentage without %. Use unit counts, not revenue.\",{\"caption\":\"Units shipped in two consecutive months. Paid segments are disjoint.\",\"headers\":[\"Segment\",\"Earlier units\",\"Later units\",\"Later revenue\"],\"rows\":[[\"Paid A\",260,320,500],[\"Paid B\",240,214,900],[\"Trial (excluded)\",140,280,0]]},6.8,\"Earlier paid base 500; later paid total 534. Change = (534−500)/500×100 = 6.8%.\",{\"prompt\":\"What starting unit count is the percentage base?\",\"answer\":500},\"base\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",8,0]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:reverse-segments\",\"Reconstruct the TOTAL EARLIER paid unit count. Each segment percentage uses its own earlier count. Enter units, not a percentage.\",{\"caption\":\"Later month counts and each segment’s change from its own earlier count.\",\"headers\":[\"Segment\",\"Later units\",\"Change from earlier (%)\",\"Later revenue\"],\"rows\":[[\"Paid A\",120,20,600],[\"Paid B\",72,-10,800],[\"Trial (excluded)\",60,100,0]]},180,\"Earlier A = 120/1.2 = 100; earlier B = 72/0.9 = 80. Total earlier paid units = 180. Reverse each segment before adding.\",{\"prompt\":\"How many earlier units were in Paid A?\",\"answer\":100},\"reverse\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",0,1]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:reverse-segments\",\"Reconstruct the TOTAL EARLIER paid unit count. Each segment percentage uses its own earlier count. Enter units, not a percentage.\",{\"caption\":\"Later month counts and each segment’s change from its own earlier count.\",\"headers\":[\"Segment\",\"Later units\",\"Change from earlier (%)\",\"Later revenue\"],\"rows\":[[\"Paid A\",96,-20,600],[\"Paid B\",125,25,800],[\"Trial (excluded)\",70,100,0]]},220,\"Earlier A = 96/0.8 = 120; earlier B = 125/1.25 = 100. Total earlier paid units = 220. Reverse each segment before adding.\",{\"prompt\":\"How many earlier units were in Paid A?\",\"answer\":120},\"reverse\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",1,1]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:reverse-segments\",\"Reconstruct the TOTAL EARLIER paid unit count. Each segment percentage uses its own earlier count. Enter units, not a percentage.\",{\"caption\":\"Later month counts and each segment’s change from its own earlier count.\",\"headers\":[\"Segment\",\"Later units\",\"Change from earlier (%)\",\"Later revenue\"],\"rows\":[[\"Paid A\",210,50,600],[\"Paid B\",60,-50,800],[\"Trial (excluded)\",80,100,0]]},260,\"Earlier A = 210/1.5 = 140; earlier B = 60/0.5 = 120. Total earlier paid units = 260. Reverse each segment before adding.\",{\"prompt\":\"How many earlier units were in Paid A?\",\"answer\":140},\"reverse\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",2,1]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:reverse-segments\",\"Reconstruct the TOTAL EARLIER paid unit count. Each segment percentage uses its own earlier count. Enter units, not a percentage.\",{\"caption\":\"Later month counts and each segment’s change from its own earlier count.\",\"headers\":[\"Segment\",\"Later units\",\"Change from earlier (%)\",\"Later revenue\"],\"rows\":[[\"Paid A\",192,20,600],[\"Paid B\",126,-10,800],[\"Trial (excluded)\",90,100,0]]},300,\"Earlier A = 192/1.2 = 160; earlier B = 126/0.9 = 140. Total earlier paid units = 300. Reverse each segment before adding.\",{\"prompt\":\"How many earlier units were in Paid A?\",\"answer\":160},\"reverse\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",3,1]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:reverse-segments\",\"Reconstruct the TOTAL EARLIER paid unit count. Each segment percentage uses its own earlier count. Enter units, not a percentage.\",{\"caption\":\"Later month counts and each segment’s change from its own earlier count.\",\"headers\":[\"Segment\",\"Later units\",\"Change from earlier (%)\",\"Later revenue\"],\"rows\":[[\"Paid A\",144,-20,600],[\"Paid B\",200,25,800],[\"Trial (excluded)\",100,100,0]]},340,\"Earlier A = 144/0.8 = 180; earlier B = 200/1.25 = 160. Total earlier paid units = 340. Reverse each segment before adding.\",{\"prompt\":\"How many earlier units were in Paid A?\",\"answer\":180},\"reverse\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",4,1]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:reverse-segments\",\"Reconstruct the TOTAL EARLIER paid unit count. Each segment percentage uses its own earlier count. Enter units, not a percentage.\",{\"caption\":\"Later month counts and each segment’s change from its own earlier count.\",\"headers\":[\"Segment\",\"Later units\",\"Change from earlier (%)\",\"Later revenue\"],\"rows\":[[\"Paid A\",300,50,600],[\"Paid B\",90,-50,800],[\"Trial (excluded)\",110,100,0]]},380,\"Earlier A = 300/1.5 = 200; earlier B = 90/0.5 = 180. Total earlier paid units = 380. Reverse each segment before adding.\",{\"prompt\":\"How many earlier units were in Paid A?\",\"answer\":200},\"reverse\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",5,1]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:reverse-segments\",\"Reconstruct the TOTAL EARLIER paid unit count. Each segment percentage uses its own earlier count. Enter units, not a percentage.\",{\"caption\":\"Later month counts and each segment’s change from its own earlier count.\",\"headers\":[\"Segment\",\"Later units\",\"Change from earlier (%)\",\"Later revenue\"],\"rows\":[[\"Paid A\",264,20,600],[\"Paid B\",180,-10,800],[\"Trial (excluded)\",120,100,0]]},420,\"Earlier A = 264/1.2 = 220; earlier B = 180/0.9 = 200. Total earlier paid units = 420. Reverse each segment before adding.\",{\"prompt\":\"How many earlier units were in Paid A?\",\"answer\":220},\"reverse\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",6,1]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:reverse-segments\",\"Reconstruct the TOTAL EARLIER paid unit count. Each segment percentage uses its own earlier count. Enter units, not a percentage.\",{\"caption\":\"Later month counts and each segment’s change from its own earlier count.\",\"headers\":[\"Segment\",\"Later units\",\"Change from earlier (%)\",\"Later revenue\"],\"rows\":[[\"Paid A\",192,-20,600],[\"Paid B\",275,25,800],[\"Trial (excluded)\",130,100,0]]},460,\"Earlier A = 192/0.8 = 240; earlier B = 275/1.25 = 220. Total earlier paid units = 460. Reverse each segment before adding.\",{\"prompt\":\"How many earlier units were in Paid A?\",\"answer\":240},\"reverse\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",7,1]"
+ ],
+ [
+  "[1,\"data-base\",\"data-base:reverse-segments\",\"Reconstruct the TOTAL EARLIER paid unit count. Each segment percentage uses its own earlier count. Enter units, not a percentage.\",{\"caption\":\"Later month counts and each segment’s change from its own earlier count.\",\"headers\":[\"Segment\",\"Later units\",\"Change from earlier (%)\",\"Later revenue\"],\"rows\":[[\"Paid A\",390,50,600],[\"Paid B\",120,-50,800],[\"Trial (excluded)\",140,100,0]]},500,\"Earlier A = 390/1.5 = 260; earlier B = 120/0.5 = 240. Total earlier paid units = 500. Reverse each segment before adding.\",{\"prompt\":\"How many earlier units were in Paid A?\",\"answer\":260},\"reverse\"]",
+  "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",8,1]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:foundation:must\",\"Schedule A, B, C, D once each in four slots. Rules: A before B; B before C. Statement: A before C. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,4,\"All feasible orders: ABCD, ABDC, ADBC, DABC. Statement holds in 4 of 4: must.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":4},\"must\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:foundation:must\",0,0]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:foundation:could\",\"Schedule A, B, C, D once each in four slots. Rules: A before B; C before D. Statement: B before C. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,1,\"All feasible orders: ABCD, ACBD, ACDB, CABD, CADB, CDAB. Statement holds in 1 of 6: could but need not. Witness ABCD; counterexample ACBD.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":6},\"could\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:foundation:could\",1,0]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:foundation:impossible\",\"Schedule A, B, C, D once each in four slots. Rules: A before B; B before C. Statement: C before A. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,0,\"All feasible orders: ABCD, ABDC, ADBC, DABC. Statement holds in 0 of 4: impossible.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":4},\"impossible\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:foundation:impossible\",2,0]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:foundation:could\",\"Schedule A, B, C, D once each in four slots. Rules: A before B; A before C. Statement: A first. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,6,\"All feasible orders: ABCD, ABDC, ACBD, ACDB, ADBC, ADCB, DABC, DACB. Statement holds in 6 of 8: could but need not. Witness ABCD; counterexample DABC.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":8},\"could\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:foundation:could\",3,0]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:foundation:could\",\"Schedule A, B, C, D once each in four slots. Rules: A before B; C before B. Statement: B last. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,6,\"All feasible orders: ACBD, ACDB, ADCB, CABD, CADB, CDAB, DACB, DCAB. Statement holds in 6 of 8: could but need not. Witness ACDB; counterexample ACBD.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":8},\"could\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:foundation:could\",4,0]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:foundation:must\",\"Schedule A, B, C, D once each in four slots. Rules: A before B; B before C; C before D. Statement: D last. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,1,\"All feasible orders: ABCD. Statement holds in 1 of 1: must.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":1},\"must\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:foundation:must\",5,0]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:foundation:could\",\"Schedule A, B, C, D once each in four slots. Rules: A before C; B before D. Statement: A before D. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,5,\"All feasible orders: ABCD, ABDC, ACBD, BACD, BADC, BDAC. Statement holds in 5 of 6: could but need not. Witness ABCD; counterexample BDAC.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":6},\"could\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:foundation:could\",6,0]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:foundation:impossible\",\"Schedule A, B, C, D once each in four slots. Rules: A before B; C before D. Statement: D before C. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,0,\"All feasible orders: ABCD, ACBD, ACDB, CABD, CADB, CDAB. Statement holds in 0 of 6: impossible.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":6},\"impossible\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:foundation:impossible\",7,0]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:foundation:must\",\"Schedule A, B, C, D once each in four slots. Rules: A before B; A before C; A before D. Statement: A first. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,6,\"All feasible orders: ABCD, ABDC, ACBD, ACDB, ADBC, ADCB. Statement holds in 6 of 6: must.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":6},\"must\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:foundation:must\",8,0]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:transfer:could\",\"Schedule A, B, C, D once each in four slots. Rules: A immediately before B; C before D. Statement: A before D. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,2,\"All feasible orders: ABCD, CABD, CDAB. Statement holds in 2 of 3: could but need not. Witness ABCD; counterexample CDAB.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":3},\"could\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:transfer:could\",0,1]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:transfer:impossible\",\"Schedule A, B, C, D once each in four slots. Rules: A before B; C before D; B and C are not adjacent. Statement: B before C. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,0,\"All feasible orders: ACDB, CABD, CADB, CDAB. Statement holds in 0 of 4: impossible.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":4},\"impossible\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:transfer:impossible\",1,1]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:transfer:impossible\",\"Schedule A, B, C, D once each in four slots. Rules: A immediately before B; C before D. Statement: B immediately before A. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,0,\"All feasible orders: ABCD, CABD, CDAB. Statement holds in 0 of 3: impossible.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":3},\"impossible\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:transfer:impossible\",2,1]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:transfer:must\",\"Schedule A, B, C, D once each in four slots. Rules: A before B; C first. Statement: C before A. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,3,\"All feasible orders: CABD, CADB, CDAB. Statement holds in 3 of 3: must.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":3},\"must\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:transfer:must\",3,1]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:transfer:could\",\"Schedule A, B, C, D once each in four slots. Rules: A before B; D is not first. Statement: D last. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,3,\"All feasible orders: ABCD, ABDC, ACBD, ACDB, ADBC, ADCB, CABD, CADB, CDAB. Statement holds in 3 of 9: could but need not. Witness ABCD; counterexample ABDC.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":9},\"could\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:transfer:could\",4,1]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:transfer:could\",\"Schedule A, B, C, D once each in four slots. Rules: A immediately before B; C immediately before D. Statement: A before C. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,1,\"All feasible orders: ABCD, CDAB. Statement holds in 1 of 2: could but need not. Witness ABCD; counterexample CDAB.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":2},\"could\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:transfer:could\",5,1]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:transfer:could\",\"Schedule A, B, C, D once each in four slots. Rules: A before B; C and D are not adjacent. Statement: C before D. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,3,\"All feasible orders: ACBD, ADBC, CABD, CADB, DABC, DACB. Statement holds in 3 of 6: could but need not. Witness ACBD; counterexample ADBC.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":6},\"could\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:transfer:could\",6,1]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:transfer:impossible\",\"Schedule A, B, C, D once each in four slots. Rules: A before B; D first. Statement: B before D. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,0,\"All feasible orders: DABC, DACB, DCAB. Statement holds in 0 of 3: impossible.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":3},\"impossible\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:transfer:impossible\",7,1]"
+ ],
+ [
+  "[1,\"brain-order\",\"brain-order:transfer:must\",\"Schedule A, B, C, D once each in four slots. Rules: A immediately before B; C before A. Statement: C before B. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.\",null,3,\"All feasible orders: CABD, CDAB, DCAB. Statement holds in 3 of 3: must.\",{\"prompt\":\"How many orders obey ALL the rules, before filtering by the statement?\",\"answer\":3},\"must\"]",
+  "[\"decision:1\",\"brain-order\",\"brain-order:transfer:must\",8,1]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:foundation:independent\",\"Events A and B are explicitly independent, with P(A)=0.2 and P(B)=0.3. What is P(A and B)?\",null,0.06,\"Independence gives P(B | A)=P(B)=0.3. Joint = 0.2×0.3 = 0.06.\",{\"prompt\":\"What is P(B | A)?\",\"answer\":0.3},\"independent\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:foundation:independent\",0,0]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:foundation:conditional\",\"A bag has 4 red and 3 blue tokens. Draw two uniformly WITHOUT replacement. What is P(two reds)?\",null,0.2857142857142857,\"First red 4/7; given that red, 3 reds remain among 6 tokens. Joint = 4/7×3/6 = 0.285714.\",{\"prompt\":\"What is P(second red | first red)?\",\"answer\":0.5},\"conditional\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:foundation:conditional\",1,0]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:foundation:insufficient\",\"Only P(A)=0.2 and P(B)=0.5 are given; their dependence is unknown. Select whether the exact joint P(A and B) is determined, then enter its LARGEST possible value consistent with these marginals.\",null,0.2,\"Joint bounds: max(0,0.2+0.5−1)=0 to min(0.2,0.5)=0.2. Both extremes are attainable, so the exact probability is undetermined.\",{\"prompt\":\"What is the SMALLEST possible P(A and B)?\",\"answer\":0},\"insufficient\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:foundation:insufficient\",2,0]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:foundation:independent\",\"Events A and B are explicitly independent, with P(A)=0.5 and P(B)=0.3. What is P(A and B)?\",null,0.15,\"Independence gives P(B | A)=P(B)=0.3. Joint = 0.5×0.3 = 0.15.\",{\"prompt\":\"What is P(B | A)?\",\"answer\":0.3},\"independent\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:foundation:independent\",3,0]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:foundation:conditional\",\"A bag has 7 red and 3 blue tokens. Draw two uniformly WITHOUT replacement. What is P(two reds)?\",null,0.46666666666666656,\"First red 7/10; given that red, 6 reds remain among 9 tokens. Joint = 7/10×6/9 = 0.466667.\",{\"prompt\":\"What is P(second red | first red)?\",\"answer\":0.6666666666666666},\"conditional\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:foundation:conditional\",4,0]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:foundation:insufficient\",\"Only P(A)=0.3 and P(B)=0.5 are given; their dependence is unknown. Select whether the exact joint P(A and B) is determined, then enter its LARGEST possible value consistent with these marginals.\",null,0.3,\"Joint bounds: max(0,0.3+0.5−1)=0 to min(0.3,0.5)=0.3. Both extremes are attainable, so the exact probability is undetermined.\",{\"prompt\":\"What is the SMALLEST possible P(A and B)?\",\"answer\":0},\"insufficient\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:foundation:insufficient\",5,0]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:foundation:independent\",\"Events A and B are explicitly independent, with P(A)=0.8 and P(B)=0.3. What is P(A and B)?\",null,0.24,\"Independence gives P(B | A)=P(B)=0.3. Joint = 0.8×0.3 = 0.24.\",{\"prompt\":\"What is P(B | A)?\",\"answer\":0.3},\"independent\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:foundation:independent\",6,0]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:foundation:conditional\",\"A bag has 10 red and 3 blue tokens. Draw two uniformly WITHOUT replacement. What is P(two reds)?\",null,0.576923076923077,\"First red 10/13; given that red, 9 reds remain among 12 tokens. Joint = 10/13×9/12 = 0.576923.\",{\"prompt\":\"What is P(second red | first red)?\",\"answer\":0.75},\"conditional\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:foundation:conditional\",7,0]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:foundation:insufficient\",\"Only P(A)=0.4 and P(B)=0.5 are given; their dependence is unknown. Select whether the exact joint P(A and B) is determined, then enter its LARGEST possible value consistent with these marginals.\",null,0.4,\"Joint bounds: max(0,0.4+0.5−1)=0 to min(0.4,0.5)=0.4. Both extremes are attainable, so the exact probability is undetermined.\",{\"prompt\":\"What is the SMALLEST possible P(A and B)?\",\"answer\":0},\"insufficient\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:foundation:insufficient\",8,0]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:transfer:conditional\",\"A record is selected uniformly from this table. What is P(A and B), meaning Group A AND success? Do not assume independence.\",{\"caption\":\"Disjoint observed groups. A is membership in Group A; B is a success.\",\"headers\":[\"Group\",\"Successes\",\"Failures\"],\"rows\":[[\"A\",10,30],[\"Not A\",20,40]]},0.1,\"P(B | A)=10/40; P(A)=40/100. Joint = 10/100 = 0.1. The conditional row, not the marginal success rate, controls the second factor.\",{\"prompt\":\"What is P(B | A)?\",\"answer\":0.25},\"conditional\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:transfer:conditional\",0,1]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:transfer:independent\",\"A bag has 4 red and 3 blue tokens. Draw uniformly, REPLACE the token, remix, then draw uniformly again, independently of the first draw. What is P(two reds)?\",null,0.32653061224489793,\"Replacement restores the 7 tokens, and independence is stated. Second-red probability 4/7; joint = (4/7)² = 0.326531.\",{\"prompt\":\"What is P(second red | first red)?\",\"answer\":0.5714285714285714},\"independent\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:transfer:independent\",1,1]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:transfer:insufficient\",\"Only P(A)=0.6 and P(B)=0.7 are given; their dependence is unknown. Select whether the exact conditional P(A | B) is determined, then enter its LARGEST possible value consistent with these marginals.\",null,0.8571428571428572,\"Joint bounds: max(0,0.6+0.7−1)=0.3 to min(0.6,0.7)=0.6. Divide both by P(B)=0.7: conditional bounds 0.428571 to 0.857143. Both extremes are attainable, so the exact probability is undetermined.\",{\"prompt\":\"What is the SMALLEST possible P(A | B)?\",\"answer\":0.4285714285714283},\"insufficient\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:transfer:insufficient\",2,1]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:transfer:conditional\",\"A record is selected uniformly from this table. What is P(A and B), meaning Group A AND success? Do not assume independence.\",{\"caption\":\"Disjoint observed groups. A is membership in Group A; B is a success.\",\"headers\":[\"Group\",\"Successes\",\"Failures\"],\"rows\":[[\"A\",25,45],[\"Not A\",23,67]]},0.15625,\"P(B | A)=25/70; P(A)=70/160. Joint = 25/160 = 0.15625. The conditional row, not the marginal success rate, controls the second factor.\",{\"prompt\":\"What is P(B | A)?\",\"answer\":0.35714285714285715},\"conditional\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:transfer:conditional\",3,1]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:transfer:independent\",\"A bag has 7 red and 3 blue tokens. Draw uniformly, REPLACE the token, remix, then draw uniformly again, independently of the first draw. What is P(two reds)?\",null,0.48999999999999994,\"Replacement restores the 10 tokens, and independence is stated. Second-red probability 7/10; joint = (7/10)² = 0.49.\",{\"prompt\":\"What is P(second red | first red)?\",\"answer\":0.7},\"independent\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:transfer:independent\",4,1]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:transfer:insufficient\",\"Only P(A)=0.7 and P(B)=0.7 are given; their dependence is unknown. Select whether the exact conditional P(A | B) is determined, then enter its LARGEST possible value consistent with these marginals.\",null,1,\"Joint bounds: max(0,0.7+0.7−1)=0.4 to min(0.7,0.7)=0.7. Divide both by P(B)=0.7: conditional bounds 0.571429 to 1. Both extremes are attainable, so the exact probability is undetermined.\",{\"prompt\":\"What is the SMALLEST possible P(A | B)?\",\"answer\":0.5714285714285713},\"insufficient\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:transfer:insufficient\",5,1]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:transfer:conditional\",\"A record is selected uniformly from this table. What is P(A and B), meaning Group A AND success? Do not assume independence.\",{\"caption\":\"Disjoint observed groups. A is membership in Group A; B is a success.\",\"headers\":[\"Group\",\"Successes\",\"Failures\"],\"rows\":[[\"A\",40,60],[\"Not A\",26,94]]},0.18181818181818182,\"P(B | A)=40/100; P(A)=100/220. Joint = 40/220 = 0.181818. The conditional row, not the marginal success rate, controls the second factor.\",{\"prompt\":\"What is P(B | A)?\",\"answer\":0.4},\"conditional\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:transfer:conditional\",6,1]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:transfer:independent\",\"A bag has 10 red and 3 blue tokens. Draw uniformly, REPLACE the token, remix, then draw uniformly again, independently of the first draw. What is P(two reds)?\",null,0.591715976331361,\"Replacement restores the 13 tokens, and independence is stated. Second-red probability 10/13; joint = (10/13)² = 0.591716.\",{\"prompt\":\"What is P(second red | first red)?\",\"answer\":0.7692307692307693},\"independent\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:transfer:independent\",7,1]"
+ ],
+ [
+  "[1,\"prob-method\",\"prob-method:transfer:insufficient\",\"Only P(A)=0.8 and P(B)=0.7 are given; their dependence is unknown. Select whether the exact conditional P(A | B) is determined, then enter its LARGEST possible value consistent with these marginals.\",null,1,\"Joint bounds: max(0,0.8+0.7−1)=0.5 to min(0.8,0.7)=0.7. Divide both by P(B)=0.7: conditional bounds 0.714286 to 1. Both extremes are attainable, so the exact probability is undetermined.\",{\"prompt\":\"What is the SMALLEST possible P(A | B)?\",\"answer\":0.7142857142857143},\"insufficient\"]",
+  "[\"decision:1\",\"prob-method\",\"prob-method:transfer:insufficient\",8,1]"
+ ]
+]);
+  const canonicalKey=key=>legacyDecisionKeys.get(key) || key;
+  function validateItemIdentity(event) {
+    const skill=get(event?.skillId);if(!skill || event.kind!=='attempt')return false;
+    if(!decisionSkills.some(s=>s.id===skill.id))return event.methodTag==null;
+    const parts=String(event.variant).split(':');
+    if(parts.length!==3 || parts[0]!==skill.id || !/^[0-8]$/.test(parts[1]) || !/^[01]$/.test(parts[2]))return false;
+    const q=question(skill.id,Number(parts[1]),false,Number(parts[2]));
+    return canonicalKey(event.semanticKey)===q.semanticKey && event.familyId===q.familyId && (event.methodTag ?? null)===(q.methodTag ?? null) && event.isTransfer===q.transfer;
+  }
+  return {skills,get,question,diagnose,canonicalKey,validateItemIdentity};
 })();
 if (typeof module !== 'undefined') module.exports = QuantCurriculum;

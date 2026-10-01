@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Challenge Gate — AI data choice</title><link rel="stylesheet" href="dashboard.css"></head>
+<body><main class="dash-main"><section class="dash-section"><h1>Optional Claude mentor</h1>
+<p>Local challenges, Python execution and grading work without AI.</p>
+<p>If enabled, Challenge Gate sends your Anthropic API key for authentication and exercise prompts, code or command attempts, help requests, and help conversation to Anthropic over HTTPS. Git and legacy exercises may request generated challenges when opened; personalized quant explanations are requested when clicked. Anthropic receives your network address as part of the connection. Your key may incur usage charges.</p>
+<p>Site domains, browsing URLs, time totals and the backup file are not sent by the mentor. Do not enter secrets or private information in exercises. You can turn transmission off in Settings or Firefox add-on data permissions. Declining keeps local teaching and challenges available.</p>
+<h2>Optional learning history</h2><label class="setting-label"><input type="checkbox" id="ai-history"> Share learning history and interaction data</label>
+<p>This separate choice adds recorded errors, completed objectives, attempt counts, performance summaries and cross-discipline progress for personalization. It is off by default. Leave it off to use AI for the current exercise (including its topic and tier) and your code, commands and chat without accumulated history or automatic error output. Declining does not disable AI.</p>
+<p><a href="privacy.html">Read the privacy notice</a></p>
+<div class="setting-actions"><button id="ai-allow" class="dash-btn">Enable AI transmission</button><button id="ai-decline" class="dash-btn">Keep AI off</button></div>
+<p id="ai-status" role="status" aria-live="polite"></p>
+</section></main><script src="consent.js"></script></body></html>

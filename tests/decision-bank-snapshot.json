@@ -1,0 +1,2494 @@
+{
+  "revision": 2,
+  "identityPolicy": "reviewed authored slots; any mathematical change requires explicit compatibility review",
+  "items": [
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",0,0]",
+      "scenario": {
+        "type": "counts",
+        "a": 200,
+        "b": 50,
+        "sa": 140,
+        "sb": 10,
+        "pilot": 40
+      },
+      "answer": 60,
+      "intermediate": 250,
+      "rows": [
+        [
+          "North",
+          "Live",
+          200,
+          140,
+          4
+        ],
+        [
+          "South",
+          "Live",
+          50,
+          10,
+          9
+        ],
+        [
+          "West",
+          "Pilot",
+          40,
+          40,
+          2
+        ]
+      ],
+      "method": "counts",
+      "headers": [
+        "Group",
+        "Status",
+        "Requests",
+        "Completed",
+        "Cost per request"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",1,0]",
+      "scenario": {
+        "type": "counts",
+        "a": 300,
+        "b": 60,
+        "sa": 225,
+        "sb": 18,
+        "pilot": 50
+      },
+      "answer": 67.5,
+      "intermediate": 360,
+      "rows": [
+        [
+          "North",
+          "Live",
+          300,
+          225,
+          4
+        ],
+        [
+          "South",
+          "Live",
+          60,
+          18,
+          9
+        ],
+        [
+          "West",
+          "Pilot",
+          50,
+          50,
+          2
+        ]
+      ],
+      "method": "counts",
+      "headers": [
+        "Group",
+        "Status",
+        "Requests",
+        "Completed",
+        "Cost per request"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",2,0]",
+      "scenario": {
+        "type": "counts",
+        "a": 400,
+        "b": 70,
+        "sa": 320,
+        "sb": 28,
+        "pilot": 60
+      },
+      "answer": 74.04255319148936,
+      "intermediate": 470,
+      "rows": [
+        [
+          "North",
+          "Live",
+          400,
+          320,
+          4
+        ],
+        [
+          "South",
+          "Live",
+          70,
+          28,
+          9
+        ],
+        [
+          "West",
+          "Pilot",
+          60,
+          60,
+          2
+        ]
+      ],
+      "method": "counts",
+      "headers": [
+        "Group",
+        "Status",
+        "Requests",
+        "Completed",
+        "Cost per request"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",3,0]",
+      "scenario": {
+        "type": "counts",
+        "a": 500,
+        "b": 80,
+        "sa": 350,
+        "sb": 16,
+        "pilot": 70
+      },
+      "answer": 63.10344827586207,
+      "intermediate": 580,
+      "rows": [
+        [
+          "North",
+          "Live",
+          500,
+          350,
+          4
+        ],
+        [
+          "South",
+          "Live",
+          80,
+          16,
+          9
+        ],
+        [
+          "West",
+          "Pilot",
+          70,
+          70,
+          2
+        ]
+      ],
+      "method": "counts",
+      "headers": [
+        "Group",
+        "Status",
+        "Requests",
+        "Completed",
+        "Cost per request"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",4,0]",
+      "scenario": {
+        "type": "counts",
+        "a": 600,
+        "b": 90,
+        "sa": 450,
+        "sb": 27,
+        "pilot": 80
+      },
+      "answer": 69.1304347826087,
+      "intermediate": 690,
+      "rows": [
+        [
+          "North",
+          "Live",
+          600,
+          450,
+          4
+        ],
+        [
+          "South",
+          "Live",
+          90,
+          27,
+          9
+        ],
+        [
+          "West",
+          "Pilot",
+          80,
+          80,
+          2
+        ]
+      ],
+      "method": "counts",
+      "headers": [
+        "Group",
+        "Status",
+        "Requests",
+        "Completed",
+        "Cost per request"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",5,0]",
+      "scenario": {
+        "type": "counts",
+        "a": 700,
+        "b": 100,
+        "sa": 560,
+        "sb": 40,
+        "pilot": 90
+      },
+      "answer": 75,
+      "intermediate": 800,
+      "rows": [
+        [
+          "North",
+          "Live",
+          700,
+          560,
+          4
+        ],
+        [
+          "South",
+          "Live",
+          100,
+          40,
+          9
+        ],
+        [
+          "West",
+          "Pilot",
+          90,
+          90,
+          2
+        ]
+      ],
+      "method": "counts",
+      "headers": [
+        "Group",
+        "Status",
+        "Requests",
+        "Completed",
+        "Cost per request"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",6,0]",
+      "scenario": {
+        "type": "counts",
+        "a": 800,
+        "b": 110,
+        "sa": 560,
+        "sb": 22,
+        "pilot": 100
+      },
+      "answer": 63.956043956043956,
+      "intermediate": 910,
+      "rows": [
+        [
+          "North",
+          "Live",
+          800,
+          560,
+          4
+        ],
+        [
+          "South",
+          "Live",
+          110,
+          22,
+          9
+        ],
+        [
+          "West",
+          "Pilot",
+          100,
+          100,
+          2
+        ]
+      ],
+      "method": "counts",
+      "headers": [
+        "Group",
+        "Status",
+        "Requests",
+        "Completed",
+        "Cost per request"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",7,0]",
+      "scenario": {
+        "type": "counts",
+        "a": 900,
+        "b": 120,
+        "sa": 675,
+        "sb": 36,
+        "pilot": 110
+      },
+      "answer": 69.70588235294117,
+      "intermediate": 1020,
+      "rows": [
+        [
+          "North",
+          "Live",
+          900,
+          675,
+          4
+        ],
+        [
+          "South",
+          "Live",
+          120,
+          36,
+          9
+        ],
+        [
+          "West",
+          "Pilot",
+          110,
+          110,
+          2
+        ]
+      ],
+      "method": "counts",
+      "headers": [
+        "Group",
+        "Status",
+        "Requests",
+        "Completed",
+        "Cost per request"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:counts\",8,0]",
+      "scenario": {
+        "type": "counts",
+        "a": 1000,
+        "b": 130,
+        "sa": 800,
+        "sb": 52,
+        "pilot": 120
+      },
+      "answer": 75.39823008849558,
+      "intermediate": 1130,
+      "rows": [
+        [
+          "North",
+          "Live",
+          1000,
+          800,
+          4
+        ],
+        [
+          "South",
+          "Live",
+          130,
+          52,
+          9
+        ],
+        [
+          "West",
+          "Pilot",
+          120,
+          120,
+          2
+        ]
+      ],
+      "method": "counts",
+      "headers": [
+        "Group",
+        "Status",
+        "Requests",
+        "Completed",
+        "Cost per request"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",0,1]",
+      "scenario": {
+        "type": "time",
+        "hoursA": 2,
+        "hoursB": 5,
+        "rateA": 12,
+        "rateB": 4
+      },
+      "answer": 6.285714285714286,
+      "intermediate": 44,
+      "rows": [
+        [
+          "Morning",
+          "Current",
+          2,
+          12,
+          10
+        ],
+        [
+          "Afternoon",
+          "Current",
+          5,
+          4,
+          20
+        ],
+        [
+          "Morning",
+          "Previous",
+          8,
+          30,
+          15
+        ]
+      ],
+      "method": "time",
+      "headers": [
+        "Interval",
+        "Period",
+        "Hours worked",
+        "Jobs per hour",
+        "Break minutes"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",1,1]",
+      "scenario": {
+        "type": "time",
+        "hoursA": 3,
+        "hoursB": 6,
+        "rateA": 14,
+        "rateB": 5
+      },
+      "answer": 8,
+      "intermediate": 72,
+      "rows": [
+        [
+          "Morning",
+          "Current",
+          3,
+          14,
+          10
+        ],
+        [
+          "Afternoon",
+          "Current",
+          6,
+          5,
+          20
+        ],
+        [
+          "Morning",
+          "Previous",
+          8,
+          30,
+          15
+        ]
+      ],
+      "method": "time",
+      "headers": [
+        "Interval",
+        "Period",
+        "Hours worked",
+        "Jobs per hour",
+        "Break minutes"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",2,1]",
+      "scenario": {
+        "type": "time",
+        "hoursA": 4,
+        "hoursB": 5,
+        "rateA": 16,
+        "rateB": 6
+      },
+      "answer": 10.444444444444445,
+      "intermediate": 94,
+      "rows": [
+        [
+          "Morning",
+          "Current",
+          4,
+          16,
+          10
+        ],
+        [
+          "Afternoon",
+          "Current",
+          5,
+          6,
+          20
+        ],
+        [
+          "Morning",
+          "Previous",
+          8,
+          30,
+          15
+        ]
+      ],
+      "method": "time",
+      "headers": [
+        "Interval",
+        "Period",
+        "Hours worked",
+        "Jobs per hour",
+        "Break minutes"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",3,1]",
+      "scenario": {
+        "type": "time",
+        "hoursA": 2,
+        "hoursB": 6,
+        "rateA": 18,
+        "rateB": 7
+      },
+      "answer": 9.75,
+      "intermediate": 78,
+      "rows": [
+        [
+          "Morning",
+          "Current",
+          2,
+          18,
+          10
+        ],
+        [
+          "Afternoon",
+          "Current",
+          6,
+          7,
+          20
+        ],
+        [
+          "Morning",
+          "Previous",
+          8,
+          30,
+          15
+        ]
+      ],
+      "method": "time",
+      "headers": [
+        "Interval",
+        "Period",
+        "Hours worked",
+        "Jobs per hour",
+        "Break minutes"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",4,1]",
+      "scenario": {
+        "type": "time",
+        "hoursA": 3,
+        "hoursB": 5,
+        "rateA": 20,
+        "rateB": 8
+      },
+      "answer": 12.5,
+      "intermediate": 100,
+      "rows": [
+        [
+          "Morning",
+          "Current",
+          3,
+          20,
+          10
+        ],
+        [
+          "Afternoon",
+          "Current",
+          5,
+          8,
+          20
+        ],
+        [
+          "Morning",
+          "Previous",
+          8,
+          30,
+          15
+        ]
+      ],
+      "method": "time",
+      "headers": [
+        "Interval",
+        "Period",
+        "Hours worked",
+        "Jobs per hour",
+        "Break minutes"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",5,1]",
+      "scenario": {
+        "type": "time",
+        "hoursA": 4,
+        "hoursB": 6,
+        "rateA": 22,
+        "rateB": 9
+      },
+      "answer": 14.2,
+      "intermediate": 142,
+      "rows": [
+        [
+          "Morning",
+          "Current",
+          4,
+          22,
+          10
+        ],
+        [
+          "Afternoon",
+          "Current",
+          6,
+          9,
+          20
+        ],
+        [
+          "Morning",
+          "Previous",
+          8,
+          30,
+          15
+        ]
+      ],
+      "method": "time",
+      "headers": [
+        "Interval",
+        "Period",
+        "Hours worked",
+        "Jobs per hour",
+        "Break minutes"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",6,1]",
+      "scenario": {
+        "type": "time",
+        "hoursA": 2,
+        "hoursB": 5,
+        "rateA": 24,
+        "rateB": 10
+      },
+      "answer": 14,
+      "intermediate": 98,
+      "rows": [
+        [
+          "Morning",
+          "Current",
+          2,
+          24,
+          10
+        ],
+        [
+          "Afternoon",
+          "Current",
+          5,
+          10,
+          20
+        ],
+        [
+          "Morning",
+          "Previous",
+          8,
+          30,
+          15
+        ]
+      ],
+      "method": "time",
+      "headers": [
+        "Interval",
+        "Period",
+        "Hours worked",
+        "Jobs per hour",
+        "Break minutes"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",7,1]",
+      "scenario": {
+        "type": "time",
+        "hoursA": 3,
+        "hoursB": 6,
+        "rateA": 26,
+        "rateB": 11
+      },
+      "answer": 16,
+      "intermediate": 144,
+      "rows": [
+        [
+          "Morning",
+          "Current",
+          3,
+          26,
+          10
+        ],
+        [
+          "Afternoon",
+          "Current",
+          6,
+          11,
+          20
+        ],
+        [
+          "Morning",
+          "Previous",
+          8,
+          30,
+          15
+        ]
+      ],
+      "method": "time",
+      "headers": [
+        "Interval",
+        "Period",
+        "Hours worked",
+        "Jobs per hour",
+        "Break minutes"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-weighted\",\"data-weighted:time\",8,1]",
+      "scenario": {
+        "type": "time",
+        "hoursA": 4,
+        "hoursB": 5,
+        "rateA": 28,
+        "rateB": 12
+      },
+      "answer": 19.11111111111111,
+      "intermediate": 172,
+      "rows": [
+        [
+          "Morning",
+          "Current",
+          4,
+          28,
+          10
+        ],
+        [
+          "Afternoon",
+          "Current",
+          5,
+          12,
+          20
+        ],
+        [
+          "Morning",
+          "Previous",
+          8,
+          30,
+          15
+        ]
+      ],
+      "method": "time",
+      "headers": [
+        "Interval",
+        "Period",
+        "Hours worked",
+        "Jobs per hour",
+        "Break minutes"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",0,0]",
+      "scenario": {
+        "type": "aggregate",
+        "a": 100,
+        "b": 80,
+        "laterA": 120,
+        "laterB": 90,
+        "trial": 60
+      },
+      "answer": 16.666666666666668,
+      "intermediate": 180,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          100,
+          120,
+          500
+        ],
+        [
+          "B",
+          "Paid",
+          80,
+          90,
+          900
+        ],
+        [
+          "C",
+          "Trial",
+          60,
+          120,
+          0
+        ]
+      ],
+      "method": "base",
+      "headers": [
+        "Segment",
+        "Type",
+        "Earlier units",
+        "Later units",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",1,0]",
+      "scenario": {
+        "type": "aggregate",
+        "a": 120,
+        "b": 100,
+        "laterA": 95,
+        "laterB": 88,
+        "trial": 70
+      },
+      "answer": -16.818181818181817,
+      "intermediate": 220,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          120,
+          95,
+          500
+        ],
+        [
+          "B",
+          "Paid",
+          100,
+          88,
+          900
+        ],
+        [
+          "C",
+          "Trial",
+          70,
+          140,
+          0
+        ]
+      ],
+      "method": "base",
+      "headers": [
+        "Segment",
+        "Type",
+        "Earlier units",
+        "Later units",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",2,0]",
+      "scenario": {
+        "type": "aggregate",
+        "a": 140,
+        "b": 120,
+        "laterA": 170,
+        "laterB": 106,
+        "trial": 80
+      },
+      "answer": 6.153846153846154,
+      "intermediate": 260,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          140,
+          170,
+          500
+        ],
+        [
+          "B",
+          "Paid",
+          120,
+          106,
+          900
+        ],
+        [
+          "C",
+          "Trial",
+          80,
+          160,
+          0
+        ]
+      ],
+      "method": "base",
+      "headers": [
+        "Segment",
+        "Type",
+        "Earlier units",
+        "Later units",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",3,0]",
+      "scenario": {
+        "type": "aggregate",
+        "a": 160,
+        "b": 140,
+        "laterA": 125,
+        "laterB": 156,
+        "trial": 90
+      },
+      "answer": -6.333333333333333,
+      "intermediate": 300,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          160,
+          125,
+          500
+        ],
+        [
+          "B",
+          "Paid",
+          140,
+          156,
+          900
+        ],
+        [
+          "C",
+          "Trial",
+          90,
+          180,
+          0
+        ]
+      ],
+      "method": "base",
+      "headers": [
+        "Segment",
+        "Type",
+        "Earlier units",
+        "Later units",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",4,0]",
+      "scenario": {
+        "type": "aggregate",
+        "a": 180,
+        "b": 160,
+        "laterA": 220,
+        "laterB": 142,
+        "trial": 100
+      },
+      "answer": 6.470588235294118,
+      "intermediate": 340,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          180,
+          220,
+          500
+        ],
+        [
+          "B",
+          "Paid",
+          160,
+          142,
+          900
+        ],
+        [
+          "C",
+          "Trial",
+          100,
+          200,
+          0
+        ]
+      ],
+      "method": "base",
+      "headers": [
+        "Segment",
+        "Type",
+        "Earlier units",
+        "Later units",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",5,0]",
+      "scenario": {
+        "type": "aggregate",
+        "a": 200,
+        "b": 180,
+        "laterA": 155,
+        "laterB": 160,
+        "trial": 110
+      },
+      "answer": -17.105263157894736,
+      "intermediate": 380,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          200,
+          155,
+          500
+        ],
+        [
+          "B",
+          "Paid",
+          180,
+          160,
+          900
+        ],
+        [
+          "C",
+          "Trial",
+          110,
+          220,
+          0
+        ]
+      ],
+      "method": "base",
+      "headers": [
+        "Segment",
+        "Type",
+        "Earlier units",
+        "Later units",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",6,0]",
+      "scenario": {
+        "type": "aggregate",
+        "a": 220,
+        "b": 200,
+        "laterA": 270,
+        "laterB": 222,
+        "trial": 120
+      },
+      "answer": 17.142857142857142,
+      "intermediate": 420,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          220,
+          270,
+          500
+        ],
+        [
+          "B",
+          "Paid",
+          200,
+          222,
+          900
+        ],
+        [
+          "C",
+          "Trial",
+          120,
+          240,
+          0
+        ]
+      ],
+      "method": "base",
+      "headers": [
+        "Segment",
+        "Type",
+        "Earlier units",
+        "Later units",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",7,0]",
+      "scenario": {
+        "type": "aggregate",
+        "a": 240,
+        "b": 220,
+        "laterA": 185,
+        "laterB": 196,
+        "trial": 130
+      },
+      "answer": -17.17391304347826,
+      "intermediate": 460,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          240,
+          185,
+          500
+        ],
+        [
+          "B",
+          "Paid",
+          220,
+          196,
+          900
+        ],
+        [
+          "C",
+          "Trial",
+          130,
+          260,
+          0
+        ]
+      ],
+      "method": "base",
+      "headers": [
+        "Segment",
+        "Type",
+        "Earlier units",
+        "Later units",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:aggregate-change\",8,0]",
+      "scenario": {
+        "type": "aggregate",
+        "a": 260,
+        "b": 240,
+        "laterA": 320,
+        "laterB": 214,
+        "trial": 140
+      },
+      "answer": 6.8,
+      "intermediate": 500,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          260,
+          320,
+          500
+        ],
+        [
+          "B",
+          "Paid",
+          240,
+          214,
+          900
+        ],
+        [
+          "C",
+          "Trial",
+          140,
+          280,
+          0
+        ]
+      ],
+      "method": "base",
+      "headers": [
+        "Segment",
+        "Type",
+        "Earlier units",
+        "Later units",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",0,1]",
+      "scenario": {
+        "type": "reverse",
+        "a": 100,
+        "b": 80,
+        "laterA": 120,
+        "laterB": 72,
+        "changeA": 20,
+        "changeB": -10
+      },
+      "answer": 180,
+      "intermediate": 100,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          120,
+          20,
+          600
+        ],
+        [
+          "B",
+          "Paid",
+          72,
+          -10,
+          800
+        ],
+        [
+          "C",
+          "Trial",
+          60,
+          100,
+          0
+        ]
+      ],
+      "method": "reverse",
+      "headers": [
+        "Segment",
+        "Type",
+        "Later units",
+        "Change from earlier (%)",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",1,1]",
+      "scenario": {
+        "type": "reverse",
+        "a": 120,
+        "b": 100,
+        "laterA": 96,
+        "laterB": 125,
+        "changeA": -20,
+        "changeB": 25
+      },
+      "answer": 220,
+      "intermediate": 120,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          96,
+          -20,
+          600
+        ],
+        [
+          "B",
+          "Paid",
+          125,
+          25,
+          800
+        ],
+        [
+          "C",
+          "Trial",
+          70,
+          100,
+          0
+        ]
+      ],
+      "method": "reverse",
+      "headers": [
+        "Segment",
+        "Type",
+        "Later units",
+        "Change from earlier (%)",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",2,1]",
+      "scenario": {
+        "type": "reverse",
+        "a": 140,
+        "b": 120,
+        "laterA": 210,
+        "laterB": 60,
+        "changeA": 50,
+        "changeB": -50
+      },
+      "answer": 260,
+      "intermediate": 140,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          210,
+          50,
+          600
+        ],
+        [
+          "B",
+          "Paid",
+          60,
+          -50,
+          800
+        ],
+        [
+          "C",
+          "Trial",
+          80,
+          100,
+          0
+        ]
+      ],
+      "method": "reverse",
+      "headers": [
+        "Segment",
+        "Type",
+        "Later units",
+        "Change from earlier (%)",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",3,1]",
+      "scenario": {
+        "type": "reverse",
+        "a": 160,
+        "b": 140,
+        "laterA": 192,
+        "laterB": 126,
+        "changeA": 20,
+        "changeB": -10
+      },
+      "answer": 300,
+      "intermediate": 160,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          192,
+          20,
+          600
+        ],
+        [
+          "B",
+          "Paid",
+          126,
+          -10,
+          800
+        ],
+        [
+          "C",
+          "Trial",
+          90,
+          100,
+          0
+        ]
+      ],
+      "method": "reverse",
+      "headers": [
+        "Segment",
+        "Type",
+        "Later units",
+        "Change from earlier (%)",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",4,1]",
+      "scenario": {
+        "type": "reverse",
+        "a": 180,
+        "b": 160,
+        "laterA": 144,
+        "laterB": 200,
+        "changeA": -20,
+        "changeB": 25
+      },
+      "answer": 340,
+      "intermediate": 180,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          144,
+          -20,
+          600
+        ],
+        [
+          "B",
+          "Paid",
+          200,
+          25,
+          800
+        ],
+        [
+          "C",
+          "Trial",
+          100,
+          100,
+          0
+        ]
+      ],
+      "method": "reverse",
+      "headers": [
+        "Segment",
+        "Type",
+        "Later units",
+        "Change from earlier (%)",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",5,1]",
+      "scenario": {
+        "type": "reverse",
+        "a": 200,
+        "b": 180,
+        "laterA": 300,
+        "laterB": 90,
+        "changeA": 50,
+        "changeB": -50
+      },
+      "answer": 380,
+      "intermediate": 200,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          300,
+          50,
+          600
+        ],
+        [
+          "B",
+          "Paid",
+          90,
+          -50,
+          800
+        ],
+        [
+          "C",
+          "Trial",
+          110,
+          100,
+          0
+        ]
+      ],
+      "method": "reverse",
+      "headers": [
+        "Segment",
+        "Type",
+        "Later units",
+        "Change from earlier (%)",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",6,1]",
+      "scenario": {
+        "type": "reverse",
+        "a": 220,
+        "b": 200,
+        "laterA": 264,
+        "laterB": 180,
+        "changeA": 20,
+        "changeB": -10
+      },
+      "answer": 420,
+      "intermediate": 220,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          264,
+          20,
+          600
+        ],
+        [
+          "B",
+          "Paid",
+          180,
+          -10,
+          800
+        ],
+        [
+          "C",
+          "Trial",
+          120,
+          100,
+          0
+        ]
+      ],
+      "method": "reverse",
+      "headers": [
+        "Segment",
+        "Type",
+        "Later units",
+        "Change from earlier (%)",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",7,1]",
+      "scenario": {
+        "type": "reverse",
+        "a": 240,
+        "b": 220,
+        "laterA": 192,
+        "laterB": 275,
+        "changeA": -20,
+        "changeB": 25
+      },
+      "answer": 460,
+      "intermediate": 240,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          192,
+          -20,
+          600
+        ],
+        [
+          "B",
+          "Paid",
+          275,
+          25,
+          800
+        ],
+        [
+          "C",
+          "Trial",
+          130,
+          100,
+          0
+        ]
+      ],
+      "method": "reverse",
+      "headers": [
+        "Segment",
+        "Type",
+        "Later units",
+        "Change from earlier (%)",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"data-base\",\"data-base:reverse-segments\",8,1]",
+      "scenario": {
+        "type": "reverse",
+        "a": 260,
+        "b": 240,
+        "laterA": 390,
+        "laterB": 120,
+        "changeA": 50,
+        "changeB": -50
+      },
+      "answer": 500,
+      "intermediate": 260,
+      "rows": [
+        [
+          "A",
+          "Paid",
+          390,
+          50,
+          600
+        ],
+        [
+          "B",
+          "Paid",
+          120,
+          -50,
+          800
+        ],
+        [
+          "C",
+          "Trial",
+          140,
+          100,
+          0
+        ]
+      ],
+      "method": "reverse",
+      "headers": [
+        "Segment",
+        "Type",
+        "Later units",
+        "Change from earlier (%)",
+        "Later revenue"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:foundation:must\",0,0]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "before",
+            "A",
+            "B"
+          ],
+          [
+            "before",
+            "B",
+            "C"
+          ]
+        ],
+        "claim": [
+          "before",
+          "A",
+          "C"
+        ]
+      },
+      "answer": 4,
+      "intermediate": 4,
+      "rows": null,
+      "method": "must",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:foundation:could\",1,0]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "before",
+            "A",
+            "B"
+          ],
+          [
+            "before",
+            "C",
+            "D"
+          ]
+        ],
+        "claim": [
+          "before",
+          "B",
+          "C"
+        ]
+      },
+      "answer": 1,
+      "intermediate": 6,
+      "rows": null,
+      "method": "could",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:foundation:impossible\",2,0]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "before",
+            "A",
+            "B"
+          ],
+          [
+            "before",
+            "B",
+            "C"
+          ]
+        ],
+        "claim": [
+          "before",
+          "C",
+          "A"
+        ]
+      },
+      "answer": 0,
+      "intermediate": 4,
+      "rows": null,
+      "method": "impossible",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:foundation:could\",3,0]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "before",
+            "A",
+            "B"
+          ],
+          [
+            "before",
+            "A",
+            "C"
+          ]
+        ],
+        "claim": [
+          "first",
+          "A"
+        ]
+      },
+      "answer": 6,
+      "intermediate": 8,
+      "rows": null,
+      "method": "could",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:foundation:could\",4,0]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "before",
+            "A",
+            "B"
+          ],
+          [
+            "before",
+            "C",
+            "B"
+          ]
+        ],
+        "claim": [
+          "last",
+          "B"
+        ]
+      },
+      "answer": 6,
+      "intermediate": 8,
+      "rows": null,
+      "method": "could",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:foundation:must\",5,0]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "before",
+            "A",
+            "B"
+          ],
+          [
+            "before",
+            "B",
+            "C"
+          ],
+          [
+            "before",
+            "C",
+            "D"
+          ]
+        ],
+        "claim": [
+          "last",
+          "D"
+        ]
+      },
+      "answer": 1,
+      "intermediate": 1,
+      "rows": null,
+      "method": "must",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:foundation:could\",6,0]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "before",
+            "A",
+            "C"
+          ],
+          [
+            "before",
+            "B",
+            "D"
+          ]
+        ],
+        "claim": [
+          "before",
+          "A",
+          "D"
+        ]
+      },
+      "answer": 5,
+      "intermediate": 6,
+      "rows": null,
+      "method": "could",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:foundation:impossible\",7,0]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "before",
+            "A",
+            "B"
+          ],
+          [
+            "before",
+            "C",
+            "D"
+          ]
+        ],
+        "claim": [
+          "before",
+          "D",
+          "C"
+        ]
+      },
+      "answer": 0,
+      "intermediate": 6,
+      "rows": null,
+      "method": "impossible",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:foundation:must\",8,0]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "before",
+            "A",
+            "B"
+          ],
+          [
+            "before",
+            "A",
+            "C"
+          ],
+          [
+            "before",
+            "A",
+            "D"
+          ]
+        ],
+        "claim": [
+          "first",
+          "A"
+        ]
+      },
+      "answer": 6,
+      "intermediate": 6,
+      "rows": null,
+      "method": "must",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:transfer:could\",0,1]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "immediate",
+            "A",
+            "B"
+          ],
+          [
+            "before",
+            "C",
+            "D"
+          ]
+        ],
+        "claim": [
+          "before",
+          "A",
+          "D"
+        ]
+      },
+      "answer": 2,
+      "intermediate": 3,
+      "rows": null,
+      "method": "could",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:transfer:impossible\",1,1]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "before",
+            "A",
+            "B"
+          ],
+          [
+            "before",
+            "C",
+            "D"
+          ],
+          [
+            "apart",
+            "B",
+            "C"
+          ]
+        ],
+        "claim": [
+          "before",
+          "B",
+          "C"
+        ]
+      },
+      "answer": 0,
+      "intermediate": 4,
+      "rows": null,
+      "method": "impossible",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:transfer:impossible\",2,1]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "immediate",
+            "A",
+            "B"
+          ],
+          [
+            "before",
+            "C",
+            "D"
+          ]
+        ],
+        "claim": [
+          "immediate",
+          "B",
+          "A"
+        ]
+      },
+      "answer": 0,
+      "intermediate": 3,
+      "rows": null,
+      "method": "impossible",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:transfer:must\",3,1]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "before",
+            "A",
+            "B"
+          ],
+          [
+            "first",
+            "C"
+          ]
+        ],
+        "claim": [
+          "before",
+          "C",
+          "A"
+        ]
+      },
+      "answer": 3,
+      "intermediate": 3,
+      "rows": null,
+      "method": "must",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:transfer:could\",4,1]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "before",
+            "A",
+            "B"
+          ],
+          [
+            "notFirst",
+            "D"
+          ]
+        ],
+        "claim": [
+          "last",
+          "D"
+        ]
+      },
+      "answer": 3,
+      "intermediate": 9,
+      "rows": null,
+      "method": "could",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:transfer:could\",5,1]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "immediate",
+            "A",
+            "B"
+          ],
+          [
+            "immediate",
+            "C",
+            "D"
+          ]
+        ],
+        "claim": [
+          "before",
+          "A",
+          "C"
+        ]
+      },
+      "answer": 1,
+      "intermediate": 2,
+      "rows": null,
+      "method": "could",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:transfer:could\",6,1]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "before",
+            "A",
+            "B"
+          ],
+          [
+            "apart",
+            "C",
+            "D"
+          ]
+        ],
+        "claim": [
+          "before",
+          "C",
+          "D"
+        ]
+      },
+      "answer": 3,
+      "intermediate": 6,
+      "rows": null,
+      "method": "could",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:transfer:impossible\",7,1]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "before",
+            "A",
+            "B"
+          ],
+          [
+            "first",
+            "D"
+          ]
+        ],
+        "claim": [
+          "before",
+          "B",
+          "D"
+        ]
+      },
+      "answer": 0,
+      "intermediate": 3,
+      "rows": null,
+      "method": "impossible",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"brain-order\",\"brain-order:transfer:must\",8,1]",
+      "scenario": {
+        "type": "orders",
+        "labels": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ],
+        "rules": [
+          [
+            "immediate",
+            "A",
+            "B"
+          ],
+          [
+            "before",
+            "C",
+            "A"
+          ]
+        ],
+        "claim": [
+          "before",
+          "C",
+          "B"
+        ]
+      },
+      "answer": 3,
+      "intermediate": 3,
+      "rows": null,
+      "method": "must",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:foundation:independent\",0,0]",
+      "scenario": {
+        "type": "independent",
+        "pA": 0.2,
+        "pB": 0.3
+      },
+      "answer": 0.06,
+      "intermediate": 0.3,
+      "rows": null,
+      "method": "independent",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:foundation:conditional\",1,0]",
+      "scenario": {
+        "type": "without",
+        "red": 4,
+        "blue": 3
+      },
+      "answer": 0.2857142857142857,
+      "intermediate": 0.5,
+      "rows": null,
+      "method": "conditional",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:foundation:insufficient\",2,0]",
+      "scenario": {
+        "type": "joint-bounds",
+        "pA": 0.2,
+        "pB": 0.5
+      },
+      "answer": 0.2,
+      "intermediate": 0,
+      "rows": null,
+      "method": "insufficient",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:foundation:independent\",3,0]",
+      "scenario": {
+        "type": "independent",
+        "pA": 0.5,
+        "pB": 0.5
+      },
+      "answer": 0.25,
+      "intermediate": 0.5,
+      "rows": null,
+      "method": "independent",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:foundation:conditional\",4,0]",
+      "scenario": {
+        "type": "without",
+        "red": 7,
+        "blue": 4
+      },
+      "answer": 0.38181818181818183,
+      "intermediate": 0.6,
+      "rows": null,
+      "method": "conditional",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:foundation:insufficient\",5,0]",
+      "scenario": {
+        "type": "joint-bounds",
+        "pA": 0.6,
+        "pB": 0.7
+      },
+      "answer": 0.6,
+      "intermediate": 0.4999999999999997,
+      "rows": null,
+      "method": "insufficient",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:foundation:independent\",6,0]",
+      "scenario": {
+        "type": "independent",
+        "pA": 0.8,
+        "pB": 0.7
+      },
+      "answer": 0.5599999999999999,
+      "intermediate": 0.7,
+      "rows": null,
+      "method": "independent",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:foundation:conditional\",7,0]",
+      "scenario": {
+        "type": "without",
+        "red": 10,
+        "blue": 2
+      },
+      "answer": 0.6818181818181818,
+      "intermediate": 0.8181818181818182,
+      "rows": null,
+      "method": "conditional",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:foundation:insufficient\",8,0]",
+      "scenario": {
+        "type": "joint-bounds",
+        "pA": 0.8,
+        "pB": 0.4
+      },
+      "answer": 0.4,
+      "intermediate": 0.2500000000000002,
+      "rows": null,
+      "method": "insufficient",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:transfer:conditional\",0,1]",
+      "scenario": {
+        "type": "conditional-table",
+        "totalA": 40,
+        "totalOther": 60,
+        "successA": 10,
+        "successOther": 20
+      },
+      "answer": 0.1,
+      "intermediate": 0.25,
+      "rows": [
+        [
+          "A",
+          10,
+          30
+        ],
+        [
+          "Not A",
+          20,
+          40
+        ]
+      ],
+      "method": "conditional",
+      "headers": [
+        "Group",
+        "Successes",
+        "Failures"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:transfer:independent\",1,1]",
+      "scenario": {
+        "type": "replacement",
+        "red": 4,
+        "blue": 3
+      },
+      "answer": 0.32653061224489793,
+      "intermediate": 0.5714285714285714,
+      "rows": null,
+      "method": "independent",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:transfer:insufficient\",2,1]",
+      "scenario": {
+        "type": "conditional-bounds",
+        "pA": 0.6,
+        "pB": 0.7
+      },
+      "answer": 0.8571428571428572,
+      "intermediate": 0.4285714285714283,
+      "rows": null,
+      "method": "insufficient",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:transfer:conditional\",3,1]",
+      "scenario": {
+        "type": "conditional-table",
+        "totalA": 70,
+        "totalOther": 90,
+        "successA": 25,
+        "successOther": 26
+      },
+      "answer": 0.15625,
+      "intermediate": 0.35714285714285715,
+      "rows": [
+        [
+          "A",
+          25,
+          45
+        ],
+        [
+          "Not A",
+          26,
+          64
+        ]
+      ],
+      "method": "conditional",
+      "headers": [
+        "Group",
+        "Successes",
+        "Failures"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:transfer:independent\",4,1]",
+      "scenario": {
+        "type": "replacement",
+        "red": 7,
+        "blue": 4
+      },
+      "answer": 0.4049586776859504,
+      "intermediate": 0.6363636363636364,
+      "rows": null,
+      "method": "independent",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:transfer:insufficient\",5,1]",
+      "scenario": {
+        "type": "conditional-bounds",
+        "pA": 0.7,
+        "pB": 0.5
+      },
+      "answer": 1,
+      "intermediate": 0.3999999999999999,
+      "rows": null,
+      "method": "insufficient",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:transfer:conditional\",6,1]",
+      "scenario": {
+        "type": "conditional-table",
+        "totalA": 100,
+        "totalOther": 120,
+        "successA": 40,
+        "successOther": 32
+      },
+      "answer": 0.18181818181818182,
+      "intermediate": 0.4,
+      "rows": [
+        [
+          "A",
+          40,
+          60
+        ],
+        [
+          "Not A",
+          32,
+          88
+        ]
+      ],
+      "method": "conditional",
+      "headers": [
+        "Group",
+        "Successes",
+        "Failures"
+      ]
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:transfer:independent\",7,1]",
+      "scenario": {
+        "type": "replacement",
+        "red": 10,
+        "blue": 2
+      },
+      "answer": 0.6944444444444445,
+      "intermediate": 0.8333333333333334,
+      "rows": null,
+      "method": "independent",
+      "headers": null
+    },
+    {
+      "key": "[\"decision:1\",\"prob-method\",\"prob-method:transfer:insufficient\",8,1]",
+      "scenario": {
+        "type": "conditional-bounds",
+        "pA": 0.8,
+        "pB": 0.9
+      },
+      "answer": 0.888888888888889,
+      "intermediate": 0.7777777777777779,
+      "rows": null,
+      "method": "insufficient",
+      "headers": null
+    }
+  ]
+}
