@@ -16,10 +16,11 @@ const QuantLearning = (() => {
     const latest = [...new Map(eligible.map(e=>[e.semanticKey,e])).values()].sort((a,b)=>a.at-b.at);
     const independent = latest.filter(e=>e.correct);
     const assessments = latest.slice(-5);
-    const practiced = assessments.length >= 5 && assessments.filter(e=>e.correct).length >= 4 && new Set(assessments.map(e=>e.lessonId)).size >= 2 && new Set(independent.map(e=>e.familyId)).size >= 2 && independent.some(e=>e.isTransfer);
+    const coversMethods=items=>(C.get(skillId)?.requiredMethods || []).every(method=>items.some(e=>e.methodTag===method));
+    const practiced = assessments.length >= 5 && assessments.filter(e=>e.correct).length >= 4 && new Set(assessments.map(e=>e.lessonId)).size >= 2 && new Set(independent.map(e=>e.familyId)).size >= 2 && independent.some(e=>e.isTransfer) && coversMethods(independent);
     const novel = [...new Map(clean.filter(e=>e.firstTry).map(e=>[e.semanticKey,e])).values()];
     const novelAssessments=events.filter(e=>e.contentVersion===2 && !e.assisted && e.firstTry && ['check','diagnostic','review'].includes(e.stage)).slice(-5);
-    const novelReady=novelAssessments.length>=5 && novelAssessments.filter(e=>e.correct).length>=4 && new Set(novelAssessments.map(e=>e.lessonId)).size>=2 && new Set(novel.map(e=>e.familyId)).size>=2 && novel.some(e=>e.isTransfer);
+    const novelReady=novelAssessments.length>=5 && novelAssessments.filter(e=>e.correct).length>=4 && new Set(novelAssessments.map(e=>e.lessonId)).size>=2 && new Set(novel.map(e=>e.familyId)).size>=2 && novel.some(e=>e.isTransfer) && coversMethods(novel);
     const recovered=practiced && !novelReady;
     const qualifyingBaseline=Math.min(Infinity,...eligible.filter(e=>e.correct).map(e=>e.at));
     const retained = practiced && Number.isFinite(qualifyingBaseline) && eligible.some(e=>e.correct && e.stage==='review' && e.at-qualifyingBaseline >= 7*DAY);
@@ -149,10 +150,11 @@ const QuantLearning = (() => {
       const constructionCorrect=!q.construction || Math.abs(constructionValue-q.construction.answer)<=q.tolerance;
       const correct=!cmd.dontKnow && numericalCorrect && reasonCorrect && constructionCorrect;
       const assisted=lesson.assisted || lesson.stage==='guided';
-      const event={id:cmd.eventId,kind:'attempt',lessonId:lesson.id,skillId:lesson.skillId,variant:q.id,familyId:q.familyId,semanticKey:q.semanticKey,contentVersion:2,gradingVersion:2,isTransfer:q.transfer,firstTry:!seen(state,q),retest:seen(state,q) && now-lastExposure(state,q)>=7*DAY,selectedReason:cmd.reason || null,construction:constructionValue,stage:lesson.stage,correct,assisted,
+      const event={id:cmd.eventId,kind:'attempt',lessonId:lesson.id,skillId:lesson.skillId,variant:q.id,familyId:q.familyId,methodTag:q.methodTag || null,semanticKey:q.semanticKey,contentVersion:2,gradingVersion:2,isTransfer:q.transfer,firstTry:!seen(state,q),retest:seen(state,q) && now-lastExposure(state,q)>=7*DAY,selectedReason:cmd.reason || null,construction:constructionValue,stage:lesson.stage,correct,assisted,
         dontKnow:!!cmd.dontKnow,error:correct?null:cmd.dontKnow?'not yet known':q.kind==='code'?'code tests failed':!reasonCorrect?'reason mismatch':!constructionCorrect?'construction mismatch':'answer mismatch',at:now,elapsedMs:now-lesson.stepStartedAt>600000?null:Math.max(0,now-lesson.stepStartedAt)};
       state.events.push(event);
-      lesson.feedback={correct,solution:q.solution,assisted,stage:lesson.stage,eventId:event.id};
+      lesson.feedback={correct,solution:q.solution,assisted,stage:lesson.stage,eventId:event.id,
+        diagnosis:!cmd.dontKnow && !constructionCorrect ? C.diagnose(q,constructionValue) : null};
       lesson.draft='';lesson.hints=0;delete lesson.teaching;
       if (!correct) {lesson.stage='teach';lesson.assisted=true;lesson.reason='Review the explanation and example, then try a guided variation.';}
       else if (assisted) {lesson.stage='check';lesson.assisted=false;lesson.seed=++state.serial;lesson.reason='Now solve a new variation without hints.';}

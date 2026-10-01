@@ -26,8 +26,192 @@ const QuantCurriculum = (() => {
   ].map(([id,mode,track,name,prerequisites,explanation,example,hints]) => ({id,mode,track,name,prerequisites,explanation,example,hints}));
   const Applied=typeof QuantApplied!=='undefined'?QuantApplied:require('./applied');
   skills.push(...Applied.skills);
+  // Decision-first units stay within the existing number + reason + intermediate contract.
+  const decisionSkills = [
+    {id:'data-weighted',mode:'math',track:'arithmetic',name:'Weighted rates from tables',prerequisites:['arith-fraction'],
+      objective:'Select relevant rows and combine counts or time-weighted rates with the correct denominator.',
+      explanation:'Read the population, period and units before calculating. An overall success rate is total successes divided by total opportunities, not the unweighted mean of group percentages. For throughput, rate × hours gives work; divide total work by total hours. Exclude rows outside the requested population.',
+      example:'Live groups: 80 successes / 100 requests and 10 / 20. Overall = 90/120 = 75%, not (80% + 50%)/2 = 65%. A pilot group outside the live population is excluded. For 2 hours at 12 jobs/hour and 4 hours at 6, throughput = (24+24)/6 = 8 jobs/hour.',
+      commonError:'Averaging group rates equally despite unequal denominators, or including an excluded row.'},
+    {id:'data-base',mode:'math',track:'arithmetic',name:'Percentage bases in tables',prerequisites:['data-weighted','arith-return'],
+      objective:'Choose the relevant starting base for a percentage change and reconstruct earlier counts from different segment changes.',
+      explanation:'Percentage change is (later − earlier) / earlier × 100. Aggregate the relevant counts before computing the aggregate change. When later counts and segment changes are supplied, divide each later count by its own growth factor before adding; different segment percentages cannot be averaged to invert the total.',
+      example:'Paid segments change 100 → 120 and 200 → 180. Total change = (300−300)/300 = 0%, despite segment changes +20% and −10%. To reverse the changes: 120/1.2 + 180/.9 = 300. A trial segment and revenue column do not answer a question about paid unit counts.',
+      commonError:'Using the final count as the change base, or applying one segment percentage to the combined total.'},
+    {id:'brain-order',mode:'brainteasers',track:'reasoning',name:'Constraint orders: must and could',prerequisites:['brain-cases'],
+      objective:'Count feasible orders and statement witnesses to distinguish must, could but need not, and impossible.',
+      explanation:'Keep all rules active. A must statement holds in every feasible order; could but need not holds in at least one and fails in at least one; impossible holds in none. A witness proves possibility. To reject must, give a feasible counterexample. Enumeration must cover every order without duplicating one. An immediately-before rule also requires adjacency.',
+      example:'A, B, C each appear once; A is before B. Feasible orders: ABC, ACB, CAB. A before B is must (3/3); A first is could but need not (2/3; CAB is a counterexample); B before A is impossible (0/3). This exercise checks counts and classification, not a written general proof.',
+      commonError:'Treating one feasible witness as proof of must, or dropping an adjacency/exclusion rule.',
+      requiredMethods:['must','could','impossible']},
+    {id:'prob-method',mode:'math',track:'probability',name:'Choose a probability method',prerequisites:['prob-independent'],
+      objective:'Choose independent or conditional multiplication, and identify when marginal rates leave a joint or conditional probability undetermined.',
+      explanation:'Always P(A and B) = P(A) × P(B | A) when P(A)>0. Independence permits replacing P(B | A) with P(B); marginals alone do not. Drawing without replacement changes the second denominator and favorable count. If only marginals are known, max(0, P(A)+P(B)−1) ≤ P(A and B) ≤ min(P(A),P(B)). These bounds describe several possible dependencies, not one exact probability. Divide joint bounds by P(B)>0 to bound P(A | B).',
+      example:'Bag: 3 red, 2 blue. Without replacement, two reds have probability (3/5)×(2/4)=3/10; with replacement and independent uniform draws, (3/5)²=9/25. If P(A)=.6 and P(B)=.5 alone, joint probability can range .1 to .5: .3 is possible but is not determined.',
+      commonError:'Multiplying marginals without independence, or claiming an exact probability from bounds.',
+      requiredMethods:['independent','conditional','insufficient']}
+  ];
+  skills.push(...decisionSkills);
+  const mod9=seed=>((seed%9)+9)%9;
+  const fmt=n=>String(Number(n.toFixed(6)));
+  const methodOptions=[
+    {value:'independent',label:'Independence is explicit: multiply marginal probabilities.'},
+    {value:'conditional',label:'Use the supplied or updated conditional probability for the second event.'},
+    {value:'insufficient',label:'The exact probability is undetermined; only attainable bounds follow from the marginals.'}
+  ];
+  function orders(labels) {
+    return labels.length?labels.flatMap((x,i)=>orders(labels.filter((_,j)=>i!==j)).map(rest=>[x,...rest])):[[]];
+  }
+  function orderRule(order,rule) {
+    const [type,a,b]=rule,ai=order.indexOf(a),bi=order.indexOf(b);
+    if(type==='before')return ai<bi;
+    if(type==='immediate')return ai+1===bi;
+    if(type==='apart')return Math.abs(ai-bi)!==1;
+    if(type==='first')return ai===0;
+    if(type==='last')return ai===order.length-1;
+    if(type==='notFirst')return ai!==0;
+    throw Error('Unknown order rule');
+  }
+  function ruleText([type,a,b]) {
+    return ({before:`${a} before ${b}`,immediate:`${a} immediately before ${b}`,apart:`${a} and ${b} are not adjacent`,first:`${a} first`,last:`${a} last`,notFirst:`${a} is not first`})[type];
+  }
+  function decisionQuestion(id,seed,level) {
+    const s=get(id),v=mod9(seed),q={id:`${id}:${v}:${level?1:0}`,skillId:id,seed,kind:'number',transfer:!!level,tolerance:.00005,explanation:s.explanation,workedExample:s.example};
+    const intermediate=(prompt,answer)=>q.construction={prompt,answer};
+    const diagnose=(value,message)=>{if(Math.abs(value-q.construction.answer)>.00005)(q.feedbackRules ||= []).push({intermediate:value,message});};
+    const reason=(correct,label,wrong)=>{q.correctReason=correct;q.reasonOptions=[{value:correct,label},{value:'unsupported',label:wrong}];};
+    if(id==='data-weighted') {
+      q.familyId=`${id}:${level?'time':'counts'}`;
+      if(!level) {
+        const a=200+100*v,b=50+10*v,sa=Math.round(a*(.7+.05*(v%3))),sb=Math.round(b*(.2+.1*(v%3))),pilot=40+10*v;
+        q.table={caption:'Service requests this week. Each request belongs to one row.',headers:['Group','Requests','Completed','Cost per request'],rows:[['North live',a,sa,4],['South live',b,sb,9],['Pilot (excluded)',pilot,pilot,2]]};
+        q.prompt='For the LIVE groups only, what percentage of requests completed? Enter the percentage without %. Cost is not part of this calculation.';
+        q.answer=100*(sa+sb)/(a+b);intermediate('How many live requests form the denominator?',a+b);
+        q.scenario={type:'counts',a,b,sa,sb,pilot};
+        q.solution=`Relevant totals: ${fmt(sa+sb)} completed / ${a+b} requests. Overall = ${fmt(q.answer)}%. Group percentages have different denominators; exclude the pilot.`;
+        diagnose(a+b+pilot,`Your denominator includes the ${pilot} pilot requests. Restrict both totals to the two live rows.`);
+        reason('counts','Add live completed counts and live request counts before dividing.','Average the two live percentages with equal weight.');
+        q.hints=['Mark the two live rows; costs and the pilot do not answer the question.','Add completed counts and request counts separately, then divide and convert to %.'];
+      } else {
+        const hoursA=2+v%3,hoursB=5+v%2,rateA=12+2*v,rateB=4+v;
+        q.table={caption:'Shift summary. Rates are constant within each listed interval.',headers:['Interval','Hours','Jobs per hour','Break minutes (already excluded from hours)'],rows:[['Current morning',hoursA,rateA,10],['Current afternoon',hoursB,rateB,20],['Previous day (excluded)',8,30,15]]};
+        q.prompt='What was the overall throughput in jobs per hour across the two CURRENT intervals? The listed hours already exclude breaks.';
+        const jobs=hoursA*rateA+hoursB*rateB;q.answer=jobs/(hoursA+hoursB);intermediate('How many jobs were completed across the current intervals?',jobs);
+        q.scenario={type:'time',hoursA,hoursB,rateA,rateB};
+        q.solution=`Jobs = ${hoursA}×${rateA} + ${hoursB}×${rateB} = ${jobs}. Hours = ${hoursA+hoursB}. Throughput = ${fmt(q.answer)} jobs/hour. Do not subtract breaks twice or average rates equally.`;
+        diagnose(rateA+rateB,`Your intermediate is the sum of the two rates (${rateA}+${rateB}), in jobs/hour. Convert each rate to jobs by multiplying by its hours before adding.`);
+        reason('time','Multiply each rate by its interval hours, then divide total jobs by total hours.','Treat each interval as one hour regardless of its duration.');
+        q.hints=['The denominator is time, and rate × time gives jobs. Ignore the previous day.','Weight each rate by its listed hours; breaks have already been excluded.'];
+      }
+    } else if(id==='data-base') {
+      q.familyId=`${id}:${level?'reverse-segments':'aggregate-change'}`;
+      const a=100+20*v,b=80+20*v,trial=60+10*v;
+      if(!level) {
+        const changeA=20+5*v,changeB=-(10+v*2),laterA=a+changeA,laterB=b+changeB;
+        q.table={caption:'Units shipped in two consecutive months. Paid segments are disjoint.',headers:['Segment','Earlier units','Later units','Later revenue'],rows:[['Paid A',a,laterA,500],['Paid B',b,laterB,900],['Trial (excluded)',trial,trial*2,0]]};
+        q.prompt='For PAID units in total, what was the percentage change from the earlier month to the later month? Enter the signed percentage without %. Use unit counts, not revenue.';
+        q.answer=100*(changeA+changeB)/(a+b);intermediate('What starting unit count is the percentage base?',a+b);
+        q.scenario={type:'aggregate',a,b,laterA,laterB,trial};
+        q.solution=`Earlier paid base ${a+b}; later paid total ${laterA+laterB}. Change = (${laterA+laterB}−${a+b})/${a+b}×100 = ${fmt(q.answer)}%.`;
+        diagnose(laterA+laterB,`Your base is the later paid total ${laterA+laterB}. Change from earlier to later uses the earlier total ${a+b}.`);
+        diagnose(a+b+trial,`Your base includes ${trial} trial units. The requested population is paid units in both months.`);
+        reason('base','Use earlier paid units as the base and combine paid counts first.','Divide the change by the later paid total.');
+        q.hints=['Select paid rows and the unit columns for both months.','Subtract earlier from later; divide by earlier paid units, then multiply by 100.'];
+      } else {
+        const changeA=[20,-20,50][v%3],changeB=[-10,25,-50][v%3],laterA=a*(1+changeA/100),laterB=b*(1+changeB/100);
+        q.table={caption:'Later month counts and each segment’s change from its own earlier count.',headers:['Segment','Later units','Change from earlier (%)','Later revenue'],rows:[['Paid A',laterA,changeA,600],['Paid B',laterB,changeB,800],['Trial (excluded)',trial,100,0]]};
+        q.prompt='Reconstruct the TOTAL EARLIER paid unit count. Each segment percentage uses its own earlier count. Enter units, not a percentage.';
+        q.answer=a+b;intermediate('How many earlier units were in Paid A?',a);
+        q.scenario={type:'reverse',a,b,laterA,laterB,changeA,changeB};
+        q.solution=`Earlier A = ${fmt(laterA)}/${fmt(1+changeA/100)} = ${a}; earlier B = ${fmt(laterB)}/${fmt(1+changeB/100)} = ${b}. Total earlier paid units = ${a+b}. Reverse each segment before adding.`;
+        diagnose(laterA*(1-changeA/100),`Your intermediate equals taking ${changeA}% off the later A count. Undo the change by dividing ${fmt(laterA)} by ${fmt(1+changeA/100)}, using A’s earlier base.`);
+        reason('reverse','Divide each segment’s later units by its own growth factor, then add.','Average the segment percentage changes and apply that factor to the combined later count.');
+        q.hints=['Write later = earlier × (1 + change/100) for each paid segment.','Divide by each segment’s own factor. A negative change gives a factor below 1.'];
+      }
+    } else if(id==='brain-order') {
+      const base=[
+        [[['before','A','B'],['before','B','C']],['before','A','C']],
+        [[['before','A','B'],['before','C','D']],['before','B','C']],
+        [[['before','A','B'],['before','B','C']],['before','C','A']],
+        [[['before','A','B'],['before','A','C']],['first','A']],
+        [[['before','A','B'],['before','C','B']],['last','B']],
+        [[['before','A','B'],['before','B','C'],['before','C','D']],['last','D']],
+        [[['before','A','C'],['before','B','D']],['before','A','D']],
+        [[['before','A','B'],['before','C','D']],['before','D','C']],
+        [[['before','A','B'],['before','A','C'],['before','A','D']],['first','A']]
+      ];
+      const transfer=[
+        [[['immediate','A','B'],['before','C','D']],['before','A','D']],
+        [[['before','A','B'],['before','C','D'],['apart','B','C']],['before','B','C']],
+        [[['immediate','A','B'],['before','C','D']],['immediate','B','A']],
+        [[['before','A','B'],['first','C']],['before','C','A']],
+        [[['before','A','B'],['notFirst','D']],['last','D']],
+        [[['immediate','A','B'],['immediate','C','D']],['before','A','C']],
+        [[['before','A','B'],['apart','C','D']],['before','C','D']],
+        [[['before','A','B'],['first','D']],['before','B','D']],
+        [[['immediate','A','B'],['before','C','A']],['before','C','B']]
+      ];
+      const [rules,claim]=(level?transfer:base)[v],valid=orders(['A','B','C','D']).filter(o=>rules.every(r=>orderRule(o,r))),witness=valid.filter(o=>orderRule(o,claim));
+      const classification=!witness.length?'impossible':witness.length===valid.length?'must':'could';
+      q.methodTag=classification;q.familyId=`${id}:${level?'transfer':'foundation'}:${classification}`;
+      q.scenario={type:'orders',labels:['A','B','C','D'],rules,claim};
+      q.prompt=`Schedule A, B, C, D once each in four slots. Rules: ${rules.map(ruleText).join('; ')}. Statement: ${ruleText(claim)}. How many feasible orders satisfy the statement? Also classify it as must, could but need not, or impossible.`;
+      q.answer=witness.length;intermediate('How many orders obey ALL the rules, before filtering by the statement?',valid.length);
+      q.correctReason=classification;q.reasonOptions=[{value:'must',label:'Must: every feasible order satisfies it.'},{value:'could',label:'Could but need not: some feasible orders satisfy it and some do not.'},{value:'impossible',label:'Impossible: no feasible order satisfies it.'}];
+      q.solution=`All feasible orders: ${valid.map(o=>o.join('')).join(', ')}. Statement holds in ${witness.length} of ${valid.length}: ${classification==='could'?'could but need not':classification}.${classification==='could'?` Witness ${witness[0].join('')}; counterexample ${valid.find(o=>!orderRule(o,claim)).join('')}.`:''}`;
+      diagnose(24,'Your intermediate is 4! = 24 unrestricted orders. Filter by every rule before evaluating the statement.');
+      q.hints=['Enumerate by first slot, removing any partial order that violates a rule. Keep adjacency rules active.','Count all feasible orders first, then statement witnesses: all means must, some but not all means could but need not, zero means impossible.'];
+    } else if(id==='prob-method') {
+      const type=v%3;let method;
+      q.reasonOptions=methodOptions.map(o=>({...o}));
+      if((!level&&type===0)||(level&&type===1)) {
+        method='independent';const red=3+v,blue=2+v%3;
+        if(level) {
+          const p=red/(red+blue);q.prompt=`A bag has ${red} red and ${blue} blue tokens. Draw uniformly, REPLACE the token, remix, then draw uniformly again, independently of the first draw. What is P(two reds)?`;
+          q.answer=p*p;intermediate('What is P(second red | first red)?',p);q.scenario={type:'replacement',red,blue};
+          q.solution=`Replacement restores the ${red+blue} tokens, and independence is stated. Second-red probability ${red}/${red+blue}; joint = (${red}/${red+blue})² = ${fmt(q.answer)}.`;
+          diagnose((red-1)/(red+blue-1),'Your conditional rate removes the first token. With replacement, both the red count and total return to their original values.');
+        } else {
+          const pA=(2+v)/10,pB=(3+v%3)/10;q.prompt=`Events A and B are explicitly independent, with P(A)=${pA} and P(B)=${pB}. What is P(A and B)?`;
+          q.answer=pA*pB;intermediate('What is P(B | A)?',pB);q.scenario={type:'independent',pA,pB};
+          q.solution=`Independence gives P(B | A)=P(B)=${pB}. Joint = ${pA}×${pB} = ${fmt(q.answer)}.`;
+          diagnose(pA,`Your conditional intermediate equals P(A)=${pA}. Independence leaves P(B | A) equal to the stated P(B)=${pB}.`);
+        }
+        q.hints=['Find the explicit independence assumption; replacement alone should not be silently assumed to imply independent sampling.','Under the stated independent sampling, the second conditional rate equals its marginal rate. Multiply once.'];
+      } else if((!level&&type===1)||(level&&type===0)) {
+        method='conditional';
+        if(!level) {
+          const red=3+v,blue=2+v%3,total=red+blue;q.prompt=`A bag has ${red} red and ${blue} blue tokens. Draw two uniformly WITHOUT replacement. What is P(two reds)?`;
+          q.answer=red/total*(red-1)/(total-1);intermediate('What is P(second red | first red)?',(red-1)/(total-1));q.scenario={type:'without',red,blue};
+          q.solution=`First red ${red}/${total}; given that red, ${red-1} reds remain among ${total-1} tokens. Joint = ${red}/${total}×${red-1}/${total-1} = ${fmt(q.answer)}.`;
+          diagnose(red/total,`Your second conditional rate is the original ${red}/${total}. After a red is removed, use ${red-1} remaining reds out of ${total-1} tokens.`);
+        } else {
+          const totalA=40+10*v,totalOther=60+10*v,successA=10+5*v,successOther=20+v;
+          q.table={caption:'Disjoint observed groups. A is membership in Group A; B is a success.',headers:['Group','Successes','Failures'],rows:[['A',successA,totalA-successA],['Not A',successOther,totalOther-successOther]]};
+          q.prompt='A record is selected uniformly from this table. What is P(A and B), meaning Group A AND success? Do not assume independence.';
+          q.answer=successA/(totalA+totalOther);intermediate('What is P(B | A)?',successA/totalA);q.scenario={type:'conditional-table',totalA,totalOther,successA,successOther};
+          q.solution=`P(B | A)=${successA}/${totalA}; P(A)=${totalA}/${totalA+totalOther}. Joint = ${successA}/${totalA+totalOther} = ${fmt(q.answer)}. The conditional row, not the marginal success rate, controls the second factor.`;
+          diagnose((successA+successOther)/(totalA+totalOther),`Your intermediate is the whole-table success rate. Conditioning on A restricts the denominator to ${totalA} Group A records and the numerator to ${successA} successes.`);
+        }
+        q.hints=['Condition on the first event: what denominator and favorable outcomes remain?','Use P(A) × P(B | A). Without replacement update both counts; a table condition restricts the row.'];
+      } else {
+        method='insufficient';const pA=(level?6:2)+Math.floor(v/3),pB=level?7:5,pa=pA/10,pb=pB/10,low=Math.max(0,pa+pb-1),high=Math.min(pa,pb);
+        q.prompt=`Only P(A)=${pa} and P(B)=${pb} are given; their dependence is unknown. Select whether the exact ${level?'conditional P(A | B)':'joint P(A and B)'} is determined, then enter its LARGEST possible value consistent with these marginals.`;
+        q.answer=level?high/pb:high;intermediate(`What is the SMALLEST possible ${level?'P(A | B)':'P(A and B)'}?`,level?low/pb:low);q.scenario={type:level?'conditional-bounds':'joint-bounds',pA:pa,pB:pb};
+        q.solution=`Joint bounds: max(0,${pa}+${pb}−1)=${fmt(low)} to min(${pa},${pb})=${fmt(high)}.${level?` Divide both by P(B)=${pb}: conditional bounds ${fmt(low/pb)} to ${fmt(high/pb)}.`:''} Both extremes are attainable, so the exact probability is undetermined.`;
+        diagnose(level?pa:pa*pb,`Your lower-bound intermediate equals the ${level?'independent conditional rate':'product of the marginals'}. Independence is not supplied. Use the attainable overlap bounds${level?' and divide by P(B)':''}.`);
+        q.hints=['Several joint distributions have these marginals. Do not invent independence.','Joint overlap is at least max(0, P(A)+P(B)−1) and at most min(P(A),P(B)). For P(A | B), divide overlap bounds by the positive P(B).'];
+      }
+      q.correctReason=method;q.methodTag=method;q.familyId=`${id}:${level?'transfer':'foundation'}:${method}`;
+    } else throw Error('Unknown decision skill');
+    // Rotate choices without changing the actual problem identity or answer key.
+    if(v%2)q.reasonOptions.reverse();
+    return q;
+  }
+
   const get = id => skills.find(s => s.id === id);
   function buildQuestion(id, seed, harder = false, level = 0) {
+    if(decisionSkills.some(s=>s.id===id))return decisionQuestion(id,seed,level);
     if(id.startsWith('market-'))return Applied.question(id,seed,harder,level);
     const s = get(id); if (!s) throw Error('Unknown skill');
     const n = (seed % 9) + 2 + (harder ? 5 : 0);
@@ -94,12 +278,12 @@ const QuantCurriculum = (() => {
     }
   }
   const order=['arith-percent','arith-fraction','arith-return','prob-complement','prob-conditional','prob-independent','prob-bayes','prob-ev','prob-variance','brain-cases','brain-pigeon','brain-balance','brain-invariant','brain-symmetry','brain-bounds','brain-conditioning','code-pnl','code-ev','code-simulation','code-variance','code-call'];
-  order.push(...Applied.skills.map(s=>s.id));
+  order.push(...decisionSkills.map(s=>s.id),...Applied.skills.map(s=>s.id));
   skills.sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id));
   const objectives={
     'arith-percent':'Calculate and invert a percentage of a stated base.', 'arith-fraction':'Translate among fractions, percentages and part-to-whole ratios.', 'arith-return':'Compound growth factors and solve a recovery-return problem.',
-    'prob-complement':'Use an exhaustive partition to find a missing probability.', 'prob-conditional':'Construct the conditioned sample space and its denominator.', 'prob-independent':'Multiply only under independence and use complements for repeated trials.', 'prob-bayes':'Include base rates and false positives when reversing a condition.', 'prob-ev':'Compute expected net payoff and derive a fair entry fee.', 'prob-variance':'Compute dispersion and variance under scaling and translation.',
-    'brain-cases':'Count disjoint exhaustive cases without double counting.', 'brain-pigeon':'Construct a worst case and identify the first guaranteed repetition.', 'brain-balance':'Connect an information lower bound with a balanced construction.', 'brain-invariant':'Identify a preserved residue to rule out an unreachable state.', 'brain-symmetry':'Count favorable relative orders justified by relabeling symmetry.', 'brain-bounds':'Prove a lower bound and provide an attaining allocation.', 'brain-conditioning':'Combine first-step branches with their correct weights.',
+    'prob-complement':'Use an exhaustive partition to find a missing probability.', 'prob-conditional':'Identify the conditioned denominator and calculate the probability.', 'prob-independent':'Multiply only under independence and use complements for repeated trials.', 'prob-bayes':'Include base rates and false positives when reversing a condition.', 'prob-ev':'Compute expected net payoff and derive a fair entry fee.', 'prob-variance':'Compute dispersion and variance under scaling and translation.',
+    'brain-cases':'Count disjoint exhaustive cases without double counting.', 'brain-pigeon':'Calculate a worst-case avoiding count and identify the first guaranteed repetition.', 'brain-balance':'Evaluate an information bound and the size of a balanced first split; recognize the stated strategy.', 'brain-invariant':'Identify a preserved residue to rule out an unreachable state.', 'brain-symmetry':'Count favorable relative orders justified by relabeling symmetry.', 'brain-bounds':'Check a capacity lower bound and counts in a stated attaining allocation.', 'brain-conditioning':'Combine first-step branches with their correct weights.',
     'code-pnl':'Implement signed P&L and rearrange it to solve for an exit price.', 'code-ev':'Aggregate weighted outcomes and subtract a fixed fee.', 'code-simulation':'Estimate single and joint events from reproducible simulated draws.', 'code-variance':'Implement population variance and exploit shift invariance.', 'code-call':'Separate expiry payoff from profit and compose a call spread.'
   };
   const errors={
@@ -108,7 +292,7 @@ const QuantCurriculum = (() => {
     'brain-cases':'Counting the overlap twice.', 'brain-pigeon':'Giving a possible result instead of a worst-case guarantee.', 'brain-balance':'Stating a bound without an achievable comparison strategy.', 'brain-invariant':'Tracking examples without identifying what the operation preserves.', 'brain-symmetry':'Assuming symmetry when sampling is not uniform.', 'brain-bounds':'Giving a lower bound without an attaining construction.', 'brain-conditioning':'Averaging branches without their probabilities.',
     'code-pnl':'Losing the sign of a short position.', 'code-ev':'Pairing weights with the wrong outcomes.', 'code-simulation':'Using a strict threshold as an inclusive threshold or confusing a sample estimate with an exact probability.', 'code-variance':'Dividing by n - 1 when population variance is requested.', 'code-call':'Confusing payoff with profit or forgetting the short leg.'
   };
-  for(const s of skills) {s.objective=objectives[s.id] || s.objective;s.commonError=errors[s.id] || s.commonError;s.contentVersion=1;}
+  for(const s of skills) {s.objective=objectives[s.id] || s.objective;s.commonError=errors[s.id] || s.commonError;s.contentVersion=1;s.scopeNote='Practiced means evidence on this bounded local unit. Retained means delayed retrieval; neither establishes broad interview readiness.';}
   const reasons={
     'brain-cases':['cases','Partition into disjoint cases and add their counts.','Multiply the counts of overlapping cases.'],
     'brain-pigeon':['worst','Fill every category to one below the target, then add one.','The most likely arrangement determines a guarantee.'],
@@ -140,7 +324,7 @@ const QuantCurriculum = (() => {
     'code-simulation':['Both coordinates must be strictly below the threshold.', 'Use a < threshold and b < threshold; equality must fail for either coordinate.']
   };
   function question(id,seed,harder=false,level=0) {
-    const q=buildQuestion(id,seed,harder,level);q.familyId=`${id}:${level?'transfer':'foundation'}`;
+    const q=buildQuestion(id,seed,harder,level);q.familyId ||= `${id}:${level?'transfer':'foundation'}`;
     if(level) q.hints=transferHints[id] || q.hints;
     if(reasons[id]) {const [value,good,bad]=reasons[id];q.correctReason=value;
       q.reasonOptions=[{value,label:good},{value:'unsupported',label:bad}];
@@ -166,8 +350,13 @@ const QuantCurriculum = (() => {
     if(q.kind==='number')q.tolerance=0.00005;
     // Content identity is independent of generation IDs, seeds and presentation order.
     q.semanticKey=JSON.stringify([1,q.skillId,q.familyId,q.prompt,q.functionName || null,q.testCases || null,q.answer ?? null,q.solution,q.construction || null]);
+    if(decisionSkills.some(s=>s.id===id))q.semanticKey=JSON.stringify([1,q.skillId,q.familyId,q.prompt,q.table || null,q.answer,q.solution,q.construction,q.correctReason]);
     return q;
   }
-  return {skills,get,question};
+  function diagnose(q,intermediate) {
+    if(intermediate===null)return null;
+    return q.feedbackRules?.find(rule=>Math.abs(intermediate-rule.intermediate)<=q.tolerance)?.message || null;
+  }
+  return {skills,get,question,diagnose};
 })();
 if (typeof module !== 'undefined') module.exports = QuantCurriculum;

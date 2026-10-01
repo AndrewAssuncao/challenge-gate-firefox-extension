@@ -57,12 +57,13 @@
     </div>
 
     <section id="quant-challenge" class="hidden" aria-label="Quant lesson">
-      <div id="quant-track-wrap"><label for="quant-track">Math track </label><select id="quant-track"><option value="arithmetic">Mental arithmetic</option><option value="probability">Probability &amp; expected value</option></select></div>
+      <div id="quant-track-wrap"><label for="quant-track">Math track </label><select id="quant-track"><option value="arithmetic">Arithmetic &amp; data</option><option value="probability">Probability &amp; expected value</option></select></div>
       <h2 id="quant-title"></h2><p id="quant-status"></p><p id="quant-reason"></p>
+      <p id="quant-scope"></p>
       <div id="quant-feedback" role="status"></div>
       <div id="quant-teaching" hidden><p id="quant-ai-label" hidden>Personalized AI explanation — assessment uses the local answer key.</p><p id="quant-objective"></p><p id="quant-explanation"></p><p id="quant-contrast"></p><h3>Worked example</h3><pre id="quant-example"></pre><p id="quant-connection"></p><p id="quant-next-step"></p></div>
       <button id="quant-next" class="gate-btn" hidden>Try guided practice</button>
-      <div id="quant-question"><p id="quant-prompt"></p><p id="quant-hints"></p></div>
+      <div id="quant-question"><p id="quant-prompt"></p><div id="quant-data" hidden></div><p id="quant-hints"></p></div>
       <form id="quant-form">
         <div class="quant-field" id="quant-reason-field"><label id="quant-reason-label" for="quant-reason-choice" hidden>Why does that answer follow?</label><select id="quant-reason-choice" hidden></select></div>
         <div class="quant-field" id="quant-construction-field"><label id="quant-construction-label" for="quant-construction" hidden></label><input id="quant-construction" hidden autocomplete="off" inputmode="numeric"></div>

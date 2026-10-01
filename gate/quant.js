@@ -91,6 +91,7 @@ const QuantChallenge = (() => {
     text('quant-title',skill.name);
     text('quant-reason',lesson.reason);
     text('quant-status',`${lesson.stage} · ${ev.status} · ${ev.novelIndependent} novel checks · ${ev.reassessed} known-item reassessments`);
+    text('quant-scope',skill.scopeNote);
     const teaching=lesson.stage==='teach' || lesson.stage==='guided';
     el('quant-teaching').hidden=!teaching && !lesson.teaching;
     text('quant-objective','Goal: '+skill.objective);
@@ -100,13 +101,22 @@ const QuantChallenge = (() => {
     text('quant-connection',lesson.teaching?.connection || (skill.prerequisites.length?`Builds on: ${skill.prerequisites.map(id=>QuantCurriculum.get(id).name).join(', ')}.`:'Start from the definition, then apply it to a different example.'));
     text('quant-next-step',lesson.teaching?.nextStep || 'Try guided practice, then a fresh independent check. Hints remain available.');
     el('quant-ai-label').hidden=!lesson.teaching;
-    text('quant-feedback',lesson.feedback?`${lesson.feedback.correct?'Correct':'Not yet'}. ${lesson.feedback.assisted?'Recorded as assisted practice. ':''}${lesson.feedback.solution}`:'');
+    text('quant-feedback',lesson.feedback?`${lesson.feedback.correct?'Correct':'Not yet'}. ${lesson.feedback.assisted?'Recorded as assisted practice. ':''}${lesson.feedback.diagnosis ? lesson.feedback.diagnosis+'\n' : ''}${lesson.feedback.solution}`:'');
     // Keep previous feedback hidden during a fresh independent assessment.
     el('quant-feedback').hidden=['check','review'].includes(lesson.stage);
     const assessing=['diagnostic','guided','check','review'].includes(lesson.stage);
     el('quant-next').hidden=lesson.stage!=='teach';
     el('quant-question').hidden=!assessing;
     text('quant-prompt',q.prompt);
+    const data=el('quant-data');data.replaceChildren();data.hidden=!q.table;
+    if(q.table) {
+      const table=document.createElement('table'),caption=document.createElement('caption');caption.textContent=q.table.caption;table.appendChild(caption);
+      const head=document.createElement('thead'),row=document.createElement('tr');
+      for(const label of q.table.headers){const cell=document.createElement('th');cell.scope='col';cell.textContent=label;row.appendChild(cell);}head.appendChild(row);table.appendChild(head);
+      const body=document.createElement('tbody');
+      for(const values of q.table.rows){const row=document.createElement('tr');values.forEach((value,i)=>{const cell=document.createElement(i?'td':'th');if(!i)cell.scope='row';cell.textContent=value;row.appendChild(cell);});body.appendChild(row);}table.appendChild(body);data.appendChild(table);
+      data.setAttribute('tabindex','0');data.setAttribute('role','region');data.setAttribute('aria-label',q.table.caption);
+    }
     el('quant-construction').hidden=!assessing || !q.construction;el('quant-construction-label').hidden=!assessing || !q.construction;
     text('quant-construction-label',q.construction?.prompt || '');el('quant-construction').value='';
     const choice=el('quant-reason-choice');choice.replaceChildren();
@@ -132,7 +142,7 @@ const QuantChallenge = (() => {
     } else PythonChallenge.destroyWorker();
     syncControls();
     if(lesson.stage==='done') {
-      text('quant-reason','Progress saved. This check is evidence of practice; readiness requires varied independent work, and retention is checked after at least seven days.');
+      text('quant-reason','Progress saved. Practice qualification uses varied independent checks in this unit. Retention requires delayed retrieval after at least seven days.');
       Gate.showContinuePrompt();
     }
   }

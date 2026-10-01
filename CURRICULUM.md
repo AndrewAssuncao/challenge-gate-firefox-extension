@@ -4,7 +4,7 @@ This is a foundation curriculum, not a complete quant interview syllabus. The re
 
 ## Learning contract
 
-Each skill has a diagnostic, local explanation and worked example, explicit common-error contrast, guided practice with hints, an independent check, a structurally different transfer family, repair after error, and spaced review. Numerical swaps do not count as a transfer family. Readiness is a transparent heuristic: at least five recent unassisted first-try assessments, at least four correct, across two lesson IDs, plus valid independent evidence from both families including transfer. Transfer qualification is evaluated from durable, non-invalidated evidence rather than only the last five answers; recent accuracy remains a separate condition. Retention additionally requires successful delayed retrieval at least seven days after initial independent evidence. No mastery is inferred from exposure, hints, model claims or prerequisite relationships.
+Each skill has a diagnostic, local explanation and worked example, explicit common-error contrast, guided practice with hints, an independent check, a structurally different transfer family, repair after error, and spaced review. Numerical swaps do not count as a transfer family. Readiness is a transparent heuristic: at least five recent unassisted assessments of distinct items (first exposure or qualifying delayed reassessment), at least four correct, across two lesson IDs, plus valid independent evidence from multiple families including transfer. New method-selection units additionally require every specified method/classification. Transfer qualification is evaluated from durable, non-invalidated evidence rather than only the last five answers; recent accuracy remains a separate condition. Retention additionally requires successful delayed retrieval at least seven days after initial independent evidence. No mastery is inferred from exposure, hints, model claims or prerequisite relationships.
 
 If every local item has been seen, the learner can use an explicit independent reassessment at least seven days after its last attempt or exposure. A reassessment replaces the evidence for that same item; it does not create an additional distinct item or a novel pass. The same four-of-five accuracy rule across five distinct items, two lesson IDs and both families still applies. Recovery through known items is labelled **practiced (reassessed)** and may satisfy prerequisites, while novel checks and known-item reassessments are counted separately. Immediate repetitions and assisted reassessments cannot qualify. The UI gives the earliest reassessment date; further exposure restarts the interval for that item.
 
@@ -146,7 +146,7 @@ The gate is a bounded micro-lesson or retrieval check; Arcade continues saved le
 
 - Mode / track: brainteasers / reasoning
 - Prerequisites: brain-pigeon
-- Objective: Connect an information lower bound with a balanced construction.
+- Objective: Evaluate an information bound and the size of a balanced first split; recognize the stated strategy.
 - Explanation: A balance comparison has three outcomes: left heavy, right heavy, equal. With a known heavier odd coin, balanced groups can divide the remaining candidates into three sets.
 - Worked example: Among 9 coins with one known heavier, weigh 3 against 3. Each outcome leaves 3 candidates; a second weighing identifies the coin.
 - Common error: Stating a bound without an achievable comparison strategy.
@@ -182,7 +182,7 @@ The gate is a bounded micro-lesson or retrieval check; Arcade continues saved le
 
 - Mode / track: brainteasers / reasoning
 - Prerequisites: brain-cases
-- Objective: Prove a lower bound and provide an attaining allocation.
+- Objective: Check a capacity lower bound and counts in a stated attaining allocation.
 - Explanation: First prove a lower bound, then show a construction that attains it. A lower bound alone is not a solution.
 - Worked example: To seat 13 people at tables holding at most 4, at least ceil(13/4) = 4 tables are needed. Groups of 4,4,4,1 attain that bound.
 - Common error: Giving a lower bound without an attaining construction.
@@ -324,3 +324,38 @@ The executable tests check the supplied round trip (-42.60 profit; opening outfl
 This is an introductory applied slice, not a trading simulator or a comprehensive options course. Early exercise, settlement mechanics, volatility surfaces, portfolio risk, live execution and realistic inventory management are outside its scope. A Greek approximation is not a guaranteed executable price.
 
 Definitions were checked against official OIC references: [Options Basics](https://www.optionseducation.org/optionsoverview/options-basics), [Options Pricing](https://www.optionseducation.org/optionsoverview/options-pricing), [Understanding Options Greeks](https://www.optionseducation.org/advancedconcepts/understanding-options-greeks), [Gamma](https://www.optionseducation.org/advancedconcepts/gamma), and [Vega](https://www.optionseducation.org/advancedconcepts/vega). Lesson wording and scenarios are original; no OIC content is copied wholesale.
+
+## Decision-first slice (four additional foundation units)
+
+The implemented bank now contains **25 foundation units and 5 introductory applied units**. A practiced marker is evidence on a bounded local bank, not broad interview readiness. The probability-method and ordering units require independent evidence from every named method/classification plus structurally changed transfer; merely passing five variants of one case cannot qualify them. Existing canonical item identities and lifetime evidence remain unchanged. Optional method tags on new events implement this coverage rule without migrating saved learners.
+
+| Unit | Explicit prerequisites | Foundation check | Independent transfer |
+|---|---|---|---|
+| Weighted rates from tables (`data-weighted`) | Fractions and ratios | Relevant live rows; total successes / total requests | Unequal interval durations; rate × time and overall throughput |
+| Percentage bases in tables (`data-base`) | Weighted rates; successive returns | Aggregate paid unit change using earlier counts | Reconstruct each earlier segment using its own growth factor before adding |
+| Constraint orders (`brain-order`) | Exhaustive cases | Feasible schedules and statement witnesses with precedence | Immediate adjacency, non-adjacency and position/exclusion constraints |
+| Choose a probability method (`prob-method`) | Independent events (and its conditional prerequisites) | Explicit independence, without replacement, or marginals-only joint bounds | Conditional count table, independent replacement, or marginals-only conditional bounds |
+
+All four use a diagnostic before teaching, a different worked example, guided hints, unassisted checks, repair after error and existing finite-bank delayed reassessment. Each has 9 foundation and 9 transfer items. Numeric swaps within a family are finite practice items, not new concepts. Tables include multiple rows, relevant units and distractor data, with native captions and row/column headers; a chart is not required to retrieve their values. Probability bounds are attainable limits, never asserted exact probabilities. Method choice is graded alongside numeric and intermediate answers.
+
+Feedback can describe an observed intermediate response (for example, a denominator that includes the excluded pilot, or the unchanged red fraction after removal). A wrong final number alone yields the solution and repair path without an invented misconception diagnosis. The feedback wording reports what the entered number equals; it cannot establish why the learner chose it.
+
+### Objective alignment limits
+
+The balance unit evaluates an information bound and size of the first balanced split, and recognizes a stated strategy. It does not ask the learner to produce a complete decision tree. Bounds/allocation checks validate capacity and intermediate counts in a stated construction; they do not assess a written general proof. Worst-case repetition asks for the avoiding count and guarantee threshold. The explanation may teach the broader principle while the objective states the actual assessed work. Full proof/tree production needs a separately designed response format and rubric.
+
+### Separate near-term sequence
+
+[NEAR_TERM_PRACTICE.md](NEAR_TERM_PRACTICE.md) provides ten original diagnostic tasks, worked solutions and repair routing. It is separate from saved evidence and makes no claim to match the unknown IMC/SHL components.
+
+## Staged long-term quant gaps and decisions
+
+This slice improves model selection; it does not close the larger quant syllabus. The following stages need teaching/assessment design before implementation. They are proposals, not unlocked or implied learned units.
+
+1. **Counting and distributions:** factorials; permutations versus combinations; with/without replacement; binomial and hypergeometric conditions; geometric support and memorylessness; discrete versus continuous distributions and CDFs. Start from exhaustive cases, conditional probability and fractions. Require mechanism selection and counterexamples, not formula recognition alone.
+2. **Expectation and dependence:** linearity without an independence assumption; indicator sums; random stopping/multistep expectations using first-step recursion; variance of sums including covariance; conditional expectation and total expectation. Current two-payoff EV and scaling variance checks do not cover these. Decide how much algebra and recurrence scaffolding to require and how to assess derivations honestly.
+3. **Simulation uncertainty:** distinguish one sample estimate from the underlying probability, repeated estimates, Monte Carlo standard error, interval interpretation, sampling design and convergence. Existing supplied-draw coding checks test counting indicators, not uncertainty or statistical confidence. Establish distribution/variance prerequisites before claiming calibrated error bars.
+4. **Code foundations and scaffolds:** explicit loop/list/function/conditional prerequisites, partial implementations, trace/debug tasks, then independent code synthesis and testing. Current starter signatures assume basic Python. Decide whether code prerequisites belong in the shared DAG and how assistance follows scaffolds, before adding a broad coding architecture.
+5. **Longer independent production:** full argument/tree construction, larger tables/charts, multi-step modeling and transfer beyond a finite authored bank. Decide rubric, accessibility, response format and what evidence can justify progression. Do not upgrade practiced labels to interview-ready or generate cosmetic seed variants to simulate unlimited novelty.
+
+No existing prerequisite was changed. New prerequisite edges attach four bounded units to the existing graph. Optional coverage metadata is confined to those new units; larger graph/rubric architecture and broad syllabus expansion remain product decisions.

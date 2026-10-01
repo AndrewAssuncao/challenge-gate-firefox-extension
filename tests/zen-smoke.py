@@ -92,7 +92,7 @@ try:
  z.wait('return typeof browser !== "undefined" && !!document.querySelector("#tab-overview")')
  z.js('document.querySelector("[data-tab=learning]").click()')
  tree=z.js('return [...document.querySelectorAll("#quant-knowledge-tree [data-skill-id]")].map(n=>({id:n.dataset.skillId,status:n.dataset.status}))')
- assert len(tree)==26,tree
+ assert len(tree)==30,tree
  links=z.js('return [...document.querySelectorAll("#quant-knowledge-tree [data-skill-id]")].flatMap(n=>JSON.parse(n.dataset.prerequisites).map(from=>({from,to:n.dataset.skillId})))')
  expected=json.loads(subprocess.check_output(['node','-e','console.log(JSON.stringify(require("./learning/engine").graph(require("./learning/engine").empty()).edges))'],cwd=ROOT,text=True))
  assert sorted((e['from'],e['to']) for e in links)==sorted((e['from'],e['to']) for e in expected)
