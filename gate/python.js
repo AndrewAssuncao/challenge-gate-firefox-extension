@@ -485,9 +485,16 @@ Respond with ONLY valid JSON:
         result = { correct: false, feedback: response.content || 'Could not parse response.', score: 0 };
       }
 
+      if(!result || Array.isArray(result) || typeof result.correct!=='boolean' ||
+        typeof result.score!=='number' || !Number.isFinite(result.score) || result.score<0 || result.score>100) {
+        resultsEl.textContent='Could not read a valid review score. Try again.';
+        return;
+      }
+      const score=result.score;
+
       let html = '';
       if (result.correct === true) {
-        html += `<div class="test-summary all-pass">Good analysis! (${result.score || 100}%)</div>`;
+        html += `<div class="test-summary all-pass">Good analysis! (${score}%)</div>`;
         html += `<div class="test-detail">${escapeHtml(result.feedback || '')}</div>`;
         if (challenge.afterSolve) {
           html += `<div class="after-solve">${escapeHtml(challenge.afterSolve)}</div>`;
@@ -495,7 +502,7 @@ Respond with ONLY valid JSON:
         resultsEl.innerHTML = html;
         onPassed();
       } else {
-        html += `<div class="test-summary some-fail">Not quite. (${result.score || 0}%)</div>`;
+        html += `<div class="test-summary some-fail">Not quite. (${score}%)</div>`;
         html += `<div class="test-detail">${escapeHtml(result.feedback || '')}</div>`;
         if (result.missingPoints && result.missingPoints.length > 0) {
           html += `<div class="test-detail" style="margin-top: 6px;">Missing: ${result.missingPoints.map(p => escapeHtml(p)).join(', ')}</div>`;
@@ -745,10 +752,7 @@ ${includeEvidence && lastErrorOutput ? `Latest errors/failures:\n${lastErrorOutp
       if (shouldCheckChallengeIssue) {
         try {
           const parsed = JSON.parse(helpText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
-          if (parsed.kind === 'challenge_issue') {
-            await bypassChallengeForIssue(parsed.message);
-            return;
-          }
+          // A tutor's issue report is feedback, never authority to erase attempts or unlock.
           if (parsed.message) helpText = parsed.message;
         } catch { /* not JSON, use as plain text */ }
       }

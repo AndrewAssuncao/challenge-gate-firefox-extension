@@ -18,9 +18,12 @@ history. Remote main remains the verified `a4bc4f5` base; no main merge is inclu
 
 ## Verified implementation
 
-- Current static suite: 154 tests passed, zero failed/skipped, including twelve new
+- Current static suite: 157 tests passed, zero failed/skipped, including twelve new
   local-starter/cache/input tests, 105 executable CPython oracle
   cases and all 30 fully exposed-bank recovery cases.
+  Three focused legacy regressions additionally verify safe review-score rendering,
+  no grant/write on invalid score data, and preservation of actual failed evidence
+  after Help issue JSON while ordinary later success retains the assistance marker.
 - Prior approved implementation's authentic Zen 1.22.3b release smoke: all 13 checks passed. Separate default-off
   history consent/decline, blocked local destination, packaged Python gate, fresh
   denied-network worker with 105 oracle cases/stdlib, new optional curriculum fields
@@ -80,6 +83,12 @@ The source review identified a legacy access-grant path for rejected test/signat
 inputs. It now reports a retryable error with no grant, invalidation or progress
 write. A conservative provider literal grammar rejects expression/call input data
 before the worker; the independent worker ast.literal_eval check remains.
+The bounded legacy follow-up accepts only finite numeric 0–100 review scores and
+renders that validated value. AI Help issue JSON now remains displayed feedback;
+it cannot grant access or invalidate attempts. The authored Quant route is unchanged.
+Provider grammar validation is preliminary: unhashable literal keys/elements and
+some interior Unicode whitespace can still be rejected by the worker. This safe
+no-write/no-grant reliability limitation is documented and deferred.
 Physical sleep and a genuine temporary-to-signed transition remain unverified;
 local tests do not establish AMO approval or a prior disappearance cause.
 
