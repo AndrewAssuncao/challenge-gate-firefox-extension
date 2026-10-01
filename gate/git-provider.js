@@ -353,7 +353,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
       const response = await browser.runtime.sendMessage({
         type: 'claudeGenerate',
         prompt: prompt,
-        model: useOpus ? 'claude-opus-4-20250514' : undefined,
+        model: useOpus ? 'claude-opus-4-8' : undefined,
         maxTokens: useOpus ? 2048 : undefined
       });
 

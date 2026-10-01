@@ -447,7 +447,7 @@ Respond with ONLY valid JSON:
       const response = await browser.runtime.sendMessage({
         type: 'claudeGenerate',
         prompt: validationPrompt,
-        model: 'claude-opus-4-20250514',
+        model: 'claude-opus-4-8',
         maxTokens: 1024
       });
 

@@ -1,12 +1,12 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const E=require('../learning/engine'),C=require('../learning/curriculum');
-function harness(){
+function harness(tutorResponse={error:'No API key configured'}){
  const nodes=new Map(),commands=[];let fail=false,id=0;
  const node=id=>{if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',classList:{add(){},remove(){},toggle(){}},setAttribute(){},removeAttribute(){}});return nodes.get(id);};
  const initial=E.apply(E.empty(),{op:'begin',mode:'math',track:'arithmetic'},1000);
  const c=vm.createContext({document:{getElementById:node},crypto:{randomUUID:()=>String(++id)},QuantLearning:E,QuantCurriculum:C,PythonChallenge:{destroyWorker(){}},Gate:{hideContinuePrompt(){}},browser:{runtime:{sendMessage:async request=>{
   commands.push(request);
-  if(request.type==='claudeGenerate')return {error:'No API key configured'};
+  if(request.type==='claudeGenerate')return tutorResponse;
   if(fail){fail=false;return {error:'disk full',retryable:true};}
   return initial;
  }}}});
@@ -21,6 +21,12 @@ test('track/reload begin always requests a fresh lesson when the saved lesson is
 });
 test('failed tutor request does not mark the lesson assisted',async()=>{
  const h=harness();await assert.rejects(h.ui.tutor(),/No API key/);assert.equal(h.commands.length,1);assert.equal(h.commands[0].type,'claudeGenerate');
+});
+test('model-unavailable Help leaves local teaching and progression available',async()=>{
+ const h=harness({error:'The tutor model is unavailable (404). Update the extension or check model access in Claude Console.',status:404});
+ await assert.rejects(h.ui.tutor(),/model is unavailable \(404\).*local lesson remains available/);
+ assert.equal(h.commands.length,1);assert.equal(h.commands[0].type,'claudeGenerate');
+ assert.equal(h.commands.some(request=>request.type==='quantCommand'),false);
 });
 test('storage retry keeps id for identical payload and changes id when answer changes',async()=>{
  const h=harness();h.node('quant-answer').value='1';h.fail=true;await assert.rejects(h.ui.attempt(false),/disk/);
