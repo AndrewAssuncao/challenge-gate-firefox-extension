@@ -46,8 +46,8 @@ const QuantCurriculum = (() => {
       requiredMethods:['must','could','impossible']},
     {id:'prob-method',mode:'math',track:'probability',name:'Choose a probability method',prerequisites:['prob-independent'],
       objective:'Choose independent or conditional multiplication, and identify when marginal rates leave a joint or conditional probability undetermined.',
-      explanation:'Always P(A and B) = P(A) × P(B | A) when P(A)>0. Independence permits replacing P(B | A) with P(B); marginals alone do not. Drawing without replacement changes the second denominator and favorable count. If only marginals are known, max(0, P(A)+P(B)−1) ≤ P(A and B) ≤ min(P(A),P(B)). These bounds describe several possible dependencies, not one exact probability. Divide joint bounds by P(B)>0 to bound P(A | B).',
-      example:'Bag: 3 red, 2 blue. Without replacement, two reds have probability (3/5)×(2/4)=3/10; with replacement and independent uniform draws, (3/5)²=9/25. If P(A)=.6 and P(B)=.5 alone, joint probability can range .1 to .5: .3 is possible but is not determined.',
+      explanation:'Always P(A and B) = P(A) × P(B | A) when P(A)>0. Independence permits replacing P(B | A) with P(B); marginals alone do not. Drawing without replacement changes the second denominator and favorable count. If only marginals are known, max(0, P(A)+P(B)−1) ≤ P(A and B) ≤ min(P(A),P(B)). The overlap cannot exceed either event. Since the union has probability at most 1, the overlap is at least P(A)+P(B)−1 and cannot be negative. These bounds describe several possible dependencies, not one exact probability. Divide joint bounds by P(B)>0 to bound P(A | B).',
+      example:'Bag: 3 red, 2 blue. Without replacement, two reds have probability (3/5)×(2/4)=3/10; with replacement and independent uniform draws, (3/5)²=9/25. With only P(A)=.6 and P(B)=.5, imagine 100 equally likely cases: 60 are in A and 50 in B. At least 10 must overlap to fit in 100, and at most all 50 B cases can overlap. Thus joint probability ranges .1 to .5: .3 is possible but is not determined.',
       commonError:'Multiplying marginals without independence, or claiming an exact probability from bounds.',
       requiredMethods:['independent','conditional','insufficient']}
   ];
@@ -124,7 +124,7 @@ const QuantCurriculum = (() => {
         q.answer=a+b;intermediate('How many earlier units were in Paid A?',a);
         q.scenario={type:'reverse',a,b,laterA,laterB,changeA,changeB};
         q.solution=`Earlier A = ${fmt(laterA)}/${fmt(1+changeA/100)} = ${a}; earlier B = ${fmt(laterB)}/${fmt(1+changeB/100)} = ${b}. Total earlier paid units = ${a+b}. Reverse each segment before adding.`;
-        diagnose(laterA*(1-changeA/100),`Your intermediate equals taking ${changeA}% off the later A count. Undo the change by dividing ${fmt(laterA)} by ${fmt(1+changeA/100)}, using A’s earlier base.`);
+        diagnose(laterA*(1-changeA/100),`Your intermediate equals ${fmt(laterA)} × ${fmt(1-changeA/100)}, using the later count as the percentage base. Undo the change by dividing ${fmt(laterA)} by ${fmt(1+changeA/100)}, using A’s earlier base.`);
         reason('reverse','Divide each segment’s later units by its own growth factor, then add.','Average the segment percentage changes and apply that factor to the combined later count.');
         q.hints=['Write later = earlier × (1 + change/100) for each paid segment.','Divide by each segment’s own factor. A negative change gives a factor below 1.'];
       }

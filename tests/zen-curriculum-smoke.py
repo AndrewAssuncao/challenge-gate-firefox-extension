@@ -105,11 +105,13 @@ try:
  assert [e['assisted'] for e in events if e['kind']=='attempt']==[False,True,False]
  print('PASS: authentic keyboard/caret, error → teaching, saved reload, guided assistance exclusion, independent check',flush=True)
  for width in [1200,390]:
-  dimensions=z.call('WebDriver:SetWindowRect',{'width':width,'height':1000});print('Window',dimensions,flush=True)
+  chrome_width=z.js('return outerWidth-innerWidth')
+  dimensions=z.call('WebDriver:SetWindowRect',{'width':width+chrome_width,'height':1000});print('Requested content width',width,'window',dimensions,flush=True)
   for skill in ['data-weighted','data-base','brain-order','prob-method']:
    r=fixture(z,skill,0,1);q=r['q']
    assert q['transfer']
    layout=z.js('return {viewport:innerWidth,body:document.documentElement.scrollWidth,footer:document.querySelector("#quant-footer").getBoundingClientRect().top,form:document.querySelector("#quant-form").getBoundingClientRect().bottom,scope:document.querySelector("#quant-scope").textContent,caption:document.querySelector("#quant-data caption")?.textContent,headers:[...document.querySelectorAll("#quant-data th")].map(n=>n.scope),region:document.querySelector("#quant-data").getAttribute("role")}')
+   assert abs(layout['viewport']-width)<=1,layout
    assert layout['body']<=layout['viewport']+1,layout
    assert layout['footer']>=layout['form']-1,layout
    assert 'bounded local unit' in layout['scope']
@@ -132,10 +134,27 @@ try:
  # Natural background/store selection from an empty learner reaches all 30 units;
  # unchanged Python grading is separately covered by executable solution/mutation tests.
  z.navigate(BASE+'dashboard/dashboard.html');z.wait('return typeof browser !== "undefined"');z.js('return browser.storage.local.set({quantLearner:{version:1,serial:0,events:[],lessons:{}}})')
- progression=z.js('''return (async()=>{const result={};let serial=0;for(const [mode,track] of [['math','arithmetic'],['math','probability'],['brainteasers',''],['python',''],['math','applied']]){const targets=QuantCurriculum.skills.filter(s=>s.mode===mode&&(!track||s.track===track));for(let i=0;i<200;i++){let r=await browser.runtime.sendMessage({type:'quantCommand',command:{op:'begin',mode,track,practice:true,fresh:true}});if(r.error)throw Error(r.error);if(targets.every(s=>QuantLearning.evidence(r.state,s.id).practiced))break;let l=r.lesson;if(l.stage==='teach'){r=await browser.runtime.sendMessage({type:'quantCommand',command:{op:'continue',lessonId:l.id,revision:l.revision}});l=r.lesson;}const q=QuantLearning.question(l);r=await browser.runtime.sendMessage({type:'quantCommand',command:{op:'attempt',lessonId:l.id,revision:l.revision,eventId:'zen-perfect-'+(++serial),answer:q.answer,reason:q.correctReason,construction:q.construction?.answer,correct:true}});if(r.error)throw Error(r.error);} }const saved=(await browser.storage.local.get('quantLearner')).quantLearner;return {state:saved,nodes:QuantLearning.graph(saved).nodes.map(n=>({id:n.id,practiced:n.evidence.practiced,retained:n.evidence.retained}))};})()''')
- assert len(progression['nodes'])==30 and all(n['practiced'] and not n['retained'] for n in progression['nodes']),progression['nodes']
- saved=progression['state'];z.stop();z=None;z=Zen();z.install();z.navigate(BASE+'dashboard/dashboard.html');z.wait('return typeof browser !== "undefined"')
+ serial=0
+ for mode,track in [('math','arithmetic'),('math','probability'),('brainteasers',''),('python',''),('math','applied')]:
+  for _ in range(200):
+   result=z.js('return browser.runtime.sendMessage({type:"quantCommand",command:'+json.dumps({'op':'begin','mode':mode,'track':track,'practice':True,'fresh':True})+'})')
+   assert not result.get('error'),result
+   check=json.loads(subprocess.check_output(['node','-e','const E=require("./learning/engine"),C=require("./learning/curriculum"),r=JSON.parse(require("fs").readFileSync(0,"utf8")),[mode,track]=process.argv.slice(1);console.log(JSON.stringify({ready:C.skills.filter(s=>s.mode===mode&&(!track||s.track===track)).every(s=>E.evidence(r.state,s.id).practiced),q:E.question(r.lesson)}))',mode,track],input=json.dumps(result),cwd=ROOT,text=True))
+   if check['ready']:break
+   lesson=result['lesson']
+   if lesson['stage']=='teach':
+    result=z.js('return browser.runtime.sendMessage({type:"quantCommand",command:'+json.dumps({'op':'continue','lessonId':lesson['id'],'revision':lesson['revision']})+'})');lesson=result['lesson']
+    check['q']=json.loads(subprocess.check_output(['node','-e','console.log(JSON.stringify(require("./learning/engine").question(JSON.parse(require("fs").readFileSync(0,"utf8")))))'],input=json.dumps(lesson),cwd=ROOT,text=True))
+   q=check['q'];serial+=1
+   command={'op':'attempt','lessonId':lesson['id'],'revision':lesson['revision'],'eventId':'zen-perfect-'+str(serial),'answer':q.get('answer'),'reason':q.get('correctReason'),'construction':q.get('construction',{}).get('answer'),'correct':True}
+   result=z.js('return browser.runtime.sendMessage({type:"quantCommand",command:'+json.dumps(command)+'})');assert not result.get('error'),result
+  else:raise AssertionError('Natural progression stalled: '+mode+' '+track)
+ saved=z.js('return browser.storage.local.get("quantLearner").then(d=>d.quantLearner)')
+ nodes=json.loads(subprocess.check_output(['node','-e','const E=require("./learning/engine"),s=JSON.parse(require("fs").readFileSync(0,"utf8"));console.log(JSON.stringify(E.graph(s).nodes.map(n=>({id:n.id,practiced:n.evidence.practiced,retained:n.evidence.retained}))))'],input=json.dumps(saved),cwd=ROOT,text=True))
+ assert len(nodes)==30 and all(n['practiced'] and not n['retained'] for n in nodes),nodes
+ z.stop();z=None;z=Zen();z.install();z.navigate(BASE+'dashboard/dashboard.html');z.wait('return typeof browser !== "undefined"')
  assert z.js('return browser.storage.local.get("quantLearner").then(d=>d.quantLearner)')==saved
+ z.call('WebDriver:SetWindowRect',{'width':390+z.js('return outerWidth-innerWidth'),'height':1000})
  z.js('document.querySelector("[data-tab=learning]").click()');z.wait('return document.querySelectorAll("#quant-tree-nodes [data-skill-id]").length===30')
  z.js('document.querySelector("#skill-prob-method").focus()')
  assert 'bounded local unit' in z.js('return document.querySelector("#quant-skill-detail").textContent')
