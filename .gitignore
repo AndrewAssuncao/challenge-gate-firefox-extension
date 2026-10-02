@@ -9,3 +9,14 @@ build/
 node_modules/
 
 output/
+
+verification/local-addon-status.json
+verification/*-profile/
+verification/review-input.txt
+
+__pycache__/
+*.pyc
+
+# Local review logs and browser metadata never belong in publication commits.
+verification/
+reviews/

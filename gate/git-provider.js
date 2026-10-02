@@ -118,7 +118,13 @@ const GitChallengeProvider = (() => {
     marathon: 'Generate an extensive challenge simulating a real collaborative workflow. Multiple branches, merges, rebases, conflict resolution, and cleanup — test deep git mastery (~20-40 minutes).'
   };
 
-  function buildMentorPrompt(profile, crossDisciplineContext, scheduledDifficulty, reinforceOnly) {
+  function buildMentorPrompt(profile, crossDisciplineContext, scheduledDifficulty, reinforceOnly, includeEvidence=true) {
+    if(!includeEvidence) {
+      const publicProfile={...defaultProfile(),currentTopicIndex:profile.currentTopicIndex,totalSessions:-1};
+      return buildMentorPrompt(publicProfile,'','normal',false,true)
+        .replace(/^Curriculum position:.*$|^Total challenge attempts:.*$/gm,'')
+        .replace(/\n## What the User Knows[\s\S]*?\n## Instructions/,'\n## Instructions');
+    }
     const currentTopic = GIT_CURRICULUM[profile.currentTopicIndex] || GIT_CURRICULUM[0];
     const tier = currentTopic.tier;
 
@@ -353,6 +359,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary):
       const response = await browser.runtime.sendMessage({
         type: 'claudeGenerate',
         prompt: prompt,
+        promptWithoutHistory:buildMentorPrompt(profile,'',scheduledDifficulty,reinforceOnly,false),
         model: useOpus ? 'claude-opus-4-8' : undefined,
         maxTokens: useOpus ? 2048 : undefined
       });

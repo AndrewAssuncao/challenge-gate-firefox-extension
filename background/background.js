@@ -3,10 +3,38 @@
 
 'use strict';
 
+// One queue serializes background writes, tracking, learner commands and restore.
+let stateQueue = Promise.resolve();
+function stateCommand(action) {
+  const work = stateQueue.then(action);
+  stateQueue = work.catch(() => {});
+  return work;
+}
+const aiRequests = new Set();
+let aiConsentEpoch = 0;
+const AI_PERSONAL = ['authenticationInfo','personalCommunications'];
+const AI_DATA = [...AI_PERSONAL,'technicalAndInteraction'];
+browser.permissions.onRemoved?.addListener(p=>{
+  if(p.data_collection?.some(x=>AI_DATA.includes(x))) {aiConsentEpoch++;for(const controller of aiRequests) controller.abort('consent-revoked');}
+});
+async function aiAllowed() {
+  const { aiConsent } = await browser.storage.local.get('aiConsent');
+  if (aiConsent?.version !== 2 || aiConsent.allowed !== true) return false;
+  const permissions = await browser.permissions.getAll();
+  return !permissions.data_collection || AI_PERSONAL.every(p => permissions.data_collection.includes(p));
+}
+
+async function aiTechnicalAllowed() {
+  const {aiConsent}=await browser.storage.local.get('aiConsent');
+  if(aiConsent?.version!==2 || aiConsent.technicalAllowed!==true)return false;
+  const p=await browser.permissions.getAll();
+  return !p.data_collection || p.data_collection.includes('technicalAndInteraction');
+}
+
 // Global unhandled rejection handler — prevents silent crashes
 self.addEventListener('unhandledrejection', (event) => {
-  console.error('[Challenge Gate] Unhandled promise rejection:', event.reason);
-  event.preventDefault(); // Prevent Firefox from killing the script
+  console.error('[Challenge Gate] Unhandled promise rejection:', 'A background operation failed.');
+  event.preventDefault();
 });
 
 // ── In-memory state (synced from storage) ──────────────────────────────────
@@ -14,7 +42,7 @@ self.addEventListener('unhandledrejection', (event) => {
 let blockedSites = [];
 let unlocks = {};
 let timeTracking = {};
-let settings = {
+const DEFAULT_SETTINGS = {
   unlockDurationMinutes: 30,
   idleTimeoutSeconds: 120,
   typingWordCount: 25,
@@ -28,6 +56,7 @@ let settings = {
     timeRanges: []
   }
 };
+let settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
 let progression = {
   pythonTier: 1,
   pythonCompleted: [],
@@ -80,31 +109,6 @@ async function loadState() {
     typingHistory = data.typingHistory || [];
     dailyChallengeLog = data.dailyChallengeLog || {};
 
-    // One-time migration: fix entries stored under UTC dates (future-dated keys)
-    // These were created before the todayKey() fix to use local dates
-    const localToday = todayKey();
-    let logMigrated = false;
-    for (const key of Object.keys(dailyChallengeLog)) {
-      if (key > localToday) {
-        // This key is in the future — shift it back to local today
-        const futureEntry = dailyChallengeLog[key];
-        if (!dailyChallengeLog[localToday]) {
-          dailyChallengeLog[localToday] = { typing: 0, python: 0, terminal: 0, git: 0, totalTime: 0 };
-        }
-        const target = dailyChallengeLog[localToday];
-        target.typing = (target.typing || 0) + (futureEntry.typing || 0);
-        target.python = (target.python || 0) + (futureEntry.python || 0);
-        target.terminal = (target.terminal || 0) + (futureEntry.terminal || 0);
-        target.git = (target.git || 0) + (futureEntry.git || 0);
-        target.totalTime = (target.totalTime || 0) + (futureEntry.totalTime || 0);
-        delete dailyChallengeLog[key];
-        logMigrated = true;
-      }
-    }
-    if (logMigrated) {
-      await browser.storage.local.set({ dailyChallengeLog }).catch(logStorageError);
-    }
-
     // Legacy profiles are preserved as evidence, never redistributed into unattempted topics.
     // Quant learner state is versioned and owned by LearnerStore independently.
 
@@ -139,10 +143,12 @@ async function saveBlockedSites() {
 
 // Keep in-memory state in sync when other pages write to storage
 browser.storage.onChanged.addListener((changes) => {
+  if(changes.aiConsent) {aiConsentEpoch++;if(changes.aiConsent.newValue?.allowed!==true || changes.aiConsent.newValue?.technicalAllowed!==changes.aiConsent.oldValue?.technicalAllowed) for(const controller of aiRequests) controller.abort('consent-revoked');}
+  if(changes.settings && changes.settings.oldValue?.anthropicApiKey!==changes.settings.newValue?.anthropicApiKey) {aiConsentEpoch++;for(const controller of aiRequests) controller.abort('consent-revoked');}
   if (changes.blockedSites) blockedSites = changes.blockedSites.newValue || [];
   if (changes.unlocks) unlocks = changes.unlocks.newValue || {};
   if (changes.timeTracking) timeTracking = changes.timeTracking.newValue || {};
-  if (changes.settings) settings = { ...settings, ...(changes.settings.newValue || {}) };
+  if (changes.settings) settings = { ...DEFAULT_SETTINGS, ...(changes.settings.newValue || {}) };
   if (changes.progression) progression = { ...progression, ...(changes.progression.newValue || {}) };
   if (changes.learningProfile) learningProfile = changes.learningProfile.newValue || null;
   if (changes.terminalLearningProfile) terminalLearningProfile = changes.terminalLearningProfile.newValue || null;
@@ -330,16 +336,16 @@ async function updateActiveTab() {
 // All tab/window listeners call async updateActiveTab — must catch errors
 // to prevent unhandled rejections from crashing the background script on sleep/wake.
 browser.tabs.onActivated.addListener(() => {
-  updateActiveTab().catch(() => {});
+  stateCommand(updateActiveTab).catch(() => {});
 });
 browser.tabs.onUpdated.addListener((_, changeInfo) => {
   if (changeInfo.url || changeInfo.status === 'complete') {
-    updateActiveTab().catch(() => {});
+    stateCommand(updateActiveTab).catch(() => {});
   }
 });
 browser.windows.onFocusChanged.addListener((windowId) => {
   windowFocused = windowId !== browser.windows.WINDOW_ID_NONE;
-  updateActiveTab().catch(() => {});
+  stateCommand(updateActiveTab).catch(() => {});
 });
 
 // Idle detection interval set after loadState (see init at bottom)
@@ -347,18 +353,17 @@ browser.windows.onFocusChanged.addListener((windowId) => {
 browser.idle.setDetectionInterval(120);
 
 // ── Single idle listener (handles both tracking + flush) ────────────────────
-// IMPORTANT: This must be synchronous. Firefox MV2 kills async idle listeners
-// that take too long. We fire-and-forget the flush with error catching.
+// Keep the listener synchronous and serialize its asynchronous storage work.
 
 browser.idle.onStateChanged.addListener((newState) => {
   isIdle = newState !== 'active';
-  updateActiveTab();
+  stateCommand(updateActiveTab).catch(() => {});
 
   // On sleep/lock, flush all state to storage
-  // Fire-and-forget: we can't await here (Firefox kills long-running idle listeners)
+  // Schedule the work and report a failure without exposing stored values.
   // but Promise.allSettled inside flushAllState ensures partial failures don't cascade
   if (newState === 'locked' || newState === 'idle') {
-    flushAllState().catch(err => console.error('[Challenge Gate] Flush on idle failed:', err));
+    stateCommand(flushAllState).catch(err => console.error('[Challenge Gate] Flush on idle failed:', err));
   }
 });
 
@@ -369,7 +374,7 @@ let flushIntervalId = null;
 function startFlushInterval() {
   if (flushIntervalId) clearInterval(flushIntervalId);
   flushIntervalId = setInterval(() => {
-    flushActiveTrack().catch(() => {});
+    stateCommand(flushActiveTrack).catch(() => {});
   }, 30000);
 }
 
@@ -381,7 +386,9 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   try {
     const handler = messageHandlers[msg.type];
     if (handler) {
-      const result = handler(msg, sender);
+      const result = msg.type==='claudeGenerate'
+        ? stateQueue.then(() => handler(msg, sender))
+        : stateCommand(() => handler(msg, sender));
       // Catch promise rejections from async handlers
       if (result && typeof result.catch === 'function') {
         return result.catch(err => {
@@ -399,6 +406,7 @@ browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 let legacyQueue = Promise.resolve();
 function legacyCommand(msg) {
+  if(typeof msg.eventId!=='string' || !msg.eventId || msg.eventId.length>120) throw Error('A bounded learning event ID is required.');
   const work = legacyQueue.then(async () => {
     const map = {python:['learningProfile',ChallengeProvider],git:['gitLearningProfile',GitChallengeProvider],terminal:['terminalLearningProfile',TerminalChallengeProvider]};
     const [key, provider] = map[msg.discipline] || [];
@@ -410,6 +418,7 @@ function legacyCommand(msg) {
     if (msg.invalidate) provider.removeChallengeAttempts(next, msg.challenge);
     else provider.updateProfileAfterChallenge(next, msg.challenge, msg.passed, msg.source, msg.struggled, msg.usedHelp, msg.summary);
     next.savedEvents.push(msg.eventId);
+    GateBackup.validateRecord(key,next);
     await browser.storage.local.set({[key]:next});
     if(key==='learningProfile') learningProfile=next;
     if(key==='gitLearningProfile') gitLearningProfile=next;
@@ -419,9 +428,95 @@ function legacyCommand(msg) {
   legacyQueue=work.catch(()=>{});
   return work;
 }
-const quantStore = LearnerStore.create(browser.storage.local);
+const quantStore = LearnerStore.create(browser.storage.local,s=>GateBackup.validateRecord('quantLearner',s));
+
+async function replaceBackup(parsed,acceptRecovery=false) {
+  await flushActiveTrack();
+  activeTrack = null;
+  try {
+  const current = await browser.storage.local.get([...GateBackup.KEYS,'aiConsent']);
+  let before;
+  try {before=GateBackup.exportState(current,browser.runtime.getManifest().version);}
+  catch {
+    if(!acceptRecovery) throw Error('Current records use an unsupported format. Review the recovery warning in the preview before replacing them. No data was changed.');
+    before=GateBackup.recoveryState(current,browser.runtime.getManifest().version);
+  }
+  // A durable recovery point must exist before the replacement can start.
+  await browser.storage.local.set({ backupRollback: before });
+  const next = {...parsed.data};
+  if (next.settings) next.settings = {...next.settings, anthropicApiKey: current.settings?.anthropicApiKey || ''};
+  // Unlock grants are ephemeral, and an old backup must not revive one.
+  if(next.unlocks) next.unlocks = {};
+  if(next.timeTracking) {
+    const today=todayKey();
+    next.timeTracking[today] ||= {};
+    for(const [domain,seconds] of Object.entries(current.timeTracking?.[today] || {})) {
+      try {GateBackup.validateRecord('timeTracking',{[today]:{[domain]:seconds}});}catch {continue;}
+      next.timeTracking[today][domain]=Math.max(seconds,next.timeTracking[today][domain] || 0);
+    }
+    if(!Object.keys(next.timeTracking[today]).length) delete next.timeTracking[today];
+  }
+  const checked={...next};
+  if(checked.settings)checked.settings=Object.fromEntries(Object.entries(checked.settings).filter(([k])=>GateBackup.SETTINGS.includes(k)));
+  GateBackup.validateData(checked,parsed.partial);
+  try {
+    await browser.storage.local.set({...next, aiConsent:{version:2,allowed:false,technicalAllowed:false}});
+  } catch {
+    // Also recover if a storage implementation committed only part of a failed set.
+    try {
+      await browser.storage.local.set(current);
+      await browser.storage.local.remove([...GateBackup.KEYS,'aiConsent'].filter(k=>!Object.prototype.hasOwnProperty.call(current,k)));
+      await loadState();
+    } catch {
+      throw Error('Restore failed. A recovery copy is saved, but storage is unavailable. Use the previous local copy once writes recover.');
+    }
+    throw Error('Restore write failed. Previous records were recovered; the local rollback copy is available.');
+  }
+  // Read the committed replacement before releasing the queue to other commands.
+  settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+  progression = {pythonTier:1,pythonCompleted:[],terminalTier:1,terminalCompleted:[],gitTier:1,gitCompleted:[],typingAvgWpm:0,totalChallengesCompleted:0};
+  await loadState();onStateLoaded();
+  return {success:true,partial:parsed.partial,notice:parsed.partial?'Quant learning restored. Site policies, legacy progress, usage and temporary unlocks were retained. AI transmission is off. Reload other exercise tabs before continuing.':'Restored. Temporary unlocks were cleared; today’s consumed time cannot decrease. AI transmission is off. Reload other exercise tabs before continuing.'};
+  } finally {await updateActiveTab();}
+}
 
 const messageHandlers = {
+  async exportBackup() {
+    await flushActiveTrack();
+    return {backup:GateBackup.exportState(await browser.storage.local.get(GateBackup.KEYS),browser.runtime.getManifest().version)};
+  },
+  async exportRecovery() {
+    return {backup:GateBackup.recoveryState(await browser.storage.local.get(GateBackup.KEYS),browser.runtime.getManifest().version)};
+  },
+  async exportRollback() {
+    const {backupRollback,settings:currentSettings}=await browser.storage.local.get(['backupRollback','settings']);
+    if(!backupRollback) throw Error('No previous copy is available.');
+    return {backup:GateBackup.safeSnapshot(backupRollback,currentSettings?.anthropicApiKey,browser.runtime.getManifest().version)};
+  },
+  async previewBackup(msg) {
+    const preview=GateBackup.preview(msg.text);
+    try {GateBackup.exportState(await browser.storage.local.get(GateBackup.KEYS));preview.needsRecoveryApproval=false;}
+    catch {preview.needsRecoveryApproval=true;preview.warning+=' Current records use an unsupported format. A recognized-field recovery snapshot will be saved first, with unknown/nested fields excluded. It cannot be automatically rolled back; download it for a reviewed migration.';}
+    return preview;
+  },
+  importBackup(msg) { return replaceBackup(GateBackup.parse(msg.text),msg.acceptRecovery===true); },
+  async rollbackBackup() {
+    const {backupRollback} = await browser.storage.local.get('backupRollback');
+    if(!backupRollback) throw Error('No rollback copy is available in this profile.');
+    return replaceBackup(GateBackup.parse(JSON.stringify(backupRollback)));
+  },
+  async getAiConsent() { return {allowed:await aiAllowed(),technicalAllowed:await aiTechnicalAllowed()}; },
+  async setAiConsent(msg) {
+    if(typeof msg.allowed!=='boolean') throw Error('Invalid consent choice.');
+    if(msg.allowed) {
+      const p=await browser.permissions.getAll();
+      if(p.data_collection && !AI_PERSONAL.every(x=>p.data_collection.includes(x))) return {error:'Firefox data permissions were not granted. AI remains off.'};
+    }
+    const technicalAllowed=msg.technicalAllowed===true;
+    if(technicalAllowed){const p=await browser.permissions.getAll();if(p.data_collection && !p.data_collection.includes('technicalAndInteraction'))throw Error('Learning history permission was not granted.');}
+    await browser.storage.local.set({aiConsent:{version:2,allowed:msg.allowed,technicalAllowed}});
+    return {success:true};
+  },
   recordLearningAttempt(msg) { return legacyCommand(msg); },
   quantCommand(msg) { return quantStore.command(msg.command).catch(error => ({error:error.message,retryable:!!error.retryable})); },
   async getState() {
@@ -454,6 +549,7 @@ const messageHandlers = {
 
   async unlock(msg) {
     const site = blockedSites.find(s => s.domain === msg.domain);
+    if(!site) throw Error('Unknown site policy.');
     const durationMin = (site && site.unlockDurationMinutes) || settings.unlockDurationMinutes || 30;
     const duration = durationMin * 60 * 1000;
     unlocks[msg.domain] = {
@@ -473,13 +569,16 @@ const messageHandlers = {
   async updateSite(msg) {
     const idx = blockedSites.findIndex(s => s.domain === msg.domain);
     if (idx >= 0) {
-      blockedSites[idx] = { ...blockedSites[idx], ...msg.updates };
+      const next = { ...blockedSites[idx], ...msg.updates };
+      GateBackup.validateRecord('blockedSites',blockedSites.map((s,i)=>i===idx?next:s));
+      blockedSites[idx] = next;
     }
     await saveBlockedSites();
     return { success: true };
   },
 
   async addSite(msg) {
+    GateBackup.validateRecord('blockedSites',[msg.site]);
     const exists = blockedSites.find(s => s.domain === msg.site.domain);
     if (exists) return { success: false, error: 'Already exists' };
     blockedSites.push(msg.site);
@@ -496,6 +595,9 @@ const messageHandlers = {
   },
 
   async updateSettings(msg) {
+    if(msg.settings.anthropicApiKey!==undefined && (typeof msg.settings.anthropicApiKey!=='string' || msg.settings.anthropicApiKey.length>4000 || (msg.settings.anthropicApiKey!=='' && (msg.settings.anthropicApiKey.length<12 || /\s/.test(msg.settings.anthropicApiKey)))))throw Error('Invalid API key setting.');
+    if(Object.keys(msg.settings).some(k=>!GateBackup.SETTINGS.includes(k) && k!=='anthropicApiKey')) throw Error('Unknown settings field.');
+    GateBackup.validateRecord('settings',Object.fromEntries(Object.entries({...settings,...msg.settings}).filter(([k])=>GateBackup.SETTINGS.includes(k))));
     settings = { ...settings, ...msg.settings };
     await saveSettings();
     if (msg.settings.idleTimeoutSeconds) {
@@ -505,7 +607,9 @@ const messageHandlers = {
   },
 
   async updateProgression(msg) {
-    progression = { ...progression, ...msg.progression };
+    const next={ ...progression, ...msg.progression };
+    GateBackup.validateRecord('progression',next);
+    progression = next;
     await saveProgression();
     return { success: true };
   },
@@ -513,11 +617,19 @@ const messageHandlers = {
   // Claude API — called from extension pages to avoid CORS issues
   async claudeGenerate(msg) {
     const apiKey = settings.anthropicApiKey;
+    if (typeof apiKey!=='string' || (apiKey && (apiKey.length<12 || /\s/.test(apiKey))))return {error:'The saved API key is invalid. Replace it in Settings.'};
     if (!apiKey) {
       return { error: 'No API key configured' };
     }
 
+    const consentEpoch=aiConsentEpoch;
+    const technicalAllowed=await aiTechnicalAllowed();
+    if (!await aiAllowed() || consentEpoch!==aiConsentEpoch) return { error: 'AI transmission is off. Review data consent in Settings.' };
+    const prompt=technicalAllowed ? msg.prompt : msg.promptWithoutHistory;
+    if(typeof prompt!=='string' || !prompt.trim())return {error:'Reload this exercise to use AI without learning history.'};
+
     const controller = new AbortController();
+    aiRequests.add(controller);
     const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -533,7 +645,7 @@ const messageHandlers = {
           model: msg.model || 'claude-sonnet-4-6',
           max_tokens: msg.maxTokens || 1024,
           messages: [
-            { role: 'user', content: msg.prompt }
+            { role: 'user', content: prompt }
           ]
         }),
         signal: controller.signal
@@ -566,6 +678,7 @@ const messageHandlers = {
       }
       return { content };
     } catch (err) {
+      if(controller.signal.reason==='consent-revoked') return {error:'AI transmission was turned off. Local teaching is still available.'};
       if (err.name === 'AbortError') {
         return { error: 'The tutor request timed out. Try Help again.' };
       }
@@ -575,6 +688,7 @@ const messageHandlers = {
       return { error: 'Could not reach Anthropic. Check your connection and try Help again.' };
     } finally {
       clearTimeout(timeoutId);
+      aiRequests.delete(controller);
     }
   },
 
@@ -610,6 +724,7 @@ const messageHandlers = {
   },
 
   async saveTypingResult(msg) {
+    GateBackup.validateRecord('typingHistory',[msg.result]);
     typingHistory.push(msg.result);
     if (typingHistory.length > 500) {
       typingHistory = typingHistory.slice(-500);
@@ -624,6 +739,8 @@ const messageHandlers = {
 
   // Daily challenge log (for heatmap and time metrics)
   async logChallengeCompletion(msg) {
+    if(msg.challengeType && !['typing','python','terminal','git','math','brainteasers'].includes(msg.challengeType)) throw Error('Unknown challenge type.');
+    if(msg.solveTime!==undefined && (!Number.isFinite(msg.solveTime) || msg.solveTime<0)) throw Error('Invalid solve time.');
     const today = todayKey();
     if (!dailyChallengeLog[today]) {
       dailyChallengeLog[today] = { typing: 0, python: 0, terminal: 0, git: 0, totalTime: 0 };
@@ -699,19 +816,23 @@ function onStateLoaded() {
 }
 
 browser.runtime.onStartup.addListener(() => {
-  loadState()
+  stateCommand(loadState)
     .then(() => { onStateLoaded(); console.log('[Challenge Gate] Startup reload complete.'); })
     .catch(err => console.error('[Challenge Gate] Startup load failed:', err));
 });
 
 browser.runtime.onInstalled.addListener(() => {
-  loadState()
-    .then(() => { onStateLoaded(); console.log('[Challenge Gate] Install/update reload complete.'); })
+  stateCommand(loadState)
+    .then(async () => {
+      onStateLoaded();
+      const {aiConsent} = await browser.storage.local.get('aiConsent');
+      if(aiConsent?.version!==2) await browser.tabs.create({url:browser.runtime.getURL('dashboard/consent.html'),active:true});
+    })
     .catch(err => console.error('[Challenge Gate] Install load failed:', err));
 });
 
 // ── Init ────────────────────────────────────────────────────────────────────
 
-loadState()
+stateCommand(loadState)
   .then(() => { onStateLoaded(); console.log('[Challenge Gate] Loaded.', blockedSites.length, 'sites blocked.'); })
   .catch(err => console.error('[Challenge Gate] Init load failed:', err));

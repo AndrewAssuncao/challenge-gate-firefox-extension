@@ -3,7 +3,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {create}=require('./background-harness.cjs');
 const fixtureKey='fixture-key-not-a-real-credential';
-const initial={settings:{anthropicApiKey:fixtureKey}};
+const initial={aiConsent:{version:2,allowed:true,technicalAllowed:true},settings:{anthropicApiKey:fixtureKey}};
 const success=()=>({ok:true,status:200,json:async()=>({content:[{type:'text',text:'Local teaching explanation'}]})});
 
 test('Help uses the supported Sonnet replacement and the Messages API contract',async()=>{
@@ -70,7 +70,7 @@ test('timeout aborts the request and clears its timer without retrying',async()=
   fetch:async(_url,options)=>{calls++;return new Promise((_resolve,reject)=>options.signal.addEventListener('abort',()=>{
    const error=Error(fixtureKey);error.name='AbortError';reject(error);
   }));}});
- const pending=h.send({type:'claudeGenerate',prompt:'Fixture'});timeout();
+ const pending=h.send({type:'claudeGenerate',prompt:'Fixture'});await new Promise(resolve=>setImmediate(resolve));timeout();
  const result=await pending;assert.match(result.error,/request timed out/);assert.equal(calls,1);assert.equal(cleared,true);
  assert.equal(JSON.stringify(result).includes(fixtureKey),false);
 });

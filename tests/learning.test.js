@@ -159,7 +159,7 @@ test('perfect learner reaches every foundation skill without repeated-content cr
   assert.equal(new Set(novel.map(e=>e.semanticKey)).size,novel.length);
   for(const skill of targets)assert.equal(E.evidence(h.state,skill.id).retained,false,'readiness is not retention');
  }
- assert.equal(reached.size,21);
+ assert.equal(reached.size,25);
 });
 test('failed or hinted first transfer recovers and continued perfect practice preserves readiness',()=>{
  for(const intervention of ['fail','hint']){

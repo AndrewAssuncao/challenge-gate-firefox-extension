@@ -127,7 +127,13 @@ const TerminalChallengeProvider = (() => {
     marathon: 'Generate an extensive, multi-step scenario that tests deep terminal mastery. Require sustained focus, complex pipelines, multi-tool integration, and thorough problem solving (~20-40 minutes).'
   };
 
-  function buildMentorPrompt(profile, crossDisciplineContext, scheduledDifficulty, reinforceOnly) {
+  function buildMentorPrompt(profile, crossDisciplineContext, scheduledDifficulty, reinforceOnly, includeEvidence=true) {
+    if(!includeEvidence) {
+      const publicProfile={...defaultProfile(),currentTopicIndex:profile.currentTopicIndex,totalSessions:-1};
+      return buildMentorPrompt(publicProfile,'','normal',false,true)
+        .replace(/^Curriculum position:.*$|^Total challenge attempts:.*$/gm,'')
+        .replace(/\n## What the User Knows[\s\S]*?\n## Instructions/,'\n## Instructions');
+    }
     const currentTopic = TERMINAL_CURRICULUM[profile.currentTopicIndex] || TERMINAL_CURRICULUM[0];
     const tier = currentTopic.tier;
 
@@ -162,7 +168,7 @@ const TerminalChallengeProvider = (() => {
     return `You are a terminal/shell mentor embedded in a browser extension. The user must solve your challenge to access a blocked site. Your job is to genuinely teach them to master the terminal — not just test them.
 
 ## Context
-The user uses macOS with Oh My Zsh, iTerm2, zsh-autosuggestions, zsh-syntax-highlighting, z plugin, and aliases plugin. They run a full-stack startup (Python + JS/TS) and need versatile terminal skills for development, deployment, and debugging.
+Exercises use a simulated shell with macOS-oriented examples for development, deployment, and debugging.
 
 ## Your Teaching Style
 - Concise, dry, intelligent. No fake enthusiasm.
@@ -342,6 +348,7 @@ IMPORTANT: The "filesystem" field must be a flat object mapping path strings to 
       const response = await browser.runtime.sendMessage({
         type: 'claudeGenerate',
         prompt: prompt,
+        promptWithoutHistory:buildMentorPrompt(profile,'',scheduledDifficulty,reinforceOnly,false),
         model: useOpus ? 'claude-opus-4-8' : undefined,
         maxTokens: useOpus ? 2048 : undefined
       });

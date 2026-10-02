@@ -28,6 +28,8 @@ const PythonChallenge = (() => {
   let helpUsedThisChallenge = false;
   let helpRequestCount = 0;
   let failedRunsSinceHelp = 0;
+  let generation = 0;
+  let pendingExecution = null;
 
   const promptEl = document.getElementById('python-prompt');
   const editorEl = document.getElementById('python-editor');
@@ -36,6 +38,8 @@ const PythonChallenge = (() => {
   const outputEl = document.getElementById('python-output');
   const resultsEl = document.getElementById('python-test-results');
   const runBtn = document.getElementById('python-run');
+  const submitBtn = document.getElementById('python-submit');
+  const stdoutEl = document.getElementById('python-stdout');
   const hintBtn = document.getElementById('python-hint');
   const tierEl = document.getElementById('python-tier');
   const progressEl = document.getElementById('python-progress');
@@ -47,15 +51,24 @@ const PythonChallenge = (() => {
   let runTimeout = null;
 
   function destroyWorker() {
+    generation++;
+    pendingExecution = null;
     clearTimeout(runTimeout);runTimeout=null;
     if (worker) {
       worker.terminate();
       worker = null;
       pyodideReady = false;
     }
+    runBtn.disabled = false; submitBtn.disabled = false;
+    runBtn.textContent = 'Run'; submitBtn.textContent = 'Submit';
   }
 
   async function init(cfg) {
+    const previous=cfg.quantChallenge && config.quantChallenge && challenge?.id===cfg.quantChallenge.id
+      ? {code:editorEl.value,start:editorEl.selectionStart,end:editorEl.selectionEnd} : null;
+    // Keep a ready, idle runtime; cancel an in-flight execution before changing lessons.
+    if(pendingExecution && !pendingExecution.processing)destroyWorker();else {generation++;pendingExecution=null;}
+    const token = generation;
     // Clear any pending fallback timeout from a previous init
     if (fallbackTimeout) {
       clearTimeout(fallbackTimeout);
@@ -73,6 +86,7 @@ const PythonChallenge = (() => {
     failedRunsSinceHelp = 0;
     helpConversation = [];
     outputEl.classList.add('hidden');
+    document.getElementById('python-submission').hidden = true;
     const helpChat = document.getElementById('python-help-chat');
     if (helpChat) { helpChat.classList.add('hidden'); }
     const helpMsgs = document.getElementById('python-help-messages');
@@ -82,6 +96,7 @@ const PythonChallenge = (() => {
     helpBtn.textContent = 'Help';
 
     runBtn.disabled = false;
+    submitBtn.disabled = false;
     [hintBtn, helpBtn, skipBtn].forEach(b => b.hidden = !!cfg.quantChallenge);
     if (cfg.quantChallenge) {
       challenge = cfg.quantChallenge;
@@ -90,7 +105,10 @@ const PythonChallenge = (() => {
       tierEl.textContent = 'Quant Coding';
       progressEl.textContent = '';
       renderChallenge();
-      if (cfg.quantDraft) { editorEl.value = cfg.quantDraft; updateHighlight(); updateLineNumbers(); }
+      if (previous || (typeof cfg.quantDraft === 'string' && cfg.quantDraft)) {
+        editorEl.value = previous?.code ?? cfg.quantDraft; updateHighlight(); updateLineNumbers();
+        if(previous){editorEl.selectionStart=previous.start;editorEl.selectionEnd=previous.end;}
+      }
       editorEl.onchange = () => cfg.onQuantDraft(editorEl.value);
       bindEvents();
       initPyodide();
@@ -99,6 +117,7 @@ const PythonChallenge = (() => {
     editorEl.onchange = null;
     // Load learning profile
     profile = await browser.runtime.sendMessage({ type: 'getLearningProfile' });
+    if (token !== generation) return;
     if (!profile) {
       profile = ChallengeProvider.defaultProfile();
     }
@@ -122,6 +141,7 @@ const PythonChallenge = (() => {
       try { scheduledDifficulty = (await browser.runtime.sendMessage({ type: 'getCurrentDifficulty' })).difficulty; } catch {}
     }
     const result = await ChallengeProvider.getChallenge(profile, scheduledDifficulty, config.reinforceOnly);
+    if (token !== generation) return;
     challenge = result.challenge;
     challengeSource = result.source;
 
@@ -145,6 +165,12 @@ const PythonChallenge = (() => {
   function renderChallenge() {
     let html = '';
     const isCodeReview = challenge.type === 'code_review';
+    const executable=isCodeReview?null:(config.quantChallenge?challenge:ChallengeProvider.getExecutable(challenge));
+    if(!isCodeReview && !executable) {
+      editorEl.value='';runBtn.disabled=true;submitBtn.disabled=true;
+      promptEl.textContent='This saved exercise needs reloading before it can run. Your learning progress is retained.';
+      return;
+    }
 
     // Teaching note (when Claude introduces a new concept)
     if (challenge.teachingNote) {
@@ -165,6 +191,11 @@ const PythonChallenge = (() => {
     }
 
     promptEl.innerHTML = html;
+    if(challengeSource==='claude' && !isCodeReview) {
+      const note=document.createElement('div');note.className='concept-tag';
+      note.textContent='The starter function is provided locally. AI supplies the exercise and feedback; write your solution below.';
+      promptEl.appendChild(note);
+    }
 
     // Code review mode: show code to review + text area
     const reviewCodeEl = document.getElementById('python-review-code');
@@ -174,14 +205,16 @@ const PythonChallenge = (() => {
       editorEl.value = '';
       editorEl.placeholder = 'Type your analysis here. What issues do you see? How would you fix them?';
       editorEl.style.minHeight = '120px';
-      runBtn.textContent = 'Submit';
+      runBtn.hidden = true;
     } else {
       if (reviewCodeEl) reviewCodeEl.classList.add('hidden');
       editorEl.placeholder = '';
       editorEl.style.minHeight = '';
-      runBtn.textContent = 'Run';
-      editorEl.value = challenge.starterCode || '';
+      runBtn.hidden = false;
+      editorEl.value = executable.starterCode;
     }
+    submitBtn.hidden = !!config.quantChallenge && config.quantAssessing === false;
+    document.getElementById('python-run-note').hidden = isCodeReview;
 
     updateHighlight();
     updateLineNumbers();
@@ -190,6 +223,7 @@ const PythonChallenge = (() => {
 
   function bindEvents() {
     runBtn.onclick = runCode;
+    submitBtn.onclick = submitCode;
     hintBtn.onclick = showHint;
     helpBtn.onclick = () => askForHelp();
     skipBtn.onclick = skipChallenge;
@@ -214,6 +248,7 @@ const PythonChallenge = (() => {
     editorEl.oninput = () => {
       updateHighlight();
       updateLineNumbers();
+      if(config.quantChallenge)config.onQuantDraft(editorEl.value);
     };
 
     editorEl.onscroll = () => {
@@ -231,10 +266,11 @@ const PythonChallenge = (() => {
         editorEl.selectionStart = editorEl.selectionEnd = start + 4;
         updateHighlight();
         updateLineNumbers();
+        if(config.quantChallenge)config.onQuantDraft(editorEl.value);
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
-        runCode();
+        if(challenge?.type==='code_review')submitCode();else runCode();
       }
     };
   }
@@ -370,53 +406,68 @@ const PythonChallenge = (() => {
       } else if (e.data.type === 'error') {
         loadingEl.classList.add('hidden');outputEl.classList.remove('hidden');resultsEl.textContent=e.data.error;destroyWorker();
       } else if (e.data.type === 'result') {
-        clearTimeout(runTimeout);runTimeout=null;
-        handleResult(e.data);
+        void handleResult(e.data);
       }
     };
     worker.onerror = (err) => {
+      if (worker !== currentWorker) return;
       console.error('[Challenge Gate] Pyodide worker error:', err);
       loadingEl.classList.add('hidden');
       // Clean up the broken worker so a retry can create a fresh one
       destroyWorker();
+      outputEl.classList.remove('hidden');
+      resultsEl.textContent='Python runtime stopped. Retry execution; no graded attempt was recorded.';
     };
   }
 
-  async function runCode() {
-    if (challengeResolved) return;
-
-    // Code review mode: send text to Claude for validation
+  function runCode() { return executeCode('scratch'); }
+  function submitCode() { return executeCode('submit'); }
+  async function executeCode(mode) {
+    if (challengeResolved || !challenge || pendingExecution) return;
+    if (mode === 'submit' && config.quantChallenge && config.quantAssessing === false) return;
     if (challenge.type === 'code_review') {
-      await submitCodeReview();
+      if (mode === 'submit') await submitCodeReview();
       return;
     }
-
-    if (!challenge) return;
+    const executable=config.quantChallenge?challenge:ChallengeProvider.getExecutable(challenge);
+    if(!executable) {
+      runBtn.disabled=true;submitBtn.disabled=true;outputEl.classList.remove('hidden');
+      resultsEl.textContent='Reload this saved exercise before running it. No code was executed.';
+      return;
+    }
     if (!pyodideReady) { initPyodide(); return; }
 
-    runBtn.disabled = true;
-    runBtn.textContent = 'Running…';
+    const request = {requestId:crypto.randomUUID(),mode,code:editorEl.value,generation,testCount:executable.testCases.length};
+    pendingExecution = request;
+    runBtn.disabled = true; submitBtn.disabled = true;
+    (mode === 'scratch' ? runBtn : submitBtn).textContent = mode === 'scratch' ? 'Running…' : 'Submitting…';
     outputEl.classList.add('hidden');
     lastRunDiagnostics = null;
 
-    if (config.quantChallenge) runTimeout=setTimeout(()=>{
-      destroyWorker();runBtn.disabled=false;runBtn.textContent='Run';outputEl.classList.remove('hidden');
-      resultsEl.textContent='Run stopped after 15 seconds. Check for an infinite loop, then retry. No mastery was awarded.';
+    runTimeout=setTimeout(()=>{
+      if (pendingExecution !== request) return;
+      destroyWorker();outputEl.classList.remove('hidden');
+      resultsEl.textContent='Execution stopped after 15 seconds. Check for an infinite loop, then retry. No graded attempt was recorded.';
     },15000);
-    worker.postMessage({
-      type: 'run',
-      code: editorEl.value,
-      testCases: challenge.testCases,
-      functionName: challenge.functionName
-    });
+    try { worker.postMessage({
+      type: 'run', requestId:request.requestId, mode,
+      code: request.code,
+      ...(mode === 'submit' ? {testCases:executable.testCases,functionName:executable.functionName} : {})
+    }); } catch(err) {
+      clearTimeout(runTimeout);runTimeout=null;
+      finishExecution(request);outputEl.classList.remove('hidden');
+      resultsEl.textContent='Could not start execution: '+err.message+'. No graded attempt was recorded.';
+    }
   }
 
   async function submitCodeReview() {
     const userAnswer = editorEl.value.trim();
     if (!userAnswer) return;
 
-    runBtn.disabled = true;
-    runBtn.textContent = 'Evaluating…';
+    const request = {requestId:crypto.randomUUID(),mode:'submit',code:userAnswer,generation};
+    pendingExecution = request;
+    runBtn.disabled = true; submitBtn.disabled = true;
+    submitBtn.textContent = 'Evaluating…';
     outputEl.classList.remove('hidden');
     resultsEl.innerHTML = '<div class="test-summary">Evaluating your answer...</div>';
 
@@ -447,12 +498,12 @@ Respond with ONLY valid JSON:
       const response = await browser.runtime.sendMessage({
         type: 'claudeGenerate',
         prompt: validationPrompt,
+        promptWithoutHistory:validationPrompt,
         model: 'claude-opus-4-8',
         maxTokens: 1024
       });
 
-      runBtn.disabled = false;
-      runBtn.textContent = 'Submit';
+      if (pendingExecution !== request || request.generation !== generation) return;
 
       if (response.error) {
         resultsEl.innerHTML = '<div class="test-summary some-fail">Could not validate (no API key). Try again.</div>';
@@ -467,38 +518,72 @@ Respond with ONLY valid JSON:
         result = { correct: false, feedback: response.content || 'Could not parse response.', score: 0 };
       }
 
+      if(!result || Array.isArray(result) || typeof result.correct!=='boolean' ||
+        typeof result.score!=='number' || !Number.isFinite(result.score) || result.score<0 || result.score>100) {
+        resultsEl.textContent='Could not read a valid review score. Try again.';
+        return;
+      }
+      const score=result.score;
+
       let html = '';
       if (result.correct === true) {
-        html += `<div class="test-summary all-pass">Good analysis! (${result.score || 100}%)</div>`;
+        html += `<div class="test-summary all-pass">Good analysis! (${score}%)</div>`;
         html += `<div class="test-detail">${escapeHtml(result.feedback || '')}</div>`;
         if (challenge.afterSolve) {
           html += `<div class="after-solve">${escapeHtml(challenge.afterSolve)}</div>`;
         }
         resultsEl.innerHTML = html;
-        onPassed();
+        const submission={answer:userAnswer,output:result.feedback || ''};
+        showSubmission(submission);
+        await onPassed(submission);
       } else {
-        html += `<div class="test-summary some-fail">Not quite. (${result.score || 0}%)</div>`;
+        html += `<div class="test-summary some-fail">Not quite. (${score}%)</div>`;
         html += `<div class="test-detail">${escapeHtml(result.feedback || '')}</div>`;
         if (result.missingPoints && result.missingPoints.length > 0) {
           html += `<div class="test-detail" style="margin-top: 6px;">Missing: ${result.missingPoints.map(p => escapeHtml(p)).join(', ')}</div>`;
         }
         resultsEl.innerHTML = html;
-        if (config.quantChallenge) { await config.onQuantResult(false); return; }
-    failedBeforePass++;
+        const submission={answer:userAnswer,output:result.feedback || ''};
+        showSubmission(submission);
+        await onFailed(submission);
       }
     } catch (err) {
-      runBtn.disabled = false;
-      runBtn.textContent = 'Submit';
+      if (pendingExecution !== request || request.generation !== generation) return;
       resultsEl.innerHTML = `<div class="test-summary some-fail">Evaluation error: ${escapeHtml(err.message)}</div>`;
+    } finally {
+      finishExecution(request);
     }
   }
 
-  function handleResult(data) {
-    if (challengeResolved) return;
-
-    runBtn.disabled = false;
-    runBtn.textContent = 'Run';
+  function finishExecution(request) {
+    if (pendingExecution !== request || request.generation !== generation) return;
+    pendingExecution = null;
+    runBtn.disabled = challengeResolved; submitBtn.disabled = challengeResolved;
+    runBtn.textContent = 'Run'; submitBtn.textContent = 'Submit';
+  }
+  function showSubmission(submission) {
+    if (config.quantChallenge) return; // The shared lesson owns durable feedback.
+    document.getElementById('python-submission').hidden = false;
+    document.getElementById('python-submitted-code').textContent = submission.answer;
+    document.getElementById('python-submitted-output').textContent = submission.output;
+  }
+  async function handleResult(data) {
+    const request = pendingExecution;
+    if (challengeResolved || !request || request.processing || data.requestId !== request.requestId || data.mode !== request.mode || request.generation !== generation) return;
+    request.processing = true;
+    clearTimeout(runTimeout);runTimeout=null;
+    try {
     outputEl.classList.remove('hidden');
+    stdoutEl.hidden = !data.stdout && !data.stderr;
+    stdoutEl.textContent = (data.stdout || '') + (data.stderr || '');
+    if (request.mode === 'scratch') {
+      lastErrorOutput = [data.stdout,data.stderr,data.error].filter(Boolean).join('\n');
+      resultsEl.textContent = data.error || 'Run finished. No graded attempt recorded.';
+      return;
+    }
+    const submission = {answer:request.code,output:[data.stdout,data.stderr,data.error,
+      ...(data.results || []).map((r,i)=>`Test ${i+1} (${r.input}): ${r.passed?'passed':'failed'}; expected ${r.expected}, got ${r.actual}${r.error?'\n'+r.error:''}`)].filter(Boolean).join('\n').slice(0,20000)};
+    showSubmission(submission);
     lastRunDiagnostics = data.diagnostics || null;
 
     if (data.error) {
@@ -507,17 +592,21 @@ Respond with ONLY valid JSON:
         <div class="test-label">Error</div>
         <div class="test-error">${escapeHtml(data.error)}</div>
       </div>`;
-      if (data.errorKind === 'user-code') void onFailed();
+      if (data.errorKind === 'user-code') await onFailed(submission);
       return;
     }
 
     if (lastRunDiagnostics?.unrecoverableChallengeIssue) {
       const issueText = buildChallengeIssueText(lastRunDiagnostics);
-      void bypassChallengeForIssue(issueText);
+      lastErrorOutput=issueText;
+      resultsEl.textContent="Test inputs could not be applied. Check that your function signature matches the starter, then retry; reload for a fresh exercise if needed. Your progress was not changed.";
       return;
     }
 
     const results = data.results || [];
+    if(!results.length || (request.testCount !== undefined && results.length !== request.testCount)) {
+      resultsEl.textContent='Incomplete assessment results were returned. Retry Submit; no graded attempt was recorded.';return;
+    }
     const allPassed = results.length > 0 && results.every(r => r.passed);
     const repairNoticeHtml = buildRepairNoticeHtml(lastRunDiagnostics);
     const repairNoticeText = buildRepairNoticeText(lastRunDiagnostics);
@@ -540,7 +629,8 @@ Respond with ONLY valid JSON:
       if (challenge.afterSolve) {
         html += `<div class="after-solve">${escapeHtml(challenge.afterSolve)}</div>`;
       }
-      onPassed();
+      resultsEl.innerHTML = html;
+      await onPassed(submission);
     } else {
       // Capture failure details for help button
       lastErrorOutput = results
@@ -556,13 +646,16 @@ Respond with ONLY valid JSON:
       const passCount = results.filter(r => r.passed).length;
       html += `<div class="test-summary some-fail">${passCount}/${results.length} tests passed.</div>`;
       html += repairNoticeHtml;
-      onFailed();
+      resultsEl.innerHTML = html;
+      await onFailed(submission);
     }
 
-    resultsEl.innerHTML = html;
+    } catch (err) {
+      if (request.generation === generation) resultsEl.textContent = 'Could not save this submission: ' + err.message + '. Your code is retained; retry Submit.';
+    } finally { finishExecution(request); }
   }
 
-  async function onPassed() {
+  async function onPassed(submission) {
     if (challengeResolved) return;
     challengeResolved = true;
 
@@ -571,12 +664,12 @@ Respond with ONLY valid JSON:
     const solveTimeSec = Math.round((Date.now() - challengeStartTime) / 1000);
     const parts = [];
     if (!struggled && !helpUsedThisChallenge) parts.push('clean');
-    if (failedBeforePass > 0) parts.push(`${failedBeforePass} failed runs`);
+    if (failedBeforePass > 0) parts.push(`${failedBeforePass} failed submissions`);
     if (helpUsedThisChallenge) parts.push('used help');
     parts.push(`${solveTimeSec}s`);
     const summary = `PASSED (${parts.join(', ')})`;
 
-    if (config.quantChallenge) { await config.onQuantResult(true); challengeResolved = false; return; }
+    if (config.quantChallenge) { await config.onQuantResult(true,submission); challengeResolved = false; return; }
 
     // Update learning profile (with spaced repetition context)
     profile = await saveAttempt(true, struggled, helpUsedThisChallenge || hintsUsed > 0, summary);
@@ -600,9 +693,9 @@ Respond with ONLY valid JSON:
     Gate.showContinuePrompt();
   }
 
-  async function onFailed() {
+  async function onFailed(submission) {
     if (challengeResolved) return;
-    if (config.quantChallenge) { await config.onQuantResult(false); return; }
+    if (config.quantChallenge) { await config.onQuantResult(false,submission); return; }
     failedBeforePass++;
 
     // Track failed runs for help-bypass gating
@@ -610,7 +703,7 @@ Respond with ONLY valid JSON:
 
     // Build compact summary of what went wrong
     const errorBrief = (lastErrorOutput || 'no output').split('\n')[0].slice(0, 120);
-    const parts = [`${failedBeforePass} failed runs`];
+    const parts = [`${failedBeforePass} failed submissions`];
     if (helpUsedThisChallenge) parts.push('used help');
     const summary = `FAILED — ${errorBrief}. ${parts.join(', ')}`;
 
@@ -644,7 +737,7 @@ Respond with ONLY valid JSON:
   // ── Help chat system ───────────────────────────────────────────────
   let helpConversation = []; // array of { role: 'user'|'assistant', content }
 
-  function buildHelpSystemPrompt() {
+  function buildHelpSystemPrompt(includeEvidence=true) {
     const userCode = editorEl.value;
     return `You are a Python tutor helping a student who is stuck on a coding challenge in a browser extension. Your job is to TEACH, not just diagnose.
 
@@ -668,7 +761,7 @@ Student's current code:
 ${userCode}
 \`\`\`
 
-${lastErrorOutput ? `Latest errors/failures:\n${lastErrorOutput}` : 'No run output yet.'}`;
+${includeEvidence && lastErrorOutput ? `Latest errors/failures:\n${lastErrorOutput}` : 'No run output yet.'}`;
   }
 
   async function askForHelp(userQuestion) {
@@ -715,6 +808,7 @@ ${lastErrorOutput ? `Latest errors/failures:\n${lastErrorOutput}` : 'No run outp
       const response = await browser.runtime.sendMessage({
         type: 'claudeGenerate',
         prompt: fullPrompt,
+        promptWithoutHistory:buildHelpSystemPrompt(false)+'\n\nHelp the student with this code.'+(helpConversation.length?'\nConversation:\n'+helpConversation.map(m=>m.role+': '+m.content).join('\n'):''),
         maxTokens: 1024
       });
 
@@ -724,10 +818,7 @@ ${lastErrorOutput ? `Latest errors/failures:\n${lastErrorOutput}` : 'No run outp
       if (shouldCheckChallengeIssue) {
         try {
           const parsed = JSON.parse(helpText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim());
-          if (parsed.kind === 'challenge_issue') {
-            await bypassChallengeForIssue(parsed.message);
-            return;
-          }
+          // A tutor's issue report is feedback, never authority to erase attempts or unlock.
           if (parsed.message) helpText = parsed.message;
         } catch { /* not JSON, use as plain text */ }
       }

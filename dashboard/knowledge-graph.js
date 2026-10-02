@@ -358,6 +358,7 @@ function renderCurriculumGraph(graph) {
     status.textContent=`${node.evidence.status} · ${node.evidence.novelIndependent} novel checks · ${node.evidence.reassessed} known-item reassessments`;
     detail.appendChild(status);
     const objective=document.createElement('p');objective.textContent=node.objective;detail.appendChild(objective);
+    const scope=document.createElement('p');scope.textContent=node.scopeNote;detail.appendChild(scope);
     const availability=document.createElement('p');availability.textContent=(node.eligible?'Prerequisites ready':'Prerequisites pending')+' · '+(node.reviewDue?'Review due':node.evidence.dueAt?'Review '+new Date(node.evidence.dueAt).toLocaleDateString():'No review scheduled');detail.appendChild(availability);
     const required=document.createElement('p');required.textContent=node.prerequisites.length?'Requires all:':'Prerequisites: none';detail.appendChild(required);
     const list=document.createElement('ul');

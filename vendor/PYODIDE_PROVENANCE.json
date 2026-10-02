@@ -1,0 +1,224 @@
+{
+  "runtime": "Pyodide 0.25.1",
+  "python": "3.11.3",
+  "emscripten": "3.1.46",
+  "assetsUnmodified": true,
+  "files": [
+    {
+      "path": "vendor/pyodide/LICENSE-PYODIDE",
+      "bytes": 16725,
+      "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/LICENSE-PYTHON",
+      "bytes": 13936,
+      "sha256": "3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/LICENSE",
+      "bytes": 5093,
+      "sha256": "620a78084fc7ca97c0b5dea9abf891f3ffcadfdbf305276f099c9c4e12fc1d86",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/system/include/SDL/COPYING",
+      "bytes": 1031,
+      "sha256": "c0340bf02391530fb13cf4170c31253ecd09868fa483553652699584eb4db6ae",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/system/lib/compiler-rt/LICENSE.TXT",
+      "bytes": 16708,
+      "sha256": "1a8f1058753f1ba890de984e48f0242a3a5c29a6a8f2ed9fd813f36985387e8d",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/system/lib/libcxx/LICENSE.TXT",
+      "bytes": 16703,
+      "sha256": "539dd7aed86e8a4f12cbdd0e6c50c189c7d74847e4fecc64ce2c6ee3a01da38b",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/system/lib/libcxxabi/LICENSE.TXT",
+      "bytes": 16706,
+      "sha256": "e2b35be49f7284a45b7baca8fc7b3ab7440e7902392b2528a457816b5bb2a15c",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/system/lib/libunwind/LICENSE.TXT",
+      "bytes": 16706,
+      "sha256": "b5efebcaca80879234098e52d1725e6d9eb8fb96a19fce625d39184b705f7b6d",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/test/sounds/LICENSE.txt",
+      "bytes": 836,
+      "sha256": "dabb2ee881522112ee70539aec179f3a639b8fc58e6a7ca06df2791fabd51537",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/test/third_party/box2d/freeglut/COPYING",
+      "bytes": 1439,
+      "sha256": "b6593d5ec4c113a274abb85b10e8615895cb0ddb89f7912af5fe5aa8df38a275",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/test/third_party/bullet/COPYING",
+      "bytes": 18002,
+      "sha256": "231f7edcc7352d7734a96eef0b8030f77982678c516876fcb81e25b32d68564c",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/test/third_party/bullet/LICENSE",
+      "bytes": 1337,
+      "sha256": "2a37da52f3f9134d50e5320f68854cfe2dea8708ff98336d08c60146d582eeb3",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/test/third_party/coremark/LICENSE.md",
+      "bytes": 18582,
+      "sha256": "9577b9c846f61fd69a0d8ac965998c6450c7d8969f71f0bb4a931b91aebad28a",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/test/third_party/enet/LICENSE",
+      "bytes": 1060,
+      "sha256": "f7295dd0e55e7df4048d0bc08e3f57af92ea03ee9e8c2d236885c29e4fcaa105",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/test/third_party/freealut/COPYING",
+      "bytes": 25268,
+      "sha256": "db6a1ddf751a4eb743d640550717fe15bb5483f5238b97aa4a0145d46dc22075",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/test/third_party/freetype/docs/LICENSE.TXT",
+      "bytes": 1396,
+      "sha256": "f35d115efd18ec624503129dbbcc8cd14c74140e2ecb85a3411b92e7a3901a11",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/test/third_party/notofont/LICENSE_OFL.txt",
+      "bytes": 4301,
+      "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/test/third_party/openjpeg/LICENSE",
+      "bytes": 1723,
+      "sha256": "db41603bdbc1a8aad4b6e51affa4357209d0e5bbafc2557ac050c62590cc800b",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/test/third_party/poppler/COPYING",
+      "bytes": 17987,
+      "sha256": "ab15fd526bd8dd18a9e77ebc139656bf4d33e97fc7238cd11bf60e2b9b8666c6",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/test/third_party/poppler/cmake/modules/COPYING-CMAKE-SCRIPTS",
+      "bytes": 1327,
+      "sha256": "46cde7dc11e64c78d650b4851b88f6704b4665ff60f22a1caf68ceb15e217e5b",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/third_party/closure-compiler/node-externs/LICENSE",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/third_party/leb128/LICENSE",
+      "bytes": 1065,
+      "sha256": "6d21d47a22d95b919ddeaf8b49a4697909b47310472cb7fe3ad14cf6810d3208",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/EMSCRIPTEN/third_party/terser/LICENSE",
+      "bytes": 1348,
+      "sha256": "68335488ef8f917c0feb901ace385f8c919bc81b0b60448a92928a3769fcec8f",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/HIWIRE/LICENSE",
+      "bytes": 16725,
+      "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/LIBFFI/LICENSE",
+      "bytes": 1132,
+      "sha256": "2c9c2acb9743e6b007b91350475308aee44691d96aa20eacef8e199988c8c388",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/licenses/LIBFFI/LICENSE-BUILDTOOLS",
+      "bytes": 18698,
+      "sha256": "e67978cd18816c0cb7d29aaaacde7b7447402c2fb321a051698890a8eaedda94",
+      "url": "see matching source archives"
+    },
+    {
+      "path": "vendor/pyodide/pyodide-lock.json",
+      "bytes": 88866,
+      "sha256": "6526dae570ab7db75019fe2c7ccc6b7b82765c56417a498a7b57e1aaebec39f5",
+      "url": "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide-lock.json"
+    },
+    {
+      "path": "vendor/pyodide/pyodide.asm.js",
+      "bytes": 1130465,
+      "sha256": "512042dfdd406971c6fc920b6932e1a8eb5dd2ab3521aa89a020980e4a08bd4b",
+      "url": "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.asm.js"
+    },
+    {
+      "path": "vendor/pyodide/pyodide.asm.wasm",
+      "bytes": 9002149,
+      "sha256": "aa920641c032c3db42eb1fb018eec611dbef96f0fa4dbdfa6fe3cb1b335aed3c",
+      "url": "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.asm.wasm"
+    },
+    {
+      "path": "vendor/pyodide/pyodide.js",
+      "bytes": 16698,
+      "sha256": "b9cb64a73cc4127eef7cdc75f0cd8307db9e90e93b66b1b6a789319511e1937c",
+      "url": "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"
+    },
+    {
+      "path": "vendor/pyodide/python_stdlib.zip",
+      "bytes": 2323181,
+      "sha256": "52866039fa3097e549649b9a62ffae8a1125f01ace7b2d077f34e3cbaff8d0ca",
+      "url": "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/python_stdlib.zip"
+    },
+    {
+      "path": "sources/pyodide/pyodide-0.25.1-source.tar.gz",
+      "bytes": 7966298,
+      "sha256": "c24a6228e27b393d1c1c3d6e1c80aae13032ce79493869dcc19a4aa753c31353",
+      "url": "https://codeload.github.com/pyodide/pyodide/tar.gz/refs/tags/0.25.1"
+    },
+    {
+      "path": "sources/pyodide/Python-3.11.3.tgz",
+      "bytes": 26455738,
+      "sha256": "1a79f3df32265d9e6625f1a0b31c28eb1594df911403d11f3320ee1da1b3e048",
+      "url": "https://www.python.org/ftp/python/3.11.3/Python-3.11.3.tgz"
+    },
+    {
+      "path": "sources/pyodide/libffi-f08493d.tar.gz",
+      "bytes": 595072,
+      "sha256": "0c4e5647b79e21b900eb872dd98a3e0a66be12b36ad89677f61fd901a2615778",
+      "url": "https://codeload.github.com/libffi/libffi/tar.gz/f08493d249d2067c8b3207ba46693dd858f95db3"
+    },
+    {
+      "path": "sources/pyodide/hiwire-49f3450.tar.gz",
+      "bytes": 27411,
+      "sha256": "e1df5a0a456da38f07bd918570e7df6984d393d8cb0fa6708772d1b8d4d84dbc",
+      "url": "https://codeload.github.com/hoodmane/hiwire/tar.gz/49f3450e34f3f50d4b8296e782dc321bb2e3264e"
+    },
+    {
+      "path": "sources/pyodide/emscripten-3.1.46.tar.gz",
+      "bytes": 28850866,
+      "sha256": "2c1474286f6b3a06b3442a57ba043f809849573a179db681c6a350bf327ce360",
+      "url": "https://codeload.github.com/emscripten-core/emscripten/tar.gz/refs/tags/3.1.46"
+    }
+  ]
+}

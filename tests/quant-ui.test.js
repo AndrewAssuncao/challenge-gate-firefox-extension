@@ -34,3 +34,8 @@ test('storage retry keeps id for identical payload and changes id when answer ch
  h.fail=true;await assert.rejects(h.ui.attempt(false),/disk/);assert.equal(h.commands[1].command.eventId,first.eventId);
  h.node('quant-answer').value='2';await h.ui.attempt(false);assert.notEqual(h.commands[2].command.eventId,first.eventId);assert.equal(h.commands[2].command.answer,'2');
 });
+
+test('history-free neutral teaching stage maps locally before validated persistence',async()=>{
+ const r=E.apply(E.empty(),{op:'begin',mode:'math',track:'arithmetic'},1000),h=harness({content:JSON.stringify({skillId:r.lesson.skillId,stage:'lesson',explanation:'Fixture',workedExample:'Fixture',connection:'Fixture',nextStep:'Fixture'})});
+ await h.ui.tutor();assert.equal(h.commands[1].command.op,'teaching');assert.equal(h.commands[1].command.value.stage,r.lesson.stage);
+});

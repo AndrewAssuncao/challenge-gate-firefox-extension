@@ -1692,7 +1692,7 @@ The user has asked for help ${helpRequestCount} times with no progress.
 Respond with ONLY valid JSON:
 {"kind": "student_issue" | "challenge_issue", "message": "brief explanation", "suggestedAction": "hint for student OR 'skip' if broken"}`;
 
-        const response = await browser.runtime.sendMessage({ type: 'claudeGenerate', prompt: diagPrompt });
+        const response = await browser.runtime.sendMessage({ type: 'claudeGenerate', prompt: diagPrompt, promptWithoutHistory:`Teach the student how to approach this exercise. Do not give the complete solution. Scenario: ${challenge.scenario}\nObjectives: ${challenge.objectives.map(o=>o.description).join('; ')}\nCommands: ${commandsExecuted.slice(-8).join(', ')}\nConversation: ${helpConversation.map(m=>m.role+': '+m.content).join('\n')}`+'\nReturn only JSON with kind: student_issue, message and suggestedAction.' });
         if (response.content) {
           const cleaned = response.content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
           try {
@@ -1738,7 +1738,7 @@ ${lastOutput ? `Last output: ${lastOutput.slice(0, 300)}` : ''}`;
         helpPrompt = baseContext + '\n\nHelp the student. Show the relevant git syntax with an example, explain the concept, then guide them to apply it.';
       }
 
-      const response = await browser.runtime.sendMessage({ type: 'claudeGenerate', prompt: helpPrompt, maxTokens: 1024 });
+      const response = await browser.runtime.sendMessage({ type: 'claudeGenerate', prompt: helpPrompt, promptWithoutHistory:`Teach the student how to approach this exercise. Do not give the complete solution. Scenario: ${challenge.scenario}\nObjectives: ${challenge.objectives.map(o=>o.description).join('; ')}\nCommands: ${commandsExecuted.slice(-8).join(', ')}\nConversation: ${helpConversation.map(m=>m.role+': '+m.content).join('\n')}`, maxTokens: 1024 });
       if (response.content) {
         helpConversation.push({ role: 'assistant', content: response.content });
         appendOutput(`<span class="term-help">${escapeHtml(response.content)}</span>`);

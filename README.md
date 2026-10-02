@@ -3,6 +3,7 @@
 A Firefox extension that blocks distracting sites until a short challenge is
 completed. This branch keeps the existing blocker, Typing, Git, Python editor,
 dashboard and optional Anthropic relay, and adds durable quant learning.
+Requires Firefox 140.0 or newer, including a compatible current Zen build.
 
 Visible modes: **Typing, Git, Quant Coding, Brainteasers, Quant Math**. Quant Math
 has separate arithmetic and probability tracks. Existing Terminal-configured sites
@@ -11,8 +12,15 @@ retain their old challenge until you explicitly choose a replacement.
 Quant lessons diagnose a skill, explain it with a worked example when needed,
 provide guided practice, then ask an independent question. Progress is saved
 locally across sessions. Hints and AI explanations count as assistance, not mastery.
+Coding **Run** executes the editor code and shows stdout or errors without grading,
+recording an attempt or changing progress. Add an example call with `print(...)`
+to see a function's result. **Submit** evaluates the assessment tests once. Only
+Submit produces graded feedback and evidence; Run does not reveal hidden tests.
+The original question, submitted work and component verdicts stay visible during
+correction and guided retries. Previous work is labeled separately from the new
+question; fresh independent checks keep worked solutions hidden.
 The existing Arcade is the place to continue practice. See [CURRICULUM.md](CURRICULUM.md)
-for the 21-skill core plus five applied Trading & Options units in Arcade.
+for the 25-skill core plus five applied Trading & Options units in Arcade.
 
 ## Try locally
 
@@ -21,17 +29,23 @@ for the 21-skill core plus five applied Trading & Options units in Arcade.
 3. Select this checkout's `manifest.json`.
 4. Open the popup → Dashboard to configure sites or use Arcade.
 
-The extension's ID and permissions are unchanged. No backend or Pi installation
+The stable extension ID is retained. Privacy controls now disable private browsing and declare optional AI data transmission. No backend or Pi installation
 is required. Quant assessment and local teaching need no model API key. Python
-execution still loads the existing Pyodide runtime from jsDelivr.
+execution uses the packaged Pyodide 0.25.1 runtime and works offline.
 
-**Personalize explanation with AI** uses the existing configured Anthropic key
-only when clicked. Learning evidence and the selected lesson are supplied as
-context. The model does not select mastery or change assessment answer keys.
+**Personalize explanation with AI** uses a configured Anthropic key after explicit data consent
+when clicked. Saving a key alone does not enable transmission. The current exercise is supplied as context; a separate default-off choice controls learning-history sharing. The model does not select mastery or change assessment answer keys.
 Git's existing AI behavior is retained. No API key is shipped in the repository.
+Legacy Python AI exercises keep generated descriptions, explanations and feedback;
+their starter functions come from a packaged local catalog. The learner writes the
+solution and presses Submit to grade it. Run is available for scratch execution.
+Remote starter code, function signatures and defaults
+are rejected; old serialized AI challenges must be reloaded before running.
 
-The Learning tab displays independent evidence and review dates and can export
-quant learner JSON. Import/restore UI is not implemented.
+The Learning tab displays independent evidence and review dates. Settings exports a full
+backup excluding API-key settings and redacting known keys, previews and validates restore, and offers local rollback.
+Old quant-only JSON exports can be imported without replacing site policies or legacy progress.
+See [PRIVACY.md](PRIVACY.md), [SIGNING.md](SIGNING.md) and [DIAGNOSIS.md](DIAGNOSIS.md).
 
 ## Development
 
@@ -40,7 +54,7 @@ node --test tests/*.test.js
 ```
 
 Tests require Node.js and Python 3; no package installation or network is needed
-for the core suite. The authentic extension smoke uses installed Zen and Python 3 (`python3 tests/zen-smoke.py`); it creates a disposable profile. A complementary browser harness uses installed Playwright and Chromium. See [IMPLEMENTATION.md](IMPLEMENTATION.md) for test commands,
+for the core suite. The authentic extension smoke uses installed Zen and Python 3 (`python3 tests/zen-release-smoke.py`); it creates a disposable profile. A complementary browser harness uses installed Playwright and Chromium. See [IMPLEMENTATION.md](IMPLEMENTATION.md) for test commands,
 verification limits, architecture and remaining manual Firefox checks.
 
 [ATTRIBUTION.md](ATTRIBUTION.md) records teaching-workflow inspiration from

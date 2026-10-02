@@ -11,6 +11,26 @@
 
 const ChallengeProvider = (() => {
 
+  // These exact packaged strings are the only executable starters for AI exercises.
+  // The response selects a catalog key; it never supplies a name, signature or default.
+  const STARTERS = Object.freeze({
+    none: Object.freeze({functionName:'solve',starterCode:'def solve():\n    pass\n',args:0}),
+    one: Object.freeze({functionName:'solve',starterCode:'def solve(value):\n    pass\n',args:1}),
+    two: Object.freeze({functionName:'solve',starterCode:'def solve(value, other):\n    pass\n',args:2}),
+    three: Object.freeze({functionName:'solve',starterCode:'def solve(value, other, extra):\n    pass\n',args:3}),
+    four: Object.freeze({functionName:'solve',starterCode:'def solve(value, other, extra, option):\n    pass\n',args:4})
+  });
+  // Serialized/cached objects cannot manufacture this identity, even with a copied ID.
+  const executableChallenges = new WeakMap();
+  function rememberExecutable(challenge, starter) {
+    executableChallenges.set(challenge,Object.freeze({functionName:starter.functionName,
+      starterCode:starter.starterCode,testCases:Object.freeze(challenge.testCases.map(t=>Object.freeze({...t})))}));
+    return challenge;
+  }
+  function getExecutable(challenge) {
+    return challenge && executableChallenges.get(challenge) || null;
+  }
+
   // ── Curriculum structure ────────────────────────────────────────────────
   // Ordered topics. The mentor advances through these, but can revisit.
 
@@ -158,7 +178,13 @@ const ChallengeProvider = (() => {
     marathon: 'Generate an extensive, multi-part challenge that tests deep mastery. Require sustained focus, architectural thinking, thorough edge case handling, and clean code organization. This should feel like a real interview problem or production task (~20-40 minutes).'
   };
 
-  function buildMentorPrompt(profile, crossDisciplineContext, scheduledDifficulty, reinforceOnly) {
+  function buildMentorPrompt(profile, crossDisciplineContext, scheduledDifficulty, reinforceOnly, includeEvidence=true) {
+    if(!includeEvidence) {
+      const publicProfile={...defaultProfile(),currentTopicIndex:profile.currentTopicIndex,totalSessions:-1};
+      return buildMentorPrompt(publicProfile,'','normal',false,true)
+        .replace(/^Curriculum position:.*$|^Total challenge attempts:.*$/gm,'')
+        .replace(/\n## What the User Knows[\s\S]*?\n## Instructions/,'\n## Instructions');
+    }
     const currentTopic = CURRICULUM[profile.currentTopicIndex] || CURRICULUM[0];
     const tier = currentTopic.tier;
 
@@ -233,14 +259,14 @@ ${profile.weakAreas.length > 0 ? `Consider revisiting: ${weakList}` : ''}
 
 ${!reinforceOnly ? 'If the user has been passing consistently on this topic (3+ passes), introduce a slightly harder variant or begin transitioning to the next concept.' : ''}
 
-${tier <= 5 ? `Every test case input must be a valid Python argument list fragment that can be inserted directly into \`function_name(<input>)\`.
+${tier <= 6 ? `Every test case input must contain only comma-separated Python literals matching the chosen local \`solve\` signature. No calls, operators, comprehensions, assignments or keyword arguments. Use numbers, quoted strings, True/False/None and nested literal containers.
 If a test case uses a string, the string MUST be quoted inside the JSON string.
 Examples:
 - Good single string input: "\\"Hello World\\""
 - Good mixed input: "[1, 2, 3], 5"
 - Bad input: "Hello World"` : ''}
 
-${tier === 6 ? `For Tier 6 challenges: generate multi-function challenges where the user writes 2-3 functions that work together. The starterCode should contain multiple function stubs. Test cases should test the main/top-level function.` : ''}
+${tier === 6 ? `For Tier 6 challenges: the student may write helper functions themselves. Test only the packaged solve function; do not return helper code or signatures.` : ''}
 
 ${tier === 7 ? `For Tier 7 code review challenges: generate a "code_review" type challenge. Show buggy or inefficient code that the user must analyze and explain what's wrong in free text. The user's text answer will be sent to Claude for validation.
 
@@ -258,19 +284,21 @@ Respond with ONLY valid JSON for code review:
   "afterSolve": "Teaching note about the issues found."
 }
 
-IMPORTANT: For code_review type, do NOT include functionName, starterCode, or testCases.` : ''}
+IMPORTANT: For code_review type, do NOT include functionName, starterCode, starterTemplate or testCases.` : ''}
 
-${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
+${tier <= 6 ? `Choose ONE of these packaged starter templates. Match the problem statement and test argument count to its exact signature:
+${Object.entries(STARTERS).map(([id,s])=>`${id}: ${s.starterCode.split('\n')[0]}`).join('\n')}
+The extension provides this starter locally. Do NOT return executable code, functionName, signatures, parameter lists, annotations or default expressions. Do not request imports or code to run automatically. Descriptions, teaching examples and tests are data; the student writes the solution.
+Respond with ONLY valid JSON (no markdown fences, no commentary):
 {
   "id": "m-<unique-8-char-id>",
   "topic": "${currentTopic.id}",
   "conceptIntroduced": "EXACT string from sub-concepts list above, or null if reinforcing",
   "teachingNote": "1-3 sentence explanation of a concept IF introducing something new. null if just reinforcing.",
   "prompt": "Clear problem statement. Use backticks for code references.",
-  "functionName": "function_name",
-  "starterCode": "def function_name(params):\\n    pass\\n",
+  "starterTemplate": "one",
   "testCases": [
-    {"input": "arg1, arg2", "expected": "expected_output_as_string"}
+    {"input": "1", "expected": "1"}
   ],
   "hints": ["Subtle hint", "More direct hint"],
   "afterSolve": "1-2 sentence note about what they just learned or a related tip. Shown after passing."
@@ -311,7 +339,7 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
     };
   }
 
-  function splitTopLevelArgs(input) {
+  function splitTopLevelArgs(input, keepEmpty=false) {
     const src = String(input || '');
     if (!src.trim()) return [];
 
@@ -367,7 +395,7 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
       parts.push(current.trim());
     }
 
-    return parts.filter(part => part.length > 0);
+    return keepEmpty?parts:parts.filter(part => part.length > 0);
   }
 
   function isSimpleLiteralToken(token) {
@@ -429,7 +457,60 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
     };
   }
 
-  function sanitizeChallenge(challenge) {
+  // Conservative data grammar. This checks syntax without evaluating Python or JS.
+  // The worker independently uses ast.literal_eval; this is an earlier fail-closed check.
+  function isLiteralInputToken(src) {
+    let pos=0,count=0;
+    const space=()=>{while(/\s/.test(src[pos]||'') && pos<src.length)pos++;};
+    function value(depth) {
+      if(depth>20 || ++count>1000)return false;
+      space();const ch=src[pos];
+      if(ch==='"' || ch==="'") {
+        pos++;
+        while(pos<src.length) {
+          const next=src[pos++];
+          if(next===ch)return true;
+          if(next<' ')return false;
+          if(next==='\\') {
+            if(pos>=src.length)return false;
+            const escape=src[pos++];
+            if('\\\'"abfnrtv'.includes(escape))continue;
+            const digits={x:2,u:4,U:8}[escape];
+            if(digits) {
+              const hex=src.slice(pos,pos+digits);
+              if(hex.length!==digits || !/^[0-9a-f]+$/i.test(hex) || (escape==='U' && parseInt(hex,16)>0x10ffff))return false;
+              pos+=digits;continue;
+            }
+            if(/[0-7]/.test(escape)){for(let n=0;n<2 && /[0-7]/.test(src[pos]||'');n++)pos++;continue;}
+            return false;
+          }
+        }
+        return false;
+      }
+      const atom=src.slice(pos).match(/^(?:True|False|None|[+-]?(?:(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?|\d+[eE][+-]?\d+|0+|[1-9]\d*))/);
+      if(atom){pos+=atom[0].length;return true;}
+      const close={'[':']','(':')','{':'}'}[ch];
+      if(!close)return false;
+      pos++;space();if(src[pos]===close){pos++;return true;}
+      let mapping=null;
+      while(pos<src.length) {
+        if(!value(depth+1))return false;
+        space();const hasColon=src[pos]===':';
+        if(ch==='{' && mapping===null)mapping=hasColon;
+        if(hasColon) {
+          if(ch!=='{' || !mapping)return false;
+          pos++;if(!value(depth+1))return false;space();
+        } else if(mapping)return false;
+        if(src[pos]===close){pos++;return true;}
+        if(src[pos++]!==',')return false;
+        space();if(src[pos]===close){pos++;return true;}
+      }
+      return false;
+    }
+    if(!value(0))return false;space();return pos===src.length;
+  }
+
+  function sanitizeLocalChallenge(challenge) {
     if (!challenge || typeof challenge !== 'object') return null;
 
     // Handle code_review type (Tier 7)
@@ -491,7 +572,41 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
       sanitized.__repairNotes = repairNotes;
     }
 
-    return sanitized;
+    return rememberExecutable(sanitized,sanitized);
+  }
+
+  function prepareGeneratedChallenge(raw) {
+    if(!raw || typeof raw!=='object' || Array.isArray(raw))return null;
+    const review=raw.type==='code_review';
+    const allowed=['id','type','topic','prompt','teachingNote','conceptIntroduced','hints','afterSolve',
+      ...(review?['codeToReview','validationCriteria']:['starterTemplate','testCases'])];
+    if(Object.keys(raw).some(k=>!allowed.includes(k)))return null;
+    if(raw.type!==undefined && raw.type!=='code_review' && raw.type!=='code')return null;
+    const text=(value,max,optional=false)=>typeof value==='string' && value.length<=max && (optional || value.trim().length>0);
+    if(!text(raw.id,120) || !text(raw.topic,100) || !CURRICULUM.some(c=>c.id===raw.topic) || !text(raw.prompt,12000))return null;
+    for(const k of ['teachingNote','conceptIntroduced','afterSolve'])if(raw[k]!=null && !text(raw[k],4000,true))return null;
+    if(!Array.isArray(raw.hints) || raw.hints.length>6 || raw.hints.some(h=>!text(h,2000,true)))return null;
+    const common={id:raw.id,topic:raw.topic,prompt:raw.prompt,teachingNote:raw.teachingNote||null,
+      conceptIntroduced:raw.conceptIntroduced||null,afterSolve:raw.afterSolve||'',hints:[...raw.hints]};
+    if(review) {
+      if(!text(raw.codeToReview,12000) || !text(raw.validationCriteria,8000))return null;
+      return {...common,type:'code_review',codeToReview:raw.codeToReview,validationCriteria:raw.validationCriteria};
+    }
+    if(typeof raw.starterTemplate!=='string' || !Object.prototype.hasOwnProperty.call(STARTERS,raw.starterTemplate))return null;
+    const starter=STARTERS[raw.starterTemplate];
+    if(!Array.isArray(raw.testCases) || !raw.testCases.length || raw.testCases.length>20)return null;
+    const testCases=[];
+    for(const t of raw.testCases) {
+      if(!t || typeof t!=='object' || Array.isArray(t) || Object.keys(t).some(k=>!['input','expected'].includes(k)) ||
+        !text(t.input,4000,true) || !text(t.expected,4000,true))return null;
+      const repaired=repairLikelyMalformedInput(t.input,{minArgs:starter.args,maxArgs:starter.args});
+      const tokens=splitTopLevelArgs(repaired.input,true);
+      if(tokens.length!==starter.args || tokens.some(t=>!isLiteralInputToken(t)))return null;
+      testCases.push({input:repaired.input,expected:t.expected});
+    }
+    const challenge={...common,starterTemplate:raw.starterTemplate,functionName:starter.functionName,
+      starterCode:starter.starterCode,testCases};
+    return rememberExecutable(challenge,starter);
   }
 
   // ── Generate via Claude API (called through background script) ──────────
@@ -520,6 +635,7 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
       const response = await browser.runtime.sendMessage({
         type: 'claudeGenerate',
         prompt: prompt,
+        promptWithoutHistory:buildMentorPrompt(profile,'',scheduledDifficulty,reinforceOnly,false),
         model: useOpus ? 'claude-opus-4-8' : undefined,
         maxTokens: useOpus ? 2048 : undefined
       });
@@ -531,13 +647,13 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
 
       // Parse JSON from response
       const content = response.content;
-      if (!content) return null;
+      if (typeof content!=='string' || content.length>120000) return null;
 
       const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const challenge = sanitizeChallenge(JSON.parse(cleaned));
+      const challenge = prepareGeneratedChallenge(JSON.parse(cleaned));
 
       // Validate
-      if (!challenge) {
+      if (!challenge || challenge.topic!==currentTopic.id) {
         console.error('[Mentor] Invalid challenge structure');
         return null;
       }
@@ -572,7 +688,7 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
     if (!localProblems || !localProblems.length) return null;
     const due = typeof SpacedRepetition !== 'undefined' ? SpacedRepetition.getReviewDueTopics(profile, CURRICULUM) : [];
     const target = due[0]?.id || (CURRICULUM[profile.currentTopicIndex] || CURRICULUM[0]).id;
-    const pool = localProblems.filter(p => p.topic === target).map(sanitizeChallenge).filter(Boolean);
+    const pool = localProblems.filter(p => p.topic === target).map(sanitizeLocalChallenge).filter(Boolean);
     const recent = new Set(profile.recentChallenges.map(c => c.id));
     const fresh = pool.filter(p => !recent.has(p.id));
     const choices = fresh.length ? fresh : pool;
@@ -734,6 +850,8 @@ ${tier <= 6 ? `Respond with ONLY valid JSON (no markdown fences, no commentary):
     updateProfileAfterChallenge,
     removeChallengeAttempts,
     defaultProfile,
+    prepareGeneratedChallenge,
+    getExecutable,
     CURRICULUM
   };
 })();

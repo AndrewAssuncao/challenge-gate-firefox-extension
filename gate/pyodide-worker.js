@@ -2,13 +2,38 @@
 
 'use strict';
 
+// Runtime, packages and executable resources must stay inside this add-on.
+// This also rejects Python js.fetch and optional-package downloads to the internet.
+const runtimeURL = new URL('../vendor/pyodide/', self.location.href).href;
+(() => {
+const nativeFetch = self.fetch.bind(self);
+self.fetch = (input, options) => {
+  const url = new URL(typeof input === 'string' ? input : input.url || input.href, self.location.href);
+  if (!url.href.startsWith(runtimeURL)) return Promise.reject(Error('Only bundled Python resources are available.'));
+  return nativeFetch(url.href, options);
+};
+const nativeImportScripts = self.importScripts.bind(self);
+self.importScripts = (...urls) => {
+  const resolved=urls.map(url=>new URL(url, self.location.href).href);
+  if (resolved.some(url => !url.startsWith(runtimeURL))) throw Error('Remote scripts are disabled.');
+  return nativeImportScripts(...resolved);
+};
+// Pyodide uses fetch in a worker. Prevent other download transports from bypassing it.
+self.XMLHttpRequest = class { constructor() { throw Error('Python network requests are disabled.'); } };
+self.WebSocket = class { constructor() { throw Error('Python network requests are disabled.'); } };
+self.EventSource = class { constructor() { throw Error('Python network requests are disabled.'); } };
+})();
 let pyodide = null;
+let stdout = '', stderr = '';
+const OUTPUT_LIMIT = 20000;
 
 async function loadPyodideRuntime() {
-  importScripts('https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js');
+  importScripts(runtimeURL + 'pyodide.js');
   pyodide = await loadPyodide({
-    indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/'
+    indexURL: runtimeURL
   });
+  pyodide.setStdout({ batched: line => { stdout = (stdout + line + '\n').slice(0, OUTPUT_LIMIT); } });
+  pyodide.setStderr({ batched: line => { stderr = (stderr + line + '\n').slice(0, OUTPUT_LIMIT); } });
   self.postMessage({ type: 'ready' });
 }
 
@@ -18,12 +43,18 @@ loadPyodideRuntime().catch(err => {
 
 self.onmessage = async (e) => {
   if (e.data.type !== 'run') return;
+  const { code, testCases = [], functionName, requestId } = e.data;
+  const mode = e.data.mode === 'scratch' ? 'scratch' : 'submit';
+  stdout = ''; stderr = '';
+  const reply = payload => {
+    // Flush partial print(..., end='') output before publishing the result.
+    if (pyodide) pyodide.runPython('import sys; sys.stdout.flush(); sys.stderr.flush()');
+    self.postMessage({ type: 'result', requestId, mode, stdout, stderr, ...payload });
+  };
   if (!pyodide) {
-    self.postMessage({ type: 'result', error: 'Python runtime not loaded yet.' });
+    reply({ errorKind: 'infrastructure', error: 'Python runtime not loaded yet.' });
     return;
   }
-
-  const { code, testCases, functionName } = e.data;
   const results = [];
   const diagnostics = {
     repairedTests: [],
@@ -46,13 +77,14 @@ import inspect
     try {
       runPython(code);
     } catch (err) {
-      self.postMessage({
-        type: 'result',
+      reply({
         errorKind: 'user-code',
         error: cleanError(err.message)
       });
       return;
     }
+    // Scratch execution never invokes, compares or discloses assessment cases.
+    if (mode === 'scratch') { reply({}); return; }
 
     namespace.set('__function_name', functionName);
     runPython(`
@@ -185,84 +217,38 @@ def __normalize_call_input(args):
         return repr(args[0])
     return ', '.join(repr(arg) for arg in args)
 
-def __execute_call(callable_fn=None, call_expr=None, args=None):
+def __execute_call(callable_fn, args):
     stdout_capture = io.StringIO()
     old_stdout = sys.stdout
     sys.stdout = stdout_capture
     try:
-        if call_expr is not None:
-            result = eval(call_expr, globals())
-        else:
-            result = callable_fn(*args)
+        result = callable_fn(*args)
         error = None
-        raised_exc = None
     except Exception as exc:
         result = f'ERROR: {exc}'
-        error = str(exc)
-        raised_exc = exc
+        error = f'{type(exc).__name__}: {exc}'
     finally:
         sys.stdout = old_stdout
-
     printed = stdout_capture.getvalue().strip()
     actual = printed if result is None and printed else result
-    return actual, printed, error, raised_exc
+    return actual, error
 
 def __run_single_test(fn_name, raw_input):
     fn = globals().get(fn_name)
     if not callable(fn):
-        return {
-            'challenge_issue': False,
-            'error': f'Function "{fn_name}" is not defined.',
-            'actual': None,
-            'repaired': False,
-            'repair_reason': None,
-            'normalized_input': None
-        }
-
-    expr = '' if raw_input is None else str(raw_input).strip()
-    call_expr = f'{fn_name}({expr})' if expr else f'{fn_name}()'
-    actual, printed, error, raised_exc = __execute_call(call_expr=call_expr)
-
-    if error is None:
-        return {
-            'challenge_issue': False,
-            'error': None,
-            'actual': '' if actual is None else str(actual),
-            'repaired': False,
-            'repair_reason': None,
-            'normalized_input': expr
-        }
-
+        return {'challenge_issue': False, 'error': f'Function "{fn_name}" is not defined.',
+                'actual': None, 'repaired': False, 'repair_reason': None, 'normalized_input': None}
+    # Test arguments (including generated cases) are data, never executable expressions.
     try:
-        if raised_exc is None or not __should_retry_with_repair(expr, raised_exc):
-            return {
-                'challenge_issue': False,
-                'error': None,
-                'actual': '' if actual is None else str(actual),
-                'repaired': False,
-                'repair_reason': None,
-                'normalized_input': expr
-            }
-
-        args, repaired, repair_reason = __repair_and_parse_test_args(fn, expr)
-        repaired_actual, _, _, _ = __execute_call(callable_fn=fn, args=args)
-        return {
-            'challenge_issue': False,
-            'error': None,
-            'actual': '' if repaired_actual is None else str(repaired_actual),
-            'repaired': repaired,
-            'repair_reason': repair_reason,
-            'normalized_input': __normalize_call_input(args)
-        }
+        args, repaired, repair_reason = __repair_and_parse_test_args(fn, raw_input)
     except Exception as exc:
-        return {
-            'challenge_issue': True,
-            'error': f'Test input could not be parsed safely: {exc}',
-            'actual': None,
-            'repaired': False,
-            'repair_reason': None,
-            'normalized_input': None
-        }
+        return {'challenge_issue': True, 'error': f'Test input could not be parsed safely: {exc}',
+                'actual': None, 'repaired': False, 'repair_reason': None, 'normalized_input': None}
+    actual, error = __execute_call(fn, args)
+    return {'challenge_issue': False, 'error': error,
+            'actual': '' if actual is None else str(actual), 'repaired': repaired,
+            'repair_reason': repair_reason, 'normalized_input': __normalize_call_input(args)}
+
 `);
 
     // Run each test case
@@ -298,9 +284,9 @@ json.dumps(__run_single_test(__function_name, __raw_input))
         const expected = String(tc.expected);
         const numeric = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?$/i;
         const a = normalizeOutput(actual), b = normalizeOutput(expected);
-        const passed = Number.isFinite(tc.tolerance) && tc.tolerance >= 0 && numeric.test(a) && numeric.test(b)
+        const passed = !payload.error && (Number.isFinite(tc.tolerance) && tc.tolerance >= 0 && numeric.test(a) && numeric.test(b)
           ? Math.abs(Number(a) - Number(b)) <= tc.tolerance
-          : a === b;
+          : a === b);
 
         if (payload.repaired) {
           diagnostics.repairedTests.push({
@@ -315,6 +301,7 @@ json.dumps(__run_single_test(__function_name, __raw_input))
           actual: actual,
           expected: tc.expected,
           input: tc.input,
+          error: payload.error ? cleanError(payload.error) : null,
           repairApplied: Boolean(payload.repaired),
           normalizedInput: payload.normalized_input,
           repairReason: payload.repair_reason
@@ -330,10 +317,9 @@ json.dumps(__run_single_test(__function_name, __raw_input))
       }
     }
 
-    self.postMessage({ type: 'result', results, diagnostics });
+    reply({ results, diagnostics });
   } catch (err) {
-    self.postMessage({
-      type: 'result',
+    reply({
       errorKind: 'infrastructure',
       error: cleanError(err.message)
     });

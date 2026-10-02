@@ -27,5 +27,5 @@ test('graph paints practiced/reassessed/retained evidence brightly and keeps rep
   if(status==='needs practice')assert.ok(marks.some(m=>m.x===x&&m.y===y&&m.r===9&&m.kind==='stroke'&&m.color==='#e0af68'),'repair ring');
  }
  assert.equal(elements['quant-tree-nodes'].children.find(n=>n.dataset.skillId==='arith-fraction').dataset.reviewDue,'true');
- assert.equal(graph.nodes.length,26);assert.equal(graph.edges.length,30);
+ assert.equal(graph.nodes.length,30);assert.equal(graph.edges.length,35);
 });
