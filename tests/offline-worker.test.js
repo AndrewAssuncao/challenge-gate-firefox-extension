@@ -3,7 +3,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 test('worker imports only packaged assets and blocks remote fetch/import/alternate transports',async()=>{
  const calls=[],messages=[];
  const self={location:{href:'moz-extension://fixture/gate/pyodide-worker.js'},fetch:async(input)=>{calls.push(['fetch',String(input)]);return {};},importScripts:(...urls)=>calls.push(['script',...urls]),postMessage:m=>messages.push(m)};
- const ctx=vm.createContext({self,URL,loadPyodide:async opts=>{calls.push(['load',opts.indexURL]);return {};},importScripts:(...urls)=>self.importScripts(...urls)});
+ const ctx=vm.createContext({self,URL,loadPyodide:async opts=>{calls.push(['load',opts.indexURL]);return {setStdout(){},setStderr(){}};},importScripts:(...urls)=>self.importScripts(...urls)});
  vm.runInContext(fs.readFileSync('gate/pyodide-worker.js','utf8'),ctx);
  await new Promise(resolve=>setImmediate(resolve));
  assert.deepEqual(calls,[['script','moz-extension://fixture/vendor/pyodide/pyodide.js'],['load','moz-extension://fixture/vendor/pyodide/']]);

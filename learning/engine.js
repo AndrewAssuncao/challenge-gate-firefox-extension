@@ -155,15 +155,26 @@ const QuantLearning = (() => {
       if(q.construction && constructionValue===null && !cmd.dontKnow) throw Error('Enter the intermediate construction check.');
       const constructionCorrect=!q.construction || Math.abs(constructionValue-q.construction.answer)<=q.tolerance;
       const correct=!cmd.dontKnow && numericalCorrect && reasonCorrect && constructionCorrect;
+      const verdict=value=>cmd.dontKnow?'unevaluated':value?'correct':'incorrect';
+      const components={answer:verdict(numericalCorrect),
+        ...(q.reasonOptions?{reason:verdict(reasonCorrect)}:{}),
+        ...(q.construction?{construction:verdict(constructionCorrect)}:{})};
+      // A single bounded display snapshot; never part of item/evidence identity.
+      const submission={prompt:q.prompt.slice(0,12000),answer:String(cmd.answer ?? lesson.draft ?? '').slice(0,20000)};
+      if(q.reasonOptions)submission.reason=(q.reasonOptions.find(option=>option.value===cmd.reason)?.label || String(cmd.reason || '')).slice(0,1600);
+      if(q.construction){submission.construction=String(cmd.construction ?? lesson.constructionDraft ?? '').slice(0,100);submission.constructionPrompt=q.construction.prompt.slice(0,1600);}
+      if(q.table)submission.data=[q.table.caption,q.table.headers.join(' | '),...q.table.rows.map(row=>row.join(' | '))].join('\n').slice(0,12000);
+      if(q.kind==='code' && typeof cmd.output==='string')submission.output=cmd.output.slice(0,20000);
       const assisted=lesson.assisted || lesson.stage==='guided';
       const event={id:cmd.eventId,kind:'attempt',lessonId:lesson.id,skillId:lesson.skillId,variant:q.id,familyId:q.familyId,methodTag:q.methodTag || null,semanticKey:q.semanticKey,contentVersion:2,gradingVersion:2,isTransfer:q.transfer,firstTry:!seen(state,q),retest:seen(state,q) && now-lastExposure(state,q)>=7*DAY,selectedReason:cmd.reason || null,construction:constructionValue,stage:lesson.stage,correct,assisted,
         dontKnow:!!cmd.dontKnow,error:correct?null:cmd.dontKnow?'not yet known':q.kind==='code'?'code tests failed':!reasonCorrect?'reason mismatch':!constructionCorrect?'construction mismatch':'answer mismatch',at:now,elapsedMs:now-lesson.stepStartedAt>600000?null:Math.max(0,now-lesson.stepStartedAt)};
       state.events.push(event);
       lesson.feedback={correct,solution:q.solution,assisted,stage:lesson.stage,eventId:event.id,
+        submission,components,
         diagnosis:!cmd.dontKnow && !constructionCorrect ? C.diagnose(q,constructionValue) : null};
       if(correct){lesson.draft='';lesson.constructionDraft='';lesson.reasonDraft='';}
       else {
-        if(q.kind!=='code')lesson.draft=String(cmd.answer ?? lesson.draft ?? '').slice(0,20000);
+        lesson.draft=String(q.kind==='code' ? cmd.draft ?? cmd.answer ?? lesson.draft ?? '' : cmd.answer ?? lesson.draft ?? '').slice(0,20000);
         lesson.constructionDraft=String(cmd.construction ?? lesson.constructionDraft ?? '').slice(0,100);
         lesson.reasonDraft=String(cmd.reason ?? lesson.reasonDraft ?? '').slice(0,80);
       }

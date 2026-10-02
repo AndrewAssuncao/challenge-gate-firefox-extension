@@ -24,12 +24,16 @@ self.WebSocket = class { constructor() { throw Error('Python network requests ar
 self.EventSource = class { constructor() { throw Error('Python network requests are disabled.'); } };
 })();
 let pyodide = null;
+let stdout = '', stderr = '';
+const OUTPUT_LIMIT = 20000;
 
 async function loadPyodideRuntime() {
   importScripts(runtimeURL + 'pyodide.js');
   pyodide = await loadPyodide({
     indexURL: runtimeURL
   });
+  pyodide.setStdout({ batched: line => { stdout = (stdout + line + '\n').slice(0, OUTPUT_LIMIT); } });
+  pyodide.setStderr({ batched: line => { stderr = (stderr + line + '\n').slice(0, OUTPUT_LIMIT); } });
   self.postMessage({ type: 'ready' });
 }
 
@@ -39,12 +43,18 @@ loadPyodideRuntime().catch(err => {
 
 self.onmessage = async (e) => {
   if (e.data.type !== 'run') return;
+  const { code, testCases = [], functionName, requestId } = e.data;
+  const mode = e.data.mode === 'scratch' ? 'scratch' : 'submit';
+  stdout = ''; stderr = '';
+  const reply = payload => {
+    // Flush partial print(..., end='') output before publishing the result.
+    if (pyodide) pyodide.runPython('import sys; sys.stdout.flush(); sys.stderr.flush()');
+    self.postMessage({ type: 'result', requestId, mode, stdout, stderr, ...payload });
+  };
   if (!pyodide) {
-    self.postMessage({ type: 'result', error: 'Python runtime not loaded yet.' });
+    reply({ errorKind: 'infrastructure', error: 'Python runtime not loaded yet.' });
     return;
   }
-
-  const { code, testCases, functionName } = e.data;
   const results = [];
   const diagnostics = {
     repairedTests: [],
@@ -67,13 +77,14 @@ import inspect
     try {
       runPython(code);
     } catch (err) {
-      self.postMessage({
-        type: 'result',
+      reply({
         errorKind: 'user-code',
         error: cleanError(err.message)
       });
       return;
     }
+    // Scratch execution never invokes, compares or discloses assessment cases.
+    if (mode === 'scratch') { reply({}); return; }
 
     namespace.set('__function_name', functionName);
     runPython(`
@@ -215,7 +226,7 @@ def __execute_call(callable_fn, args):
         error = None
     except Exception as exc:
         result = f'ERROR: {exc}'
-        error = str(exc)
+        error = f'{type(exc).__name__}: {exc}'
     finally:
         sys.stdout = old_stdout
     printed = stdout_capture.getvalue().strip()
@@ -234,7 +245,7 @@ def __run_single_test(fn_name, raw_input):
         return {'challenge_issue': True, 'error': f'Test input could not be parsed safely: {exc}',
                 'actual': None, 'repaired': False, 'repair_reason': None, 'normalized_input': None}
     actual, error = __execute_call(fn, args)
-    return {'challenge_issue': False, 'error': None,
+    return {'challenge_issue': False, 'error': error,
             'actual': '' if actual is None else str(actual), 'repaired': repaired,
             'repair_reason': repair_reason, 'normalized_input': __normalize_call_input(args)}
 
@@ -273,9 +284,9 @@ json.dumps(__run_single_test(__function_name, __raw_input))
         const expected = String(tc.expected);
         const numeric = /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?$/i;
         const a = normalizeOutput(actual), b = normalizeOutput(expected);
-        const passed = Number.isFinite(tc.tolerance) && tc.tolerance >= 0 && numeric.test(a) && numeric.test(b)
+        const passed = !payload.error && (Number.isFinite(tc.tolerance) && tc.tolerance >= 0 && numeric.test(a) && numeric.test(b)
           ? Math.abs(Number(a) - Number(b)) <= tc.tolerance
-          : a === b;
+          : a === b);
 
         if (payload.repaired) {
           diagnostics.repairedTests.push({
@@ -290,6 +301,7 @@ json.dumps(__run_single_test(__function_name, __raw_input))
           actual: actual,
           expected: tc.expected,
           input: tc.input,
+          error: payload.error ? cleanError(payload.error) : null,
           repairApplied: Boolean(payload.repaired),
           normalizedInput: payload.normalized_input,
           repairReason: payload.repair_reason
@@ -305,10 +317,9 @@ json.dumps(__run_single_test(__function_name, __raw_input))
       }
     }
 
-    self.postMessage({ type: 'result', results, diagnostics });
+    reply({ results, diagnostics });
   } catch (err) {
-    self.postMessage({
-      type: 'result',
+    reply({
       errorKind: 'infrastructure',
       error: cleanError(err.message)
     });

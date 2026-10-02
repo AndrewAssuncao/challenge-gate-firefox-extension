@@ -1,9 +1,15 @@
-# Challenge Gate privacy notice (1.1.0)
+# Challenge Gate privacy notice (1.1.1)
 
 Local extension storage contains learning evidence and drafts, legacy Python/Git/
 Terminal progress, typing history, site rules, per-domain time totals, unlocks and
 settings. There is no developer telemetry or analytics. Private browsing is
 disabled. Python uses the packaged runtime without a CDN.
+
+Each Quant lesson keeps one bounded original-submission snapshot locally, including
+the question, submitted fields and coding output/errors when applicable. It stays
+visible for comparison through correction and guided practice, is included in
+local backups, and is not added to learner evidence or mentor prompts. Run executes
+editor code without assessment or a graded record; Submit runs assessment tests.
 
 The optional Anthropic mentor is disabled until explicit consent. When enabled
 with a configured key, legacy generated challenges and help requests send exercise
@@ -29,7 +35,7 @@ For generated Python exercises, AI supplies descriptions, literal test data and
 feedback. The executable starter and its function signature are supplied from a
 fixed local catalog; remote executable starter/signature/default fields are
 rejected. Cached legacy AI objects cannot authorize execution. Learner-written
-editor contents run only when the learner presses Run. AI code-review samples and
+editor contents run only when the learner presses Run or Submit. AI code-review samples and
 tutor examples are displayed rather than automatically run.
 
 Backups are user-initiated local JSON downloads. API-key settings, consent and

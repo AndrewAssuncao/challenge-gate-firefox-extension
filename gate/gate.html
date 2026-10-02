@@ -61,6 +61,7 @@
       <h2 id="quant-title"></h2><p id="quant-status"></p><p id="quant-reason"></p>
       <p id="quant-scope"></p>
       <div id="quant-feedback" role="status"></div>
+      <section id="quant-submission" aria-label="Previous submission" hidden></section>
       <div id="quant-teaching" hidden><p id="quant-ai-label" hidden>Personalized AI explanation — assessment uses the local answer key.</p><p id="quant-objective"></p><p id="quant-explanation"></p><p id="quant-contrast"></p><h3>Worked example</h3><pre id="quant-example"></pre><p id="quant-connection"></p><p id="quant-next-step"></p></div>
       <button id="quant-next" class="gate-btn" hidden>Try guided practice</button>
       <div id="quant-question"><p id="quant-prompt"></p><div id="quant-data" hidden></div><p id="quant-hints"></p></div>
@@ -88,11 +89,15 @@
         <pre id="python-highlight" aria-hidden="true"></pre>
       </div>
       <div id="python-actions" class="challenge-helpers">
-        <button id="python-run" class="gate-btn">Run</button>
+        <button id="python-run" class="gate-btn gate-btn-ghost">Run</button>
+        <button id="python-submit" class="gate-btn">Submit</button>
       </div>
+      <p id="python-run-note">Run executes your code without grading. Add a function call with print(...) to inspect an example. Submit grades the exercise.</p>
       <div id="python-output" class="hidden">
+        <pre id="python-stdout" hidden></pre>
         <div id="python-test-results"></div>
       </div>
+      <section id="python-submission" aria-label="Previous submission" hidden><h3>Your submitted work</h3><pre id="python-submitted-code"></pre><pre id="python-submitted-output"></pre></section>
       <div id="python-helpers" class="challenge-helpers"><button id="python-hint" class="gate-btn gate-btn-ghost">Hint</button><button id="python-help" class="gate-btn gate-btn-ghost">Help</button><button id="python-skip" class="gate-btn gate-btn-ghost">Skip</button></div>
       <div id="python-help-chat" class="help-chat hidden">
         <div id="python-help-messages" class="help-messages"></div>

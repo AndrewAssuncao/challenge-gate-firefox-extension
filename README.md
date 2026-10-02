@@ -12,6 +12,13 @@ retain their old challenge until you explicitly choose a replacement.
 Quant lessons diagnose a skill, explain it with a worked example when needed,
 provide guided practice, then ask an independent question. Progress is saved
 locally across sessions. Hints and AI explanations count as assistance, not mastery.
+Coding **Run** executes the editor code and shows stdout or errors without grading,
+recording an attempt or changing progress. Add an example call with `print(...)`
+to see a function's result. **Submit** evaluates the assessment tests once. Only
+Submit produces graded feedback and evidence; Run does not reveal hidden tests.
+The original question, submitted work and component verdicts stay visible during
+correction and guided retries. Previous work is labeled separately from the new
+question; fresh independent checks keep worked solutions hidden.
 The existing Arcade is the place to continue practice. See [CURRICULUM.md](CURRICULUM.md)
 for the 25-skill core plus five applied Trading & Options units in Arcade.
 
@@ -31,7 +38,8 @@ when clicked. Saving a key alone does not enable transmission. The current exerc
 Git's existing AI behavior is retained. No API key is shipped in the repository.
 Legacy Python AI exercises keep generated descriptions, explanations and feedback;
 their starter functions come from a packaged local catalog. The learner writes the
-solution and presses Run. Remote starter code, function signatures and defaults
+solution and presses Submit to grade it. Run is available for scratch execution.
+Remote starter code, function signatures and defaults
 are rejected; old serialized AI challenges must be reloaded before running.
 
 The Learning tab displays independent evidence and review dates. Settings exports a full

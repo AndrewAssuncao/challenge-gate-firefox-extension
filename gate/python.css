@@ -204,6 +204,12 @@
   line-height: 1.6;
 }
 
+#python-run-note { color:var(--text-dim); font-size:12px; line-height:1.6; margin-bottom:12px; }
+#python-stdout, #python-submission { background:var(--bg-raised); border:1px solid var(--border); border-radius:8px; padding:14px; }
+#python-stdout, #python-submission pre { font-family:var(--mono); font-size:12px; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; }
+#python-submission { margin-top:16px; }
+#python-submission h3 { font-size:13px; margin-bottom:10px; }
+
 .test-case {
   padding: 10px 14px;
   margin-bottom: 4px;

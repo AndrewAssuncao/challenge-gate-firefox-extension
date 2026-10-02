@@ -66,7 +66,14 @@ const GateBackup = (() => {
       ['seed','level','revision','checks','required','hints'].forEach(x=>optional(l,x,integer));
       ['startedAt','stepStartedAt','retestAt'].forEach(x=>optional(l,x,num)); ['assisted','harder','practice'].forEach(x=>optional(l,x,bool));
       if(l.teaching) {fields(l.teaching,['skillId','stage','explanation','workedExample','connection','nextStep']);const same=l.teaching.stage===l.stage, carried=l.stage==='guided' && l.teaching.stage==='teach';if(!same && !carried)fail();E.validateTeaching(l.teaching,{...l,stage:l.teaching.stage});}
-      if(l.feedback) { fields(l.feedback,['correct','solution','assisted','stage','eventId','diagnosis'],['correct','assisted','stage','eventId']); bool(l.feedback.correct);bool(l.feedback.assisted);str(l.feedback.solution);str(l.feedback.stage);str(l.feedback.eventId);optional(l.feedback,'diagnosis',str); }
+      if(l.feedback) {
+        fields(l.feedback,['correct','solution','assisted','stage','eventId','diagnosis','submission','components'],['correct','assisted','stage','eventId']); bool(l.feedback.correct);bool(l.feedback.assisted);str(l.feedback.solution);str(l.feedback.stage);str(l.feedback.eventId);optional(l.feedback,'diagnosis',str);
+        optional(l.feedback,'submission',s=>{
+          fields(s,['prompt','answer','reason','construction','constructionPrompt','data','output'],['prompt','answer']);str(s.prompt,12000);str(s.answer);
+          optional(s,'reason',x=>str(x,1600));optional(s,'construction',x=>str(x,100));optional(s,'constructionPrompt',x=>str(x,1600));optional(s,'data',x=>str(x,12000));optional(s,'output',str);
+        });
+        optional(l.feedback,'components',c=>{fields(c,['answer','reason','construction'],['answer']);Object.values(c).forEach(x=>choice(x,['correct','incorrect','unevaluated']));});
+      }
     });
   }
   function legacy(v) {
@@ -130,7 +137,10 @@ const GateBackup = (() => {
     const lessonKeys=['id','key','mode','track','skillId','stage','reason','seed','level','revision','assisted','draft','constructionDraft','reasonDraft','checks','required','harder','practice','startedAt','stepStartedAt','retestAt','hints'];
     const data=defaults();
     const q=raw.quantLearner || {};
-    data.quantLearner={...pick(q,['version','serial']),events:array(q.events).map(e=>pick(e,EVENT_FIELDS[e?.kind] || [])),lessons:map(q.lessons,l=>({...pick(l,lessonKeys),...(l?.feedback?{feedback:pick(l.feedback,['correct','solution','assisted','stage','eventId','diagnosis'])}:{}),...(l?.teaching?{teaching:pick(l.teaching,['skillId','stage','explanation','workedExample','connection','nextStep'])}:{})}))};
+    const feedback=f=>({...pick(f,['correct','solution','assisted','stage','eventId','diagnosis']),
+      ...(f.submission?{submission:pick(f.submission,['prompt','answer','reason','construction','constructionPrompt','data','output'])}:{}),
+      ...(f.components?{components:pick(f.components,['answer','reason','construction'])}:{})});
+    data.quantLearner={...pick(q,['version','serial']),events:array(q.events).map(e=>pick(e,EVENT_FIELDS[e?.kind] || [])),lessons:map(q.lessons,l=>({...pick(l,lessonKeys),...(l?.feedback?{feedback:feedback(l.feedback)}:{}),...(l?.teaching?{teaching:pick(l.teaching,['skillId','stage','explanation','workedExample','connection','nextStep'])}:{})}))};
     data.blockedSites=array(raw.blockedSites).map(s=>pick(s,['domain','enabled','challengeType','dailyLimitMinutes','unlockDurationMinutes']));
     data.settings=pick(raw.settings,SETTINGS);
     if(raw.settings?.difficultySchedule) data.settings.difficultySchedule={...pick(raw.settings.difficultySchedule,['weekdayDefault','weekendDefault']),timeRanges:array(raw.settings.difficultySchedule.timeRanges).map(r=>pick(r,['start','end','difficulty']))};

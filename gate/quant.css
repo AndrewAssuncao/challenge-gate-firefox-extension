@@ -35,6 +35,10 @@
 #quant-error { color:var(--error); font-size:13px; margin:12px 0 0; overflow-wrap:anywhere; }
 #quant-error:empty { display:none; }
 #quant-feedback { font-size:13px; }
+#quant-submission { background:var(--bg-raised); border:1px solid var(--border); border-radius:8px; padding:16px; margin:16px 0; }
+#quant-submission h3 { font-size:13px; margin-bottom:10px; }
+#quant-submission p { font-size:12px; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; }
+#quant-submission pre { font-family:var(--mono); font-size:12px; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; margin:8px 0 14px; }
 .quant-code #python-meta, .quant-code #python-prompt { display:none; }
 #python-helpers { margin-top:14px; }
 #python-helpers:has(button[hidden]) { display:none; }

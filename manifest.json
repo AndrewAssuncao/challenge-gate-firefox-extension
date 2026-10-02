@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Challenge Gate",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Practice typing, Git, quant coding, brainteasers and quant mathematics before browsing.",
   "browser_specific_settings": {
     "gecko": {

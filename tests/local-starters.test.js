@@ -5,14 +5,15 @@ const local=JSON.parse(fs.readFileSync('gate/challenges/python-problems.json','u
 function harness(response) {
  const messages=[],posts=[],unlocks=[],nodes=new Map();
  const node=()=>({value:'',innerHTML:'',textContent:'',disabled:false,style:{},classList:{remove(){},add(){}},appendChild(){},focus(){}});
- const ctx=vm.createContext({console:{log(){},error(){}},Date,clearTimeout,setTimeout,
+ const ctx=vm.createContext({console:{log(){},error(){}},Date,clearTimeout,setTimeout:()=>1,crypto:{randomUUID:()=>"fixture"},
   document:{getElementById:id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);},createElement:node},
   window:{addEventListener(){}},Gate:{showContinuePrompt:()=>unlocks.push(true)},fetch:async()=>({json:async()=>local}),
   browser:{runtime:{getURL:p=>p,sendMessage:async m=>{messages.push(m);return m.type==='claudeGenerate'?response:{}}}}});
  vm.runInContext(fs.readFileSync('gate/challenge-provider.js','utf8'),ctx);
  const provider=vm.runInContext('ChallengeProvider',ctx);
  let source=fs.readFileSync('gate/python.js','utf8');
- source=source.replace('return { init, destroyWorker };',`return {runCode,renderChallenge,handleResult,
+ source=source.replace('return { init, destroyWorker };',`return {runCode,submitCode,renderChallenge,
+  receive(data){pendingExecution={mode:"submit",requestId:"fixture",code:editorEl.value,generation};return handleResult({...data,mode:"submit",requestId:"fixture"});},
   setup(c,cfg,w){challenge=c;config=cfg;challengeSource='claude';worker=w;pyodideReady=true;}};`);
  vm.runInContext(source,ctx);
  return {provider,ui:vm.runInContext('PythonChallenge',ctx),nodes,messages,posts,unlocks,worker:{postMessage:m=>posts.push(m)}};
@@ -87,7 +88,7 @@ test('AI string-encoded expressions/calls and malformed containers fall back bef
 
 test('worker test/signature issues cannot grant access, invalidate history or award progress',()=>{
  const h=harness(),c=h.provider.prepareGeneratedChallenge(fixture());h.ui.setup(c,{},h.worker);
- h.ui.handleResult({results:[{passed:false,challengeIssue:true}],diagnostics:{unrecoverableChallengeIssue:true,
+ h.ui.receive({results:[{passed:false,challengeIssue:true}],diagnostics:{unrecoverableChallengeIssue:true,
   unrecoverableTests:[{input:'1',error:'Signature requires 0 arguments.'}]}});
  assert.equal(h.unlocks.length,0);assert.equal(h.messages.length,0);assert.equal(h.posts.length,0);
  assert.equal(h.nodes.get('python-run').disabled,false);
@@ -112,12 +113,12 @@ test('editor blocks cached legacy objects and copied trust fields before renderi
  await h.ui.runCode();assert.equal(h.posts.length,0);
 });
 
-test('Run submits learner-authored code and immutable local descriptor despite challenge metadata mutation',async()=>{
+test('Submit grades learner-authored code and immutable local descriptor despite challenge metadata mutation',async()=>{
  const h=harness(),c=h.provider.prepareGeneratedChallenge(fixture());
  c.starterCode='REMOTE-FIXTURE()';c.functionName='injected';c.testCases=[{input:'REMOTE-FIXTURE()',expected:'bad'}];
  h.ui.setup(c,{},h.worker);h.ui.renderChallenge();assert.equal(h.nodes.get('python-editor').value,'def solve(value):\n    pass\n');
  const learner='def solve(value):\n    return value + 1';h.nodes.get('python-editor').value=learner;
- await h.ui.runCode();assert.equal(h.posts.length,1);const m=h.posts[0];
+ await h.ui.submitCode();assert.equal(h.posts.length,1);const m=h.posts[0];
  assert.equal(m.code,learner);assert.equal(m.functionName,'solve');assert.equal(m.testCases[0].input,'1');
  assert.equal(m.testCases[0].expected,'1');
 });
@@ -139,7 +140,7 @@ test('manifest requires the cloud-verified Firefox140 native data-permission bou
 test('actual worker Python parser accepts literal containers and rejects executable AI test payloads',async()=>{
  const scripts=[],self={location:{href:'moz-extension://fixture/gate/pyodide-worker.js'},fetch:async()=>({}),importScripts(){},postMessage(){}};
  const namespace={set(){},destroy(){}};
- const runtime={runPython:s=>{scripts.push(s);return s==='dict()'?namespace:undefined;}};
+ const runtime={setStdout(){},setStderr(){},runPython:s=>{scripts.push(s);return s==='dict()'?namespace:undefined;}};
  const ctx=vm.createContext({self,URL,importScripts:()=>{},loadPyodide:async()=>runtime});
  vm.runInContext(fs.readFileSync('gate/pyodide-worker.js','utf8'),ctx);
  await new Promise(r=>setImmediate(r));await self.onmessage({data:{type:'run',code:'def solve(value):\n    return value',functionName:'solve',testCases:[]}});

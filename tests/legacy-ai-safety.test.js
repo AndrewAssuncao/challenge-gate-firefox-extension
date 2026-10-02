@@ -14,7 +14,8 @@ function ui(send) {
   browser:{runtime:{sendMessage:async m=>{messages.push(m);return send(m);}}}});
  vm.runInContext(fs.readFileSync('gate/challenge-provider.js','utf8'),ctx);
  let source=fs.readFileSync('gate/python.js','utf8');
- source=source.replace('return { init, destroyWorker };',`return {runCode,handleResult,askForHelp,
+ source=source.replace('return { init, destroyWorker };',`return {submitCode,askForHelp,
+  receive(data){pendingExecution={mode:"submit",requestId:"fixture",code:editorEl.value,generation};return handleResult({...data,mode:"submit",requestId:"fixture"});},
   setup(c,cfg={}){challenge=c;config=cfg;challengeSource='claude';profile=ChallengeProvider.defaultProfile();challengeStartTime=Date.now();},
   assistance(){return {helpUsedThisChallenge,challengeResolved};}};`);
  vm.runInContext(source,ctx);
@@ -29,7 +30,7 @@ test('code-review markup, nonnumeric, nonfinite and out-of-range scores reject b
  responses.push('{"correct":true,"score":1e400,"feedback":"Fixture"}');
  for(const content of responses) {
   const h=ui(async()=>({content}));h.engine.setup(review);h.nodes.get('python-editor').value='Learner review';
-  await h.engine.runCode();
+  await h.engine.submitCode();
   assert.equal(h.grants.length,0);assert.deepEqual(h.messages.map(m=>m.type),['claudeGenerate']);
   assert.equal(h.nodes.get('python-run').disabled,false);
   assert.match(h.nodes.get('python-test-results').textContent,/valid review score.*Try again/);
@@ -42,7 +43,7 @@ test('valid numeric review scores display literally, including zero, and ordinar
  for(const [correct,score] of [[false,0],[false,42.5],[true,0],[true,100]]) {
   const outcomes=[],h=ui(async()=>({content:JSON.stringify({correct,score,feedback:'<fixture>',missingPoints:['<point>']})}));
   h.engine.setup(review,{quantChallenge:true,onQuantResult:async result=>outcomes.push(result)});
-  h.nodes.get('python-editor').value='Learner review';await h.engine.runCode();
+  h.nodes.get('python-editor').value='Learner review';await h.engine.submitCode();
   await new Promise(r=>setImmediate(r));
   assert.ok(h.nodes.get('python-test-results').innerHTML.includes(`(${score}%)`));
   assert.ok(h.nodes.get('python-test-results').innerHTML.includes('&lt;fixture&gt;'));
@@ -59,7 +60,7 @@ test('Help issue JSON preserves actual failed evidence and grants nothing; later
  const h=ui(m=>backend.send(m));
  h.engine.setup({id:'exercise-fixture',topic:'basics',functionName:'solve',starterCode:'def solve(value):\n    pass\n',testCases:[{input:'1',expected:'1'}],hints:[],prompt:'Return the value.'});
  const failed={results:[{passed:false,input:'1',expected:'1',actual:'0'}],diagnostics:{}};
- h.engine.handleResult(failed);h.engine.handleResult(failed);
+ await h.engine.receive(failed);await h.engine.receive(failed);
  for(let n=0;n<5;n++)await new Promise(r=>setImmediate(r));
  await backend.send({type:'getState'});
  assert.equal(h.messages.filter(m=>m.type==='recordLearningAttempt').length,2);
@@ -72,7 +73,7 @@ test('Help issue JSON preserves actual failed evidence and grants nothing; later
  assert.match(h.nodes.get('python-help-messages').children.at(-1).textContent,/Possible fixture issue/);
  assert.equal(h.nodes.get('python-help').disabled,false);
  assert.equal(h.engine.assistance().helpUsedThisChallenge,true);assert.equal(h.engine.assistance().challengeResolved,false);
- h.engine.handleResult({results:[{passed:true,input:'1',expected:'1',actual:'1'}],diagnostics:{}});
+ await h.engine.receive({results:[{passed:true,input:'1',expected:'1',actual:'1'}],diagnostics:{}});
  for(let n=0;n<5;n++)await new Promise(r=>setImmediate(r));
  await backend.send({type:'getState'});
  assert.equal(h.grants.length,1);
